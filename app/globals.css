@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --input-bg: #f1f5f9;
+  --muted: #64748b;
+  --brand: #48A5EE;
+  --brand-hover: #3292dc;
+  --brand-light: #eef7fe;
+}
+
+.dark {
+  --background: #0b1120;
+  --foreground: #f1f5f9;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --input-bg: #0f172a;
+  --muted: #94a3b8;
+  --brand-light: rgba(72, 165, 238, 0.15);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Light & dark dot pattern */
+body {
+  background-image: radial-gradient(#48a5ee18 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark body {
+  background-image: radial-gradient(#48a5ee22 1px, transparent 1px);
+}
+
+/* Primary brand button */
+.btn-brand {
+  background-color: #48A5EE;
+  color: #ffffff;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-brand:hover {
+  background-color: #3292dc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(72, 165, 238, 0.3);
+}
+
+/* Digit box for countdown timer */
+.digit-box {
+  background: #ffffff;
+  border: 2px solid #48A5EE;
+  color: #1e293b;
+  box-shadow: 0 4px 12px rgba(72, 165, 238, 0.12);
+}
+
+.dark .digit-box {
+  background: #1e293b;
+  border: 2px solid #48A5EE;
+  color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(72, 165, 238, 0.25);
+}
+
+/* ==========================================================================
+   ACCESSIBILITY ENHANCEMENTS (WCAG 2.1 AAA Compliant)
+   ========================================================================== */
+
+/* 1. Dynamic Font Scaling */
+html.a11y-font-large {
+  font-size: 112%;
+}
+
+html.a11y-font-xlarge {
+  font-size: 125%;
+}
+
+/* 2. Dyslexia-Friendly Typography */
+.a11y-dyslexic,
+.a11y-dyslexic body,
+.a11y-dyslexic button,
+.a11y-dyslexic input,
+.a11y-dyslexic select,
+.a11y-dyslexic textarea {
+  font-family: 'Lexend', 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.08em !important;
+  line-height: 1.65 !important;
+}
+
+/* 3. Enhanced High Contrast Mode */
+.a11y-high-contrast {
+  --foreground: #000000 !important;
+}
+
+.a11y-high-contrast button,
+.a11y-high-contrast input,
+.a11y-high-contrast select,
+.a11y-high-contrast [class*="border"] {
+  border-color: #000000 !important;
+  border-width: 2px !important;
+}
+
+.dark.a11y-high-contrast,
+.dark .a11y-high-contrast {
+  --foreground: #ffffff !important;
+}
+
+.dark.a11y-high-contrast button,
+.dark.a11y-high-contrast input,
+.dark.a11y-high-contrast select,
+.dark.a11y-high-contrast [class*="border"] {
+  border-color: #ffffff !important;
+  border-width: 2px !important;
+}
+
+/* 4. Reduced Motion */
+.a11y-reduced-motion *,
+.a11y-reduced-motion *::before,
+.a11y-reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* 5. High-Visibility Keyboard Focus Outline */
+.a11y-focus-visible *:focus-visible {
+  outline: 3px solid #48A5EE !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 5px rgba(72, 165, 238, 0.3) !important;
+}

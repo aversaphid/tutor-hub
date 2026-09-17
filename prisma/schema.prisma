@@ -1,0 +1,92 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  HEAD_TUTOR
+  TUTOR
+  TUTEE
+}
+
+enum SessionStatus {
+  SCHEDULED
+  DELAYED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String?   @unique
+  role         Role
+  passwordHash String?   // For Head Tutor & Tutors
+  pin          String?   // 4-digit unique PIN for Tutees
+  magicKey     String?   @unique // Secure random key for Tutee magic links
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // For Students: their normal / default assigned tutor
+  assignedTutorId String?
+  assignedTutor   User?    @relation("TutorStudentAssignment", fields: [assignedTutorId], references: [id])
+  assignedStudents User[]  @relation("TutorStudentAssignment")
+
+  tutorSessions Session[] @relation("TutorSessions")
+  tuteeSessions Session[] @relation("TuteeSessions")
+  auditLogs     AuditLog[]
+}
+
+model Session {
+  id                 String        @id @default(cuid())
+  title              String        @default("Maths Lesson")
+  tutorId            String
+  tuteeId            String
+  tutor              User          @relation("TutorSessions", fields: [tutorId], references: [id])
+  tutee              User          @relation("TuteeSessions", fields: [tuteeId], references: [id])
+  scheduledStartTime DateTime
+  scheduledEndTime   DateTime
+  actualStartTime    DateTime?
+  actualEndTime      DateTime?
+  status             SessionStatus @default(SCHEDULED)
+  delayMinutes       Int           @default(0)
+  teamsMeetingUrl    String?
+  notes              String?
+
+  // Admin Personal Reminder & Attendance Confirmations
+  adminReminder      String?       // Personal reminder set by admin on the lesson
+  tutorConfirmed     Boolean       @default(false) // Whether the tutor has confirmed attendance
+  tuteeConfirmed     Boolean       @default(false) // Whether the tutee/student has confirmed attendance
+
+  // Tutor Payment Tracking (Upcoming vs Completed Unpaid vs Archived Paid)
+  tutorPaid          Boolean       @default(false)
+  tutorPaidAt        DateTime?
+
+  // Tutee Lesson Completion & Review
+  feedbackCovered    String?       // What was covered in the lesson
+  feedbackRating     Int?          // Rating out of 5 stars (1-5)
+  feedbackNotes      String?       // Optional additional notes from student
+  feedbackSubmittedAt DateTime?
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  auditLogs          AuditLog[]
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  details    String?
+  timestamp  DateTime @default(now())
+}
