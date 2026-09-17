@@ -43,6 +43,7 @@ import {
   X,
   CalendarClock,
   XCircle,
+  ChevronDown,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
@@ -159,6 +160,12 @@ export default function AdminPage() {
   // Reschedule Modal state
   const [rescheduleTargetLesson, setRescheduleTargetLesson] = useState<any>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+
+  // Collapsible Lesson Sections state (Upcoming expanded by default, others collapsed)
+  const [isUpcomingOpen, setIsUpcomingOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(false);
+  const [isCancelledOpen, setIsCancelledOpen] = useState(false);
+  const [isArchivedOpen, setIsArchivedOpen] = useState(false);
 
   useEffect(() => {
     initAdminData();
@@ -1496,24 +1503,54 @@ export default function AdminPage() {
 
                 {/* Status Summary Pills */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
-                  <span className="px-3 py-1 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold">
-                    Upcoming: {upcomingList.length}
-                  </span>
-                  <span className="px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800">
-                    Pending Tutor Payout: {completedUnpaidList.length}
-                  </span>
-                  <span className="px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800">
-                    Cancelled: {cancelledList.length}
-                  </span>
-                  <span className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
-                    Archived &amp; Paid: {archivedPaidList.length}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
+                    className="px-3 py-1 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold hover:bg-[#48A5EE]/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title={isUpcomingOpen ? "Click to collapse" : "Click to expand"}
+                  >
+                    <span>Upcoming: {upcomingList.length}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                    className="px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title={isCompletedOpen ? "Click to collapse" : "Click to expand"}
+                  >
+                    <span>Pending Tutor Payout: {completedUnpaidList.length}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCancelledOpen(!isCancelledOpen)}
+                    className="px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title={isCancelledOpen ? "Click to collapse" : "Click to expand"}
+                  >
+                    <span>Cancelled: {cancelledList.length}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsArchivedOpen(!isArchivedOpen)}
+                    className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title={isArchivedOpen ? "Click to collapse" : "Click to expand"}
+                  >
+                    <span>Archived &amp; Paid: {archivedPaidList.length}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
+                  </button>
                 </div>
               </div>
 
               {/* 1. UPCOMING LESSONS (Shown at top) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm space-y-3">
-                <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
+                    isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  }`}
+                >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                       <Clock className="w-4 h-4 text-[#48A5EE]" />
@@ -1523,10 +1560,18 @@ export default function AdminPage() {
                       Future scheduled or in-progress lessons. Older finished lessons move automatically below.
                     </p>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-[#48A5EE]/15 text-[#48A5EE] text-xs font-bold">
-                    {upcomingList.length} Scheduled
-                  </span>
-                </div>
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-full bg-[#48A5EE]/15 text-[#48A5EE] text-xs font-bold">
+                      {upcomingList.length} Scheduled
+                    </span>
+                    <div className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                </button>
+
+                {isUpcomingOpen && (
+                  <div className="space-y-3 pt-3">
 
                 {upcomingList.length === 0 ? (
                   <div className="text-center py-10 px-4 space-y-2">
@@ -1738,11 +1783,19 @@ export default function AdminPage() {
                     </table>
                   </div>
                 )}
+                  </div>
+                )}
               </div>
 
               {/* 2. COMPLETED (TUTOR NOT PAID) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm space-y-3">
-                <div className="p-5 bg-amber-50/50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsCompletedOpen(!isCompletedOpen)}
+                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${
+                    isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
+                  }`}
+                >
                   <div>
                     <h3 className="text-base font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -1752,7 +1805,18 @@ export default function AdminPage() {
                       These lessons have completed or passed. Review what was covered, the student rating, and toggle to Paid once settled.
                     </p>
                   </div>
-                </div>
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      {isCompletedOpen ? "Hide" : "Show"}
+                    </span>
+                    <div className="p-1 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                </button>
+
+                {isCompletedOpen && (
+                  <div className="space-y-3">
 
                 {completedUnpaidList.length === 0 ? (
                   <div className="text-center py-10 px-4 space-y-1">
@@ -1887,26 +1951,45 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+                  </div>
+                )}
               </div>
 
               {/* 3. CANCELLED LESSONS */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm space-y-3">
-                <div className="p-5 border-b border-rose-100 dark:border-rose-950/60 flex items-center justify-between">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsCancelledOpen(!isCancelledOpen)}
+                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${
+                    isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
+                  }`}
+                >
                   <div>
-                    <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-rose-950 dark:text-rose-200 flex items-center gap-2">
                       <XCircle className="w-4 h-4 text-rose-500" />
                       <span>Cancelled Lessons ({cancelledList.length})</span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-rose-800/80 dark:text-rose-300/80">
                       Lessons that were cancelled. Click Reschedule to reactivate them at a new date &amp; time.
                     </p>
                   </div>
-                  {cancelledList.length > 0 && (
-                    <span className="px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold">
-                      {cancelledList.length} Cancelled
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    {cancelledList.length > 0 && (
+                      <span className="px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold">
+                        {cancelledList.length} Cancelled
+                      </span>
+                    )}
+                    <span className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                      {isCancelledOpen ? "Hide" : "Show"}
                     </span>
-                  )}
-                </div>
+                    <div className="p-1 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                </button>
+
+                {isCancelledOpen && (
+                  <div className="space-y-3">
 
                 {cancelledList.length === 0 ? (
                   <div className="text-center py-8 px-4 space-y-1 text-xs text-slate-400">
@@ -1986,11 +2069,19 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+                  </div>
+                )}
               </div>
 
               {/* 4. ARCHIVED (TUTOR PAID) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm space-y-3">
-                <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setIsArchivedOpen(!isArchivedOpen)}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
+                    isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  }`}
+                >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                       <Archive className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -2000,7 +2091,18 @@ export default function AdminPage() {
                       Historical completed lessons where tutor payout has been marked as settled.
                     </p>
                   </div>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {isArchivedOpen ? "Hide" : "Show"}
+                    </span>
+                    <div className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                </button>
+
+                {isArchivedOpen && (
+                  <div className="space-y-3">
 
                 {archivedPaidList.length === 0 ? (
                   <div className="text-center py-10 px-4 space-y-1 text-xs text-slate-400">
@@ -2109,6 +2211,8 @@ export default function AdminPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
                   </div>
                 )}
               </div>
