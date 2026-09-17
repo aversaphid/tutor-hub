@@ -105,16 +105,16 @@ export const UpdateSessionSchema = z.object({
   tutorId: z.string().optional(),
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),
-  teamsMeetingUrl: TeamsUrlSchema.optional().or(z.literal("")),
+  teamsMeetingUrl: TeamsUrlSchema.optional().nullable().or(z.literal("")),
   status: z.enum(["SCHEDULED", "DELAYED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   tutorPaid: z.boolean().optional(),
-  notes: z.string().max(1000).optional(),
+  notes: z.string().max(1000).optional().nullable(),
   adminReminder: z.string().max(1000).optional().nullable(),
   tutorConfirmed: z.boolean().optional(),
   tuteeConfirmed: z.boolean().optional(),
-  feedbackCovered: z.string().optional(),
-  feedbackRating: z.number().int().min(1).max(5).optional(),
-  feedbackNotes: z.string().optional(),
+  feedbackCovered: z.string().optional().nullable(),
+  feedbackRating: z.number().int().min(1).max(5).optional().nullable(),
+  feedbackNotes: z.string().optional().nullable(),
 });
 
 // Session delay schema
