@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import crypto from "crypto";
 import { prisma } from "./prisma";
 
 export const AUTH_COOKIE_NAME = "th_auth_token";
@@ -21,18 +22,37 @@ export interface SessionUser {
   magicKey: string | null;
 }
 
-// Encode simple secure token (base64 JSON signed or hashed in prod)
+const SECRET = process.env.SESSION_SECRET || process.env.TURSO_AUTH_TOKEN || "lb-maths-tuition-session-secret";
+
+// Encode cryptographically signed secure token
 export function createAuthToken(user: { id: string; role: string }): string {
   const payload = {
     sub: user.id,
     role: user.role,
     iat: Date.now(),
   };
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
+  return `${data}.${signature}`;
 }
 
 export function parseAuthToken(token: string): { sub: string; role: string } | null {
   try {
+    const parts = token.split(".");
+    if (parts.length === 2) {
+      const [data, signature] = parts;
+      const expected = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
+      if (signature.length !== expected.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+        return null;
+      }
+      const json = Buffer.from(data, "base64url").toString("utf-8");
+      const parsed = JSON.parse(json);
+      if (!parsed.sub || !parsed.role) return null;
+      return parsed;
+    }
+
+    // Fallback for transition from legacy unsigned tokens
     const json = Buffer.from(token, "base64").toString("utf-8");
     const parsed = JSON.parse(json);
     if (!parsed.sub || !parsed.role) return null;
