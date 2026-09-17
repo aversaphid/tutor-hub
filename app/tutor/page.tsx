@@ -39,6 +39,7 @@ import {
   CalendarClock,
   XCircle,
   ChevronDown,
+  X,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
@@ -91,6 +92,7 @@ export default function TutorDashboardPage() {
     "soonest" | "newest" | "oldest" | "student" | "rating"
   >("soonest");
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
 
   // Collapsible Lesson Sections state (Upcoming expanded by default, others collapsed)
   const [isUpcomingOpen, setIsUpcomingOpen] = useState(true);
@@ -754,7 +756,7 @@ export default function TutorDashboardPage() {
         {/* TAB 2: MY ASSIGNED STUDENTS */}
         {activeTab === "students" && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4 transition-colors">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
               <div>
                 <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
                   Students Assigned to You
@@ -763,10 +765,32 @@ export default function TutorDashboardPage() {
                   You can see your assigned students&apos; PINs and copy their direct magic access links.
                 </p>
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#48A5EE]/10 text-[#48A5EE]">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] shrink-0 self-start sm:self-auto">
                 {assignedStudents.length} Students
               </span>
             </div>
+
+            {/* Student Search Box */}
+            {assignedStudents.length > 0 && (
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  placeholder="Search your students by name, PIN, email..."
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                />
+                {studentSearchTerm && (
+                  <button
+                    onClick={() => setStudentSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
 
             {loading ? (
               <div className="py-12 text-center text-xs text-slate-400">Loading assigned students...</div>
@@ -782,7 +806,17 @@ export default function TutorDashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {assignedStudents.map((student) => (
+                {assignedStudents
+                  .filter((student) => {
+                    if (!studentSearchTerm.trim()) return true;
+                    const q = studentSearchTerm.toLowerCase();
+                    return (
+                      student.name.toLowerCase().includes(q) ||
+                      (student.pin || "").toLowerCase().includes(q) ||
+                      (student.email || "").toLowerCase().includes(q)
+                    );
+                  })
+                  .map((student) => (
                   <div
                     key={student.id}
                     className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"

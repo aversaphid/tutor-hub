@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
@@ -44,6 +44,7 @@ import {
   CalendarClock,
   XCircle,
   ChevronDown,
+  GraduationCap,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
@@ -72,6 +73,18 @@ export default function AdminPage() {
   const [lessonTutorFilter, setLessonTutorFilter] = useState("ALL");
   const [lessonStudentFilter, setLessonStudentFilter] = useState("ALL");
   const [lessonSortBy, setLessonSortBy] = useState<"soonest" | "newest" | "oldest" | "student" | "tutor" | "rating">("soonest");
+
+  // Search, filter, and sort state for Students directory
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [studentTutorFilter, setStudentTutorFilter] = useState("ALL");
+  const [studentLessonFilter, setStudentLessonFilter] = useState<"ALL" | "HAS_UPCOMING" | "NO_UPCOMING">("ALL");
+  const [studentSortBy, setStudentSortBy] = useState<"name_asc" | "name_desc" | "tutor" | "newest">("name_asc");
+
+  // Search, filter, and sort state for Tutors directory
+  const [tutorSearchTerm, setTutorSearchTerm] = useState("");
+  const [tutorStudentFilter, setTutorStudentFilter] = useState("ALL");
+  const [tutorRoleFilter, setTutorRoleFilter] = useState<"ALL" | "HEAD_TUTOR" | "TUTOR">("ALL");
+  const [tutorSortBy, setTutorSortBy] = useState<"name_asc" | "name_desc" | "students_count" | "newest">("name_asc");
 
   // Live / Next Lesson Quick Controls
   const [activeLesson, setActiveLesson] = useState<any>(null);
@@ -955,6 +968,108 @@ export default function AdminPage() {
       setTimeout(() => setCopiedKey(null), 2500);
     } catch {}
   };
+
+  // Memoized filtered students list
+  const filteredStudents = useMemo(() => {
+    return students
+      .filter((st) => {
+        // 1. Search term: matches student name, PIN, magic key, or assigned tutor name
+        if (studentSearchTerm.trim()) {
+          const q = studentSearchTerm.toLowerCase();
+          const matchName = st.name.toLowerCase().includes(q);
+          const matchPin = (st.pin || "").toLowerCase().includes(q);
+          const matchKey = (st.magicKey || "").toLowerCase().includes(q);
+          const matchTutor = (st.assignedTutor?.name || "").toLowerCase().includes(q);
+          if (!matchName && !matchPin && !matchKey && !matchTutor) return false;
+        }
+
+        // 2. Filter by assigned tutor
+        if (studentTutorFilter === "UNASSIGNED") {
+          if (st.assignedTutorId) return false;
+        } else if (studentTutorFilter !== "ALL") {
+          if (st.assignedTutorId !== studentTutorFilter) return false;
+        }
+
+        // 3. Filter by lesson status
+        if (studentLessonFilter !== "ALL") {
+          const now = Date.now();
+          const hasUpcoming = sessions.some(
+            (s) =>
+              s.tuteeId === st.id &&
+              s.status !== "COMPLETED" &&
+              s.status !== "CANCELLED" &&
+              new Date(s.scheduledEndTime).getTime() > now
+          );
+          if (studentLessonFilter === "HAS_UPCOMING" && !hasUpcoming) return false;
+          if (studentLessonFilter === "NO_UPCOMING" && hasUpcoming) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (studentSortBy === "name_asc") return a.name.localeCompare(b.name);
+        if (studentSortBy === "name_desc") return b.name.localeCompare(a.name);
+        if (studentSortBy === "tutor") {
+          const tA = a.assignedTutor?.name || "zzz";
+          const tB = b.assignedTutor?.name || "zzz";
+          return tA.localeCompare(tB);
+        }
+        if (studentSortBy === "newest") {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        }
+        return 0;
+      });
+  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentSortBy, sessions]);
+
+  // Memoized filtered tutors list
+  const filteredTutors = useMemo(() => {
+    return tutors
+      .filter((t) => {
+        // 1. Search term: matches tutor name, email, or any assigned student's name
+        if (tutorSearchTerm.trim()) {
+          const q = tutorSearchTerm.toLowerCase();
+          const matchName = t.name.toLowerCase().includes(q);
+          const matchEmail = (t.email || "").toLowerCase().includes(q);
+          const matchStudent = (t.assignedStudents || []).some((st: any) =>
+            st.name.toLowerCase().includes(q)
+          );
+          if (!matchName && !matchEmail && !matchStudent) return false;
+        }
+
+        // 2. Filter by student
+        if (tutorStudentFilter === "HAS_STUDENTS") {
+          if (!t.assignedStudents || t.assignedStudents.length === 0) return false;
+        } else if (tutorStudentFilter === "NO_STUDENTS") {
+          if (t.assignedStudents && t.assignedStudents.length > 0) return false;
+        } else if (tutorStudentFilter !== "ALL") {
+          const hasAssigned = (t.assignedStudents || []).some(
+            (st: any) => st.id === tutorStudentFilter
+          );
+          const hasSession = sessions.some(
+            (s) => s.tutorId === t.id && s.tuteeId === tutorStudentFilter
+          );
+          if (!hasAssigned && !hasSession) return false;
+        }
+
+        // 3. Filter by role
+        if (tutorRoleFilter !== "ALL") {
+          if (t.role !== tutorRoleFilter) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (tutorSortBy === "name_asc") return a.name.localeCompare(b.name);
+        if (tutorSortBy === "name_desc") return b.name.localeCompare(a.name);
+        if (tutorSortBy === "students_count") {
+          return (b.assignedStudents?.length || 0) - (a.assignedStudents?.length || 0);
+        }
+        if (tutorSortBy === "newest") {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        }
+        return 0;
+      });
+  }, [tutors, tutorSearchTerm, tutorStudentFilter, tutorRoleFilter, tutorSortBy, sessions]);
 
   if (loading) {
     return (
@@ -2225,7 +2340,10 @@ export default function AdminPage() {
               <div>
                 <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#48A5EE]" />
-                  <span>Students &amp; PIN Directory ({students.length})</span>
+                  <span>
+                    Students &amp; PIN Directory ({filteredStudents.length}
+                    {filteredStudents.length !== students.length ? ` of ${students.length}` : ""})
+                  </span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Manage student accounts, view secret PINs, and copy direct magic links.
@@ -2244,6 +2362,95 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {/* Filter and Search Bar */}
+            <div className="p-4 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  placeholder="Search student, PIN, magic key, tutor..."
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                />
+                {studentSearchTerm && (
+                  <button
+                    onClick={() => setStudentSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter by Tutor */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={studentTutorFilter}
+                  onChange={(e) => setStudentTutorFilter(e.target.value)}
+                  aria-label="Filter students by tutor"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="ALL">All Tutors ({tutors.length})</option>
+                  <option value="UNASSIGNED">Unassigned Only</option>
+                  {tutors.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      Tutor: {formatTutorName(t.name)} ({t.assignedStudents?.length || 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter by Lesson Status */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={studentLessonFilter}
+                  onChange={(e) => setStudentLessonFilter(e.target.value as any)}
+                  aria-label="Filter students by lesson status"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="ALL">All Lesson Statuses</option>
+                  <option value="HAS_UPCOMING">Has Upcoming Lessons</option>
+                  <option value="NO_UPCOMING">No Upcoming Lessons</option>
+                </select>
+              </div>
+
+              {/* Sort by */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={studentSortBy}
+                  onChange={(e) => setStudentSortBy(e.target.value as any)}
+                  aria-label="Sort students"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="tutor">Assigned Tutor</option>
+                  <option value="newest">Recently Added</option>
+                </select>
+              </div>
+
+              {/* Reset button */}
+              {(studentSearchTerm || studentTutorFilter !== "ALL" || studentLessonFilter !== "ALL" || studentSortBy !== "name_asc") && (
+                <button
+                  onClick={() => {
+                    setStudentSearchTerm("");
+                    setStudentTutorFilter("ALL");
+                    setStudentLessonFilter("ALL");
+                    setStudentSortBy("name_asc");
+                  }}
+                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
+
             {students.length === 0 ? (
               <div className="text-center py-12 px-4 space-y-2">
                 <Users className="w-8 h-8 text-slate-400 mx-auto" />
@@ -2251,6 +2458,25 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Click &quot;Add Student&quot; above to create students and assign them to a tutor.
                 </p>
+              </div>
+            ) : filteredStudents.length === 0 ? (
+              <div className="text-center py-12 px-4 space-y-3">
+                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Students Found</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                  No students match your search criteria. Try modifying your search or clearing filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setStudentSearchTerm("");
+                    setStudentTutorFilter("ALL");
+                    setStudentLessonFilter("ALL");
+                    setStudentSortBy("name_asc");
+                  }}
+                  className="py-1.5 px-3 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -2265,16 +2491,39 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {students.map((st) => (
+                    {filteredStudents.map((st) => (
                       <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
-                          {st.name}
+                          <div className="flex items-center gap-2">
+                            <span>{st.name}</span>
+                            {sessions.some((s) => s.tuteeId === st.id && s.status === "IN_PROGRESS") ? (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
+                                ● Live Now
+                              </span>
+                            ) : sessions.some(
+                                (s) =>
+                                  s.tuteeId === st.id &&
+                                  (s.status === "SCHEDULED" || s.status === "DELAYED") &&
+                                  new Date(s.scheduledEndTime).getTime() > Date.now()
+                              ) ? (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
+                                Upcoming Lesson
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              {formatTutorName(st.assignedTutor?.name) || "Unassigned"}
-                            </span>
+                            {st.assignedTutor ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs border border-emerald-200/60 dark:border-emerald-800/60">
+                                <GraduationCap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>{formatTutorName(st.assignedTutor.name)}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-200/60 dark:border-amber-800/60">
+                                Unassigned
+                              </span>
+                            )}
                             <button
                               onClick={() => {
                                 setReassignModalStudent(st);
@@ -2287,9 +2536,30 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700">
-                            {st.pin || "----"}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700">
+                              {st.pin || "----"}
+                            </span>
+                            {st.pin && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard.writeText(st.pin);
+                                    setCopiedKey(`pin-${st.id}`);
+                                    setTimeout(() => setCopiedKey(null), 2000);
+                                  } catch {}
+                                }}
+                                className="p-1 text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                title="Copy PIN"
+                              >
+                                {copiedKey === `pin-${st.id}` ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-3.5 font-mono text-[11px] text-[#48A5EE]">
                           /student?key={st.magicKey}
@@ -2335,7 +2605,10 @@ export default function AdminPage() {
               <div>
                 <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#48A5EE]" />
-                  <span>Tutor Directory ({tutors.length})</span>
+                  <span>
+                    Tutor Directory ({filteredTutors.length}
+                    {filteredTutors.length !== tutors.length ? ` of ${tutors.length}` : ""})
+                  </span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Manage tutor staff, view assignments, and configure credentials.
@@ -2354,68 +2627,218 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
-                  <tr>
-                    <th className="px-5 py-3.5">Tutor Name</th>
-                    <th className="px-5 py-3.5">Email / Handle</th>
-                    <th className="px-5 py-3.5">Role</th>
-                    <th className="px-5 py-3.5">Assigned Students</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {tutors.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                      <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
-                        {formatTutorName(t.name)}
-                      </td>
-                      <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono">
-                        {t.email}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
-                          {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-700 dark:text-slate-300">
-                        {t.assignedStudents?.length || 0} student(s)
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && t.email !== "luke@lbmathstuition.co.uk" ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                setPasswordModalUser(t);
-                                setAdminNewPassword("");
-                                setAdminConfirmPassword("");
-                                setPasswordModalError("");
-                                setPasswordModalSuccess("");
-                              }}
-                              className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-                              title="Set Password"
-                            >
-                              <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                              <span>Set Password</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTutor(t.id, t.name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                              title="Delete Tutor"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">Primary Admin (You)</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Filter and Search Bar */}
+            <div className="p-4 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={tutorSearchTerm}
+                  onChange={(e) => setTutorSearchTerm(e.target.value)}
+                  placeholder="Search tutor name, email, student..."
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                />
+                {tutorSearchTerm && (
+                  <button
+                    onClick={() => setTutorSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter by Student */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Users className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={tutorStudentFilter}
+                  onChange={(e) => setTutorStudentFilter(e.target.value)}
+                  aria-label="Filter tutors by student"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="ALL">All Students</option>
+                  <option value="HAS_STUDENTS">Has Students Assigned</option>
+                  <option value="NO_STUDENTS">No Students Assigned</option>
+                  <optgroup label="Specific Student">
+                    {students.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        Student: {st.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Filter by Role */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={tutorRoleFilter}
+                  onChange={(e) => setTutorRoleFilter(e.target.value as any)}
+                  aria-label="Filter tutors by role"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="HEAD_TUTOR">Admin Only</option>
+                  <option value="TUTOR">Tutors Only</option>
+                </select>
+              </div>
+
+              {/* Sort by */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={tutorSortBy}
+                  onChange={(e) => setTutorSortBy(e.target.value as any)}
+                  aria-label="Sort tutors"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                  <option value="students_count">Most Students Assigned</option>
+                  <option value="newest">Recently Added</option>
+                </select>
+              </div>
+
+              {/* Reset button */}
+              {(tutorSearchTerm || tutorStudentFilter !== "ALL" || tutorRoleFilter !== "ALL" || tutorSortBy !== "name_asc") && (
+                <button
+                  onClick={() => {
+                    setTutorSearchTerm("");
+                    setTutorStudentFilter("ALL");
+                    setTutorRoleFilter("ALL");
+                    setTutorSortBy("name_asc");
+                  }}
+                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
+
+            {tutors.length === 0 ? (
+              <div className="text-center py-12 px-4 space-y-2">
+                <Users className="w-8 h-8 text-slate-400 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Tutors Yet</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Click &quot;Add Tutor&quot; above to create tutor accounts.
+                </p>
+              </div>
+            ) : filteredTutors.length === 0 ? (
+              <div className="text-center py-12 px-4 space-y-3">
+                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Tutors Found</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                  No tutors match your search criteria. Try modifying your search or clearing filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setTutorSearchTerm("");
+                    setTutorStudentFilter("ALL");
+                    setTutorRoleFilter("ALL");
+                    setTutorSortBy("name_asc");
+                  }}
+                  className="py-1.5 px-3 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
+                    <tr>
+                      <th className="px-5 py-3.5">Tutor Name</th>
+                      <th className="px-5 py-3.5">Email / Handle</th>
+                      <th className="px-5 py-3.5">Role</th>
+                      <th className="px-5 py-3.5">Assigned Students</th>
+                      <th className="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {filteredTutors.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                        <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
+                          {formatTutorName(t.name)}
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono">
+                          {t.email}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              t.role === "HEAD_TUTOR"
+                                ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"
+                                : "bg-[#48A5EE]/10 text-[#48A5EE]"
+                            }`}
+                          >
+                            {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-bold text-slate-700 dark:text-slate-300">
+                              {t.assignedStudents?.length || 0} student
+                              {t.assignedStudents?.length === 1 ? "" : "s"}
+                            </span>
+                            {t.assignedStudents && t.assignedStudents.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {t.assignedStudents.map((st: any) => (
+                                  <span
+                                    key={st.id}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60"
+                                  >
+                                    {st.name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">None assigned</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          {t.role !== "HEAD_TUTOR" &&
+                          t.id !== currentUser?.id &&
+                          t.email !== "luke@lbmathstuition.co.uk" ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setPasswordModalUser(t);
+                                  setAdminNewPassword("");
+                                  setAdminConfirmPassword("");
+                                  setPasswordModalError("");
+                                  setPasswordModalSuccess("");
+                                }}
+                                className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                                title="Set Password"
+                              >
+                                <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                                <span>Set Password</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTutor(t.id, t.name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Delete Tutor"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">
+                              Primary Admin (You)
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
