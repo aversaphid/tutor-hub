@@ -70,6 +70,12 @@ export const ReassignStudentSchema = z.object({
   assignedTutorId: z.string().nullable().optional(),
 });
 
+// Admin update user password
+export const AdminUpdateUserPasswordSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  newPassword: z.string().min(5, "New password must be at least 5 characters"),
+});
+
 // Lesson Completion by Student (What was covered, 1-5 star rating, optional notes)
 export const LessonCompletionSchema = z.object({
   feedbackCovered: z.string().trim().min(2, "Please specify what you covered in the lesson"),

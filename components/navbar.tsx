@@ -9,6 +9,7 @@ import ChangePasswordModal from "./change-password-modal";
 import TutorLoginModal from "./tutor-login-modal";
 import AccessibilityModal from "./accessibility-modal";
 import ThemeToggle from "./theme-toggle";
+import { formatTutorName } from "@/lib/format";
 
 interface NavbarProps {
   user?: {
@@ -106,7 +107,7 @@ export default function Navbar({ user }: NavbarProps) {
             {user && isStaff ? (
               <div className="flex items-center gap-2">
                 <span className="hidden md:inline-block text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                  {isHeadTutor ? "Admin" : "Tutor"}
+                  {isHeadTutor ? "Luke (Admin)" : formatTutorName(user.name) || "Tutor"}
                 </span>
 
                 {isHeadTutor && pathname !== "/admin" && (

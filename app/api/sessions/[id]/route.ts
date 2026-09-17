@@ -125,11 +125,7 @@ export async function PATCH(
       if (existing.tuteeId !== user.id) {
         return NextResponse.json({ error: "Forbidden." }, { status: 403 });
       }
-      if (updates.tuteeConfirmed !== undefined) {
-        updateData.tuteeConfirmed = updates.tuteeConfirmed;
-        auditAction = "CONFIRMATION_UPDATED";
-        auditDetails = `Student ${user.name} confirmed attendance.`;
-      }
+      // Note: Attendance confirmations can only be updated by the Admin as personal reminders
     } else {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
@@ -150,15 +146,18 @@ export async function PATCH(
           ? `Personal admin reminder updated: "${updateData.adminReminder}"`
           : "Personal admin reminder cleared.";
       }
-      if (updates.tutorConfirmed !== undefined) {
-        updateData.tutorConfirmed = updates.tutorConfirmed;
-        auditAction = "CONFIRMATION_UPDATED";
-        auditDetails = `Tutor attendance marked as ${updates.tutorConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by ${user.name}.`;
-      }
-      if (updates.tuteeConfirmed !== undefined && user.role === "HEAD_TUTOR") {
-        updateData.tuteeConfirmed = updates.tuteeConfirmed;
-        auditAction = "CONFIRMATION_UPDATED";
-        auditDetails = `Student attendance marked as ${updates.tuteeConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`;
+      // Attendance confirmations: ONLY admin can toggle as personal reminders
+      if (user.role === "HEAD_TUTOR") {
+        if (updates.tutorConfirmed !== undefined) {
+          updateData.tutorConfirmed = updates.tutorConfirmed;
+          auditAction = "CONFIRMATION_UPDATED";
+          auditDetails = `Tutor attendance marked as ${updates.tutorConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`;
+        }
+        if (updates.tuteeConfirmed !== undefined) {
+          updateData.tuteeConfirmed = updates.tuteeConfirmed;
+          auditAction = "CONFIRMATION_UPDATED";
+          auditDetails = `Student attendance marked as ${updates.tuteeConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`;
+        }
       }
       if (updates.feedbackCovered !== undefined) updateData.feedbackCovered = updates.feedbackCovered;
       if (updates.feedbackRating !== undefined) updateData.feedbackRating = updates.feedbackRating;

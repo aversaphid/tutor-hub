@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
-import { CreateUserSchema, ReassignStudentSchema } from "@/lib/validations";
+import { CreateUserSchema, ReassignStudentSchema, AdminUpdateUserPasswordSchema } from "@/lib/validations";
 import crypto from "crypto";
 
 export async function GET() {
@@ -140,18 +140,48 @@ export async function POST(request: Request) {
   }
 }
 
-// Admin permanent student tutor reassignment
+// Admin updates (reassign student tutor or update user password)
 export async function PATCH(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "HEAD_TUTOR") {
       return NextResponse.json(
-        { error: "Unauthorized. Only admin can reassign student tutors." },
+        { error: "Unauthorized. Only administrators can update user credentials and assignments." },
         { status: 403 }
       );
     }
 
     const body = await request.json();
+
+    // 1. Password update flow
+    if (body.newPassword !== undefined || body.userId !== undefined) {
+      const parseResult = AdminUpdateUserPasswordSchema.safeParse(body);
+      if (!parseResult.success) {
+        return NextResponse.json(
+          { error: parseResult.error.issues[0]?.message || "Validation error" },
+          { status: 400 }
+        );
+      }
+
+      const { userId, newPassword } = parseResult.data;
+      const targetUser = await prisma.user.findUnique({ where: { id: userId } });
+      if (!targetUser) {
+        return NextResponse.json({ error: "User not found." }, { status: 404 });
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Password updated successfully for ${targetUser.name}.`,
+      });
+    }
+
+    // 2. Student reassignment flow
     const parseResult = ReassignStudentSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(
@@ -178,8 +208,8 @@ export async function PATCH(request: Request) {
       message: `Assigned tutor updated for ${updatedStudent.name}.`,
     });
   } catch (err) {
-    console.error("Reassign student error:", err);
-    return NextResponse.json({ error: "Failed to update assignment." }, { status: 500 });
+    console.error("Admin user PATCH error:", err);
+    return NextResponse.json({ error: "Failed to update user." }, { status: 500 });
   }
 }
 

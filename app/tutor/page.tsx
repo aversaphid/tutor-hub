@@ -32,6 +32,7 @@ import {
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatTutorName } from "@/lib/format";
 
 export default function TutorDashboardPage() {
   const router = useRouter();
@@ -252,31 +253,6 @@ export default function TutorDashboardPage() {
     } catch {}
   };
 
-  const handleConfirmTutorAttendance = async (sessionId: string) => {
-    // Optimistic update
-    setMySessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, tutorConfirmed: true } : s))
-    );
-    if (activeLesson?.id === sessionId) {
-      setActiveLesson((prev: any) => (prev ? { ...prev, tutorConfirmed: true } : null));
-    }
-    try {
-      const res = await fetch(`/api/sessions/${sessionId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tutorConfirmed: true }),
-      });
-      if (res.ok) {
-        setActionMessage("Attendance confirmed!");
-        setTimeout(() => setActionMessage(""), 3000);
-      } else {
-        await loadMySessions();
-      }
-    } catch {
-      await loadMySessions();
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
       <Navbar user={currentUser} />
@@ -299,7 +275,7 @@ export default function TutorDashboardPage() {
               )}
             </div>
             <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-              Welcome, {currentUser?.name || "Tutor"}
+              Welcome, {formatTutorName(currentUser?.name) || "Tutor"}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Manage your assigned students, launch Teams sessions, and view student PINs &amp; magic links.
@@ -437,27 +413,6 @@ export default function TutorDashboardPage() {
                         </>
                       )}
                     </button>
-                  </div>
-
-                  {/* Tutor Attendance Confirmation */}
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                    {activeLesson.tutorConfirmed ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Your Attendance: Confirmed ✓</span>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleConfirmTutorAttendance(activeLesson.id)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Confirm Your Attendance</span>
-                      </button>
-                    )}
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tuteeConfirmed ? "Confirmed ✓" : "Pending"}</strong>
-                    </span>
                   </div>
                 </div>
 
@@ -865,18 +820,6 @@ export default function TutorDashboardPage() {
                                 >
                                   {s.status}
                                 </span>
-                                {s.tutorConfirmed ? (
-                                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                    <CheckCircle2 className="w-2.5 h-2.5" /> Confirmed
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={() => handleConfirmTutorAttendance(s.id)}
-                                    className="text-[10px] font-bold text-[#48A5EE] hover:underline cursor-pointer"
-                                  >
-                                    Confirm attendance
-                                  </button>
-                                )}
                               </div>
                             </td>
                             <td className="px-5 py-3.5">

@@ -15,6 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import Link from "next/link";
+import { formatTutorName } from "@/lib/format";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -110,18 +111,6 @@ function StudentLobbyContent() {
     } catch {}
   };
 
-  const handleConfirmStudentAttendance = async () => {
-    if (!activeSession) return;
-    setActiveSession((prev: any) => (prev ? { ...prev, tuteeConfirmed: true } : null));
-    try {
-      await fetch(`/api/sessions/${activeSession.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tuteeConfirmed: true }),
-      });
-    } catch {}
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
@@ -206,35 +195,12 @@ function StudentLobbyContent() {
               onStatusChange={(updated) => setActiveSession(updated)}
             />
 
-            {/* Attendance Confirmation Banner */}
-            {activeSession.status !== "COMPLETED" && (
-              <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shadow-sm transition-colors">
-                <div className="flex items-center gap-2 text-xs">
-                  <CheckCircle2 className={`w-4 h-4 ${activeSession.tuteeConfirmed ? "text-emerald-600" : "text-slate-400"}`} />
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    Your Attendance:{" "}
-                    <strong className={activeSession.tuteeConfirmed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
-                      {activeSession.tuteeConfirmed ? "Confirmed ✓" : "Please confirm your attendance"}
-                    </strong>
-                  </span>
-                </div>
-                {!activeSession.tuteeConfirmed && (
-                  <button
-                    onClick={handleConfirmStudentAttendance}
-                    className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-                  >
-                    Confirm Attendance
-                  </button>
-                )}
-              </div>
-            )}
-
             {/* InPrivate Teams Launcher */}
             <TeamsLauncher
               meetingUrl={activeSession.teamsMeetingUrl}
               isUnlocked={isMeetingUnlocked}
               sessionTitle={activeSession.title}
-              tutorName={activeSession.tutor?.name || "Tutor"}
+              tutorName={formatTutorName(activeSession.tutor?.name || "Tutor")}
             />
 
             {/* Status if Lesson Completed */}
@@ -312,7 +278,7 @@ function StudentLobbyContent() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                    <span>Tutor: {session.tutor?.name || "Tutor"}</span>
+                    <span>Tutor: {formatTutorName(session.tutor?.name || "Tutor")}</span>
                     <span>
                       {new Date(session.scheduledStartTime).toLocaleTimeString([], {
                         hour: "2-digit",

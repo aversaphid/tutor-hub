@@ -34,6 +34,7 @@ import {
   Settings,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
+import { formatTutorName } from "@/lib/format";
 import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
@@ -98,8 +99,16 @@ export default function AdminPage() {
   const [newAssignedTutorId, setNewAssignedTutorId] = useState("");
   const [isReassigning, setIsReassigning] = useState(false);
 
-  // Password Modal
+  // Password Modal for current admin
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  // Set User Password Modal State (Admin can set/override passwords for any user/tutor)
+  const [passwordModalUser, setPasswordModalUser] = useState<any>(null);
+  const [adminNewPassword, setAdminNewPassword] = useState("");
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState("");
+  const [passwordModalError, setPasswordModalError] = useState("");
+  const [passwordModalSuccess, setPasswordModalSuccess] = useState("");
+  const [isSubmittingAdminPassword, setIsSubmittingAdminPassword] = useState(false);
 
   // Copied Key state
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -300,6 +309,52 @@ export default function AdminPage() {
       }
     } catch {
       alert("Network error deleting tutor.");
+    }
+  };
+
+  // Set User Password (Admin directly sets/overrides passwords, cannot view them)
+  const handleAdminSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordModalUser) return;
+    if (!adminNewPassword || adminNewPassword.length < 5) {
+      setPasswordModalError("Password must be at least 5 characters.");
+      return;
+    }
+    if (adminNewPassword !== adminConfirmPassword) {
+      setPasswordModalError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmittingAdminPassword(true);
+    setPasswordModalError("");
+    setPasswordModalSuccess("");
+
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: passwordModalUser.id,
+          newPassword: adminNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordModalError(data.error || "Failed to update password.");
+        return;
+      }
+
+      setPasswordModalSuccess(`Password successfully updated for ${formatTutorName(passwordModalUser.name)}!`);
+      setTimeout(() => {
+        setPasswordModalUser(null);
+        setAdminNewPassword("");
+        setAdminConfirmPassword("");
+        setPasswordModalSuccess("");
+      }, 1500);
+    } catch {
+      setPasswordModalError("An unexpected network error occurred.");
+    } finally {
+      setIsSubmittingAdminPassword(false);
     }
   };
 
@@ -719,7 +774,7 @@ export default function AdminPage() {
                 </h3>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Tutor: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutor?.name}</strong> &bull;{" "}
+                  Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong> &bull;{" "}
                   {new Date(activeLesson.scheduledStartTime).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1059,7 +1114,7 @@ export default function AdminPage() {
                         <option value="ALL">All Tutors</option>
                         {tutors.map((t) => (
                           <option key={t.id} value={t.id}>
-                            {t.name}
+                            {formatTutorName(t.name)}
                           </option>
                         ))}
                       </select>
@@ -1149,7 +1204,7 @@ export default function AdminPage() {
                           <th className="px-5 py-3.5">Tutor Assigned</th>
                           <th className="px-5 py-3.5">Date &amp; Time</th>
                           <th className="px-5 py-3.5">Status</th>
-                          <th className="px-5 py-3.5">Confirmations (Tutor / Student)</th>
+                          <th className="px-5 py-3.5">Admin Attendance Checklist</th>
                           <th className="px-5 py-3.5">PIN &amp; Magic Link</th>
                           <th className="px-5 py-3.5 text-right">Actions</th>
                         </tr>
@@ -1197,7 +1252,7 @@ export default function AdminPage() {
                               )}
                             </td>
                             <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300 font-medium">
-                              {s.tutor?.name}
+                              {formatTutorName(s.tutor?.name)}
                             </td>
                             <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
@@ -1346,7 +1401,7 @@ export default function AdminPage() {
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                              Tutor: <strong>{s.tutor?.name}</strong>
+                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -1396,7 +1451,7 @@ export default function AdminPage() {
                           {/* What was covered by tutor */}
                           {s.feedbackCovered ? (
                             <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({s.tutor?.name || "Tutor"}):</span>
+                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
                               <span>{s.feedbackCovered}</span>
                               {s.feedbackNotes && (
                                 <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
@@ -1466,7 +1521,7 @@ export default function AdminPage() {
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                              Tutor: <strong>{s.tutor?.name}</strong>
+                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -1508,7 +1563,7 @@ export default function AdminPage() {
 
                           {s.feedbackCovered && (
                             <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({s.tutor?.name || "Tutor"}):</span>
+                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
                               <span>{s.feedbackCovered}</span>
                               {s.feedbackNotes && (
                                 <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
@@ -1577,7 +1632,7 @@ export default function AdminPage() {
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              {st.assignedTutor?.name || "Unassigned"}
+                              {formatTutorName(st.assignedTutor?.name) || "Unassigned"}
                             </span>
                             <button
                               onClick={() => {
@@ -1650,7 +1705,7 @@ export default function AdminPage() {
                   {tutors.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                       <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
-                        {t.name}
+                        {formatTutorName(t.name)}
                       </td>
                       <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono">
                         {t.email}
@@ -1664,17 +1719,31 @@ export default function AdminPage() {
                         {t.assignedStudents?.length || 0} student(s)
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        {t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id ? (
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleDeleteTutor(t.id, t.name)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Delete Tutor"
+                            onClick={() => {
+                              setPasswordModalUser(t);
+                              setAdminNewPassword("");
+                              setAdminConfirmPassword("");
+                              setPasswordModalError("");
+                              setPasswordModalSuccess("");
+                            }}
+                            className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                            title="Set Password"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                            <span>Set Password</span>
                           </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">Primary Admin</span>
-                        )}
+                          {t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && (
+                            <button
+                              onClick={() => handleDeleteTutor(t.id, t.name)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                              title="Delete Tutor"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1867,7 +1936,7 @@ export default function AdminPage() {
                     <option value="">Choose student</option>
                     {students.map((st) => (
                       <option key={st.id} value={st.id}>
-                        {st.name} {st.assignedTutor ? `(Tutor: ${st.assignedTutor.name})` : ""}
+                        {st.name} {st.assignedTutor ? `(Tutor: ${formatTutorName(st.assignedTutor.name)})` : ""}
                       </option>
                     ))}
                   </select>
@@ -1886,7 +1955,7 @@ export default function AdminPage() {
                     <option value="">Choose tutor</option>
                     {tutors.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.name}
+                        {formatTutorName(t.name)}
                       </option>
                     ))}
                   </select>
@@ -2047,7 +2116,7 @@ export default function AdminPage() {
                       <option value="">Unassigned</option>
                       {tutors.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.name} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
+                          {formatTutorName(t.name)} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
                         </option>
                       ))}
                     </select>
@@ -2114,7 +2183,7 @@ export default function AdminPage() {
                   <option value="">Unassigned</option>
                   {tutors.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
+                      {formatTutorName(t.name)} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
                     </option>
                   ))}
                 </select>
@@ -2222,6 +2291,107 @@ export default function AdminPage() {
                     {isSavingReminder ? "Saving..." : "Save Reminder"}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN SET USER PASSWORD MODAL */}
+      {passwordModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE]">
+                <Key className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  Set Password
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Update password for {formatTutorName(passwordModalUser.name)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <div className="text-slate-700 dark:text-slate-300">
+                <strong>Account:</strong> {formatTutorName(passwordModalUser.name)}
+              </div>
+              <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                {passwordModalUser.email}
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 italic pt-1">
+                Note: Passwords are encrypted and cannot be viewed, but as admin you can set a new one directly.
+              </p>
+            </div>
+
+            {passwordModalError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold">
+                {passwordModalError}
+              </div>
+            )}
+
+            {passwordModalSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{passwordModalSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminSetPassword} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  New Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={5}
+                  placeholder="Minimum 5 characters"
+                  value={adminNewPassword}
+                  onChange={(e) => setAdminNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={5}
+                  placeholder="Repeat new password"
+                  value={adminConfirmPassword}
+                  onChange={(e) => setAdminConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordModalUser(null);
+                    setAdminNewPassword("");
+                    setAdminConfirmPassword("");
+                    setPasswordModalError("");
+                    setPasswordModalSuccess("");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingAdminPassword}
+                  className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingAdminPassword ? "Updating..." : "Update Password"}
+                </button>
               </div>
             </form>
           </div>

@@ -112,9 +112,9 @@ async function setup() {
     await client.execute({
       sql: `INSERT INTO "User" ("id", "name", "email", "role", "passwordHash", "active", "createdAt", "updatedAt") 
             VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-      args: [adminId, "Admin", "luke@lbmathstuition.co.uk", "HEAD_TUTOR", adminHash, now, now],
+      args: [adminId, "Luke", "luke@lbmathstuition.co.uk", "HEAD_TUTOR", adminHash, now, now],
     });
-    console.log("✅ Admin account created: luke@lbmathstuition.co.uk (Password: admin)");
+    console.log("✅ Admin account created: Luke (luke@lbmathstuition.co.uk) (Password: admin)");
   } else {
     console.log("✅ Admin account already exists on Turso database.");
   }
