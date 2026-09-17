@@ -110,62 +110,90 @@ export async function POST(request: Request) {
       adminReminder,
       tutorConfirmed,
       tuteeConfirmed,
+      repeatWeeks = 1,
     } = parseResult.data;
 
-    const start = new Date(scheduledStartTime);
-    const end = new Date(scheduledEndTime);
+    const baseStart = new Date(scheduledStartTime);
+    const baseEnd = new Date(scheduledEndTime);
+    const durationMs = baseEnd.getTime() - baseStart.getTime();
 
-    // Conflict detection engine
-    const conflict = await detectSessionConflict({
-      tutorId,
-      tuteeId,
-      startTime: start,
-      endTime: end,
-    });
-
-    if (conflict.hasConflict) {
-      return NextResponse.json(
-        { error: conflict.reason, conflict: true },
-        { status: 409 }
-      );
-    }
+    const weeksToSchedule = Math.max(1, Math.min(repeatWeeks, 12));
 
     // Lookup student name for clean default title if omitted
     const student = await prisma.user.findUnique({
       where: { id: tuteeId },
       select: { name: true },
     });
-
     const finalTitle = title?.trim() || `${student?.name || "Student"} - Maths Lesson`;
 
-    const session = await prisma.session.create({
-      data: {
-        title: finalTitle,
+    // 1. Conflict detection engine across all scheduled weeks
+    for (let w = 0; w < weeksToSchedule; w++) {
+      const weekStart = new Date(baseStart.getTime() + w * 7 * 24 * 3600 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + durationMs);
+
+      const conflict = await detectSessionConflict({
         tutorId,
         tuteeId,
-        scheduledStartTime: start,
-        scheduledEndTime: end,
-        teamsMeetingUrl: teamsMeetingUrl || null,
-        notes: notes || null,
-        adminReminder: adminReminder ? adminReminder.trim() : null,
-        tutorConfirmed: tutorConfirmed ?? false,
-        tuteeConfirmed: tuteeConfirmed ?? false,
-        status: "SCHEDULED",
-      },
-      include: {
-        tutor: { select: { id: true, name: true, email: true } },
-        tutee: { select: { id: true, name: true, pin: true, magicKey: true } },
-      },
-    });
+        startTime: weekStart,
+        endTime: weekEnd,
+      });
 
-    await logSessionAudit({
-      sessionId: session.id,
-      actorId: user.id,
-      action: "CREATED",
-      details: `Lesson scheduled by Admin.`,
-    });
+      if (conflict.hasConflict) {
+        const weekLabel = weeksToSchedule > 1 ? ` (Week ${w + 1} - ${weekStart.toLocaleDateString([], { month: "short", day: "numeric" })})` : "";
+        return NextResponse.json(
+          { error: `${conflict.reason}${weekLabel}`, conflict: true },
+          { status: 409 }
+        );
+      }
+    }
 
-    return NextResponse.json({ success: true, session }, { status: 201 });
+    // 2. Create the sessions
+    const createdSessions = [];
+    for (let w = 0; w < weeksToSchedule; w++) {
+      const weekStart = new Date(baseStart.getTime() + w * 7 * 24 * 3600 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + durationMs);
+
+      const session = await prisma.session.create({
+        data: {
+          title: finalTitle,
+          tutorId,
+          tuteeId,
+          scheduledStartTime: weekStart,
+          scheduledEndTime: weekEnd,
+          teamsMeetingUrl: teamsMeetingUrl || null,
+          notes: notes || null,
+          adminReminder: adminReminder ? adminReminder.trim() : null,
+          tutorConfirmed: tutorConfirmed ?? false,
+          tuteeConfirmed: tuteeConfirmed ?? false,
+          status: "SCHEDULED",
+        },
+        include: {
+          tutor: { select: { id: true, name: true, email: true } },
+          tutee: { select: { id: true, name: true, pin: true, magicKey: true } },
+        },
+      });
+
+      await logSessionAudit({
+        sessionId: session.id,
+        actorId: user.id,
+        action: "CREATED",
+        details: weeksToSchedule > 1
+          ? `Recurring lesson (week ${w + 1} of ${weeksToSchedule}) scheduled by Admin.`
+          : `Lesson scheduled by Admin.`,
+      });
+
+      createdSessions.push(session);
+    }
+
+    return NextResponse.json({
+      success: true,
+      session: createdSessions[0],
+      sessions: createdSessions,
+      count: createdSessions.length,
+      message: weeksToSchedule > 1
+        ? `Successfully scheduled ${weeksToSchedule} weekly lessons!`
+        : "Lesson scheduled successfully!",
+    }, { status: 201 });
   } catch (err) {
     console.error("Session creation error:", err);
     return NextResponse.json(

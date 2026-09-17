@@ -1,0 +1,25 @@
+{
+  "name": "LB Maths Tuition - Student Portal & Lesson Hub",
+  "short_name": "LB Maths",
+  "description": "Online mathematics tuition lessons, student lobby, and scheduling portal for LB Maths Tuition.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#48A5EE",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

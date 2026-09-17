@@ -5,6 +5,8 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import TutorCompletionModal from "@/components/tutor-completion-modal";
+import AddToCalendar from "@/components/add-to-calendar";
+import { exportSessionsToCSV } from "@/lib/csv-export";
 import {
   Calendar,
   Users,
@@ -30,6 +32,7 @@ import {
   Edit3,
   Lock,
   Settings,
+  Download,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
@@ -814,6 +817,16 @@ export default function TutorDashboardPage() {
                         <option value="rating">Rating (Highest)</option>
                       </select>
                     </div>
+
+                    {/* Export CSV */}
+                    <button
+                      onClick={() => exportSessionsToCSV(filtered, "lb-maths-my-lessons")}
+                      className="flex items-center gap-1.5 bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] px-3 py-1.5 rounded-xl border border-[#48A5EE]/30 text-xs font-bold transition-colors cursor-pointer"
+                      title="Download your lessons as CSV"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV</span>
+                    </button>
                   </div>
                 </div>
 
@@ -925,14 +938,15 @@ export default function TutorDashboardPage() {
                                   href={s.teamsMeetingUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1"
+                                  className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-xs"
                                 >
                                   <span>Teams</span>
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
                               ) : (
-                                <span className="text-slate-400 italic">Not set</span>
+                                <span className="text-slate-400 italic text-xs">Not set</span>
                               )}
+                              <AddToCalendar session={s} compact />
                               <button
                                 onClick={() => {
                                   setSessionToComplete(s);

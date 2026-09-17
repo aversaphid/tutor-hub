@@ -95,6 +95,7 @@ export const CreateSessionSchema = z.object({
   adminReminder: z.string().max(1000).optional().or(z.literal("")),
   tutorConfirmed: z.boolean().optional(),
   tuteeConfirmed: z.boolean().optional(),
+  repeatWeeks: z.number().int().min(1).max(12).optional(),
 });
 
 // Session update

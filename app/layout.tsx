@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   title: "LB Maths Tuition | Student Portal & Online Lessons",
   description:
     "Join your online maths tuition session with your tutor. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "LB Maths",
+  },
   openGraph: {
     title: "LB Maths Tuition | Student Portal & Online Lessons",
     description:

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
+import AddToCalendar from "@/components/add-to-calendar";
+import { exportSessionsToCSV } from "@/lib/csv-export";
 import {
   Calendar,
   Users,
@@ -33,6 +35,8 @@ import {
   Trash2,
   Bell,
   Settings,
+  Download,
+  Repeat,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName } from "@/lib/format";
@@ -78,6 +82,8 @@ export default function AdminPage() {
   const [newLessonAdminReminder, setNewLessonAdminReminder] = useState("");
   const [conflictError, setConflictError] = useState("");
   const [isSubmittingLesson, setIsSubmittingLesson] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [repeatWeeks, setRepeatWeeks] = useState(4);
 
   // Edit Admin Personal Reminder Modal State
   const [reminderModalSession, setReminderModalSession] = useState<any>(null);
@@ -569,7 +575,31 @@ export default function AdminPage() {
     }
   };
 
-  // Schedule Lesson (Conflict Engine) - NO lesson topic entry!
+  // Schedule Same Time Next Week (+7 days shortcut)
+  const handleScheduleSameTimeNextWeek = (session: any) => {
+    setSelectedStudentId(session.tuteeId || session.tutee?.id || "");
+    setSelectedTutorId(session.tutorId || session.tutor?.id || "");
+    const origStart = new Date(session.scheduledStartTime);
+    const origEnd = new Date(session.scheduledEndTime);
+    const nextStart = new Date(origStart.getTime() + 7 * 24 * 3600 * 1000);
+    const nextEnd = new Date(origEnd.getTime() + 7 * 24 * 3600 * 1000);
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const formatLocal = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    setStartTime(formatLocal(nextStart));
+    setEndTime(formatLocal(nextEnd));
+    setTeamsUrl(session.teamsMeetingUrl || "");
+    setNotes(session.notes || "");
+    setNewLessonAdminReminder(session.adminReminder || "");
+    setIsRepeating(false);
+    setRepeatWeeks(1);
+    setConflictError("");
+    setIsNewLessonOpen(true);
+  };
+
+  // Schedule Lesson (Conflict Engine) - Supports bulk recurring weeks!
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     setConflictError("");
@@ -587,6 +617,7 @@ export default function AdminPage() {
           teamsMeetingUrl: teamsUrl || undefined,
           notes: notes || undefined,
           adminReminder: newLessonAdminReminder.trim() || undefined,
+          repeatWeeks: isRepeating ? repeatWeeks : 1,
         }),
       });
 
@@ -604,8 +635,10 @@ export default function AdminPage() {
       setTeamsUrl("");
       setNotes("");
       setNewLessonAdminReminder("");
+      setIsRepeating(false);
+      setRepeatWeeks(4);
       await refreshAllData();
-      setActionMessage("Lesson scheduled successfully!");
+      setActionMessage(data.message || "Lesson scheduled successfully!");
       setTimeout(() => setActionMessage(""), 4000);
     } catch {
       setConflictError("Network error. Please try again.");
@@ -822,6 +855,14 @@ export default function AdminPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => exportSessionsToCSV(sessions, "lb-maths-all-lessons")}
+              className="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Download all lesson records as CSV for Excel / Spreadsheets"
+            >
+              <Download className="w-4 h-4 text-[#48A5EE]" />
+              <span>Export CSV</span>
+            </button>
             <button
               onClick={() => setIsNewLessonOpen(true)}
               className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
@@ -1447,11 +1488,20 @@ export default function AdminPage() {
                                   href={s.teamsMeetingUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[#48A5EE] font-semibold hover:underline mr-1"
+                                  className="text-[#48A5EE] font-semibold hover:underline mr-1 text-xs"
                                 >
                                   Teams
                                 </a>
                               )}
+                              <AddToCalendar session={s} compact />
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s)}
+                                className="px-2 py-1 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                                title="Schedule same time next week (+7 days)"
+                              >
+                                <Repeat className="w-3 h-3" />
+                                <span>+1 Wk</span>
+                              </button>
                               <button
                                 onClick={() => handleDeleteSession(s.id, s.title)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
@@ -1572,6 +1622,14 @@ export default function AdminPage() {
                         {/* Mark Paid Toggle & Delete */}
                         <div className="shrink-0 flex items-center gap-2">
                           <button
+                            onClick={() => handleScheduleSameTimeNextWeek(s)}
+                            className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                            title="Schedule same time next week (+7 days)"
+                          >
+                            <Repeat className="w-3.5 h-3.5" />
+                            <span>+1 Wk</span>
+                          </button>
+                          <button
                             onClick={() => handleToggleTutorPaid(s)}
                             className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                           >
@@ -1677,8 +1735,16 @@ export default function AdminPage() {
                           )}
                         </div>
 
-                        {/* Revert to Unpaid & Delete */}
+                        {/* Rebook, Revert to Unpaid & Delete */}
                         <div className="shrink-0 flex items-center gap-2">
+                          <button
+                            onClick={() => handleScheduleSameTimeNextWeek(s)}
+                            className="py-1.5 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                            title="Schedule same time next week (+7 days)"
+                          >
+                            <Repeat className="w-3.5 h-3.5" />
+                            <span>+1 Wk</span>
+                          </button>
                           <button
                             onClick={() => handleToggleTutorPaid(s)}
                             className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
@@ -2370,6 +2436,43 @@ export default function AdminPage() {
                   onChange={(e) => setNewLessonAdminReminder(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
+              </div>
+
+              {/* Repeat Weekly Option */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="w-4 h-4 text-[#48A5EE]" />
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      Repeat Weekly
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isRepeating}
+                    onChange={(e) => setIsRepeating(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#48A5EE] focus:ring-[#48A5EE] cursor-pointer"
+                  />
+                </label>
+
+                {isRepeating && (
+                  <div className="pt-1 flex items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400">Duration:</span>
+                    <select
+                      value={repeatWeeks}
+                      onChange={(e) => setRepeatWeeks(Number(e.target.value))}
+                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                    >
+                      <option value={2}>2 Weeks</option>
+                      <option value={3}>3 Weeks</option>
+                      <option value={4}>4 Weeks (1 Month)</option>
+                      <option value={6}>6 Weeks (Half Term)</option>
+                      <option value={8}>8 Weeks</option>
+                      <option value={10}>10 Weeks</option>
+                      <option value={12}>12 Weeks (Full Term)</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

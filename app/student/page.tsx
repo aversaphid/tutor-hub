@@ -6,6 +6,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import CountdownTimer from "@/components/countdown-timer";
 import TeamsLauncher from "@/components/teams-launcher";
+import AddToCalendar from "@/components/add-to-calendar";
 import {
   Calendar,
   ArrowLeft,
@@ -190,6 +191,13 @@ function StudentLobbyContent() {
         {/* Live Lesson Section */}
         {activeSession ? (
           <div className="space-y-6">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                Lesson Scheduled for {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <AddToCalendar session={activeSession} />
+            </div>
+
             {/* Countdown Box */}
             <CountdownTimer
               initialSession={activeSession}
@@ -240,16 +248,20 @@ function StudentLobbyContent() {
             )}
           </div>
         ) : (
-          <div className="text-center py-12 px-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 transition-colors">
-            <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">No Active Lessons Scheduled</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              You do not have a lesson scheduled for today. Check with your tutor if you need to arrange a time.
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-4 shadow-sm transition-colors">
+            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mx-auto">
+              <Calendar className="w-8 h-8" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+              No Lesson Scheduled Right Now
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+              When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
             </p>
           </div>
         )}
 
-        {/* Upcoming Lessons */}
+        {/* Other Upcoming Lessons */}
         {upcomingSessions.length > 0 && (
           <div className="space-y-3 pt-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -261,7 +273,7 @@ function StudentLobbyContent() {
               {upcomingSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1 transition-colors"
+                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-800 dark:text-slate-100">{session.title}</span>
@@ -280,6 +292,9 @@ function StudentLobbyContent() {
                         minute: "2-digit",
                       })}
                     </span>
+                  </div>
+                  <div className="pt-1 flex justify-end">
+                    <AddToCalendar session={session} compact />
                   </div>
                 </div>
               ))}
