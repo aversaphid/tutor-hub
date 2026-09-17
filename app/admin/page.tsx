@@ -1867,22 +1867,22 @@ export default function AdminPage() {
                         {t.assignedStudents?.length || 0} student(s)
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setPasswordModalUser(t);
-                              setAdminNewPassword("");
-                              setAdminConfirmPassword("");
-                              setPasswordModalError("");
-                              setPasswordModalSuccess("");
-                            }}
-                            className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-                            title="Set Password"
-                          >
-                            <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                            <span>Set Password</span>
-                          </button>
-                          {t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && (
+                        {t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && t.email !== "luke@lbmathstuition.co.uk" ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setPasswordModalUser(t);
+                                setAdminNewPassword("");
+                                setAdminConfirmPassword("");
+                                setPasswordModalError("");
+                                setPasswordModalSuccess("");
+                              }}
+                              className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                              title="Set Password"
+                            >
+                              <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                              <span>Set Password</span>
+                            </button>
                             <button
                               onClick={() => handleDeleteTutor(t.id, t.name)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
@@ -1890,8 +1890,10 @@ export default function AdminPage() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">Primary Admin (You)</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -2182,11 +2184,18 @@ export default function AdminPage() {
                           className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
                         >
                           <option value="">Choose tutor account...</option>
-                          {tutors.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {formatTutorName(t.name)} ({t.email}) - {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
+                          {tutors
+                            .filter((t) => t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && t.email !== "luke@lbmathstuition.co.uk")
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {formatTutorName(t.name)} ({t.email})
+                              </option>
+                            ))}
+                          {tutors.filter((t) => t.role !== "HEAD_TUTOR" && t.id !== currentUser?.id && t.email !== "luke@lbmathstuition.co.uk").length === 0 && (
+                            <option value="" disabled>
+                              No other tutors created yet
                             </option>
-                          ))}
+                          )}
                         </select>
                       </div>
 
