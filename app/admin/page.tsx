@@ -828,28 +828,6 @@ export default function AdminPage() {
               <CalendarPlus className="w-4 h-4" />
               <span>Schedule Lesson</span>
             </button>
-
-            <button
-              onClick={() => {
-                setNewUserRole("TUTEE");
-                setIsNewUserOpen(true);
-              }}
-              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-[#48A5EE]" />
-              <span>Add Student</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setNewUserRole("TUTOR");
-                setIsNewUserOpen(true);
-              }}
-              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Users className="w-4 h-4 text-[#48A5EE]" />
-              <span>Add Tutor</span>
-            </button>
           </div>
         </div>
 
@@ -1727,6 +1705,29 @@ export default function AdminPage() {
         {/* TAB 2: STUDENTS, ASSIGNED TUTORS & MAGIC LINKS */}
         {activeTab === "students" && (
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#48A5EE]" />
+                  <span>Students &amp; PIN Directory ({students.length})</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Manage student accounts, view secret PINs, and copy direct magic links.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setNewUserRole("TUTEE");
+                  setIsNewUserOpen(true);
+                }}
+                className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Student</span>
+              </button>
+            </div>
+
             {students.length === 0 ? (
               <div className="text-center py-12 px-4 space-y-2">
                 <Users className="w-8 h-8 text-slate-400 mx-auto" />
@@ -1814,6 +1815,29 @@ export default function AdminPage() {
         {/* TAB 3: TUTORS */}
         {activeTab === "tutors" && (
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#48A5EE]" />
+                  <span>Tutor Directory ({tutors.length})</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Manage tutor staff, view assignments, and configure credentials.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setNewUserRole("TUTOR");
+                  setIsNewUserOpen(true);
+                }}
+                className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Tutor</span>
+              </button>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">

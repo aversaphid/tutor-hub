@@ -12,7 +12,6 @@ import {
   FileText,
   UserCheck,
   CheckCircle2,
-  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
@@ -211,12 +210,6 @@ function StudentLobbyContent() {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Lesson Completed</span>
                   </span>
-                  {activeSession.feedbackRating && (
-                    <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{activeSession.feedbackRating} / 5 Stars</span>
-                    </div>
-                  )}
                 </div>
                 {activeSession.feedbackCovered && (
                   <p className="text-xs text-slate-700 dark:text-slate-200">
