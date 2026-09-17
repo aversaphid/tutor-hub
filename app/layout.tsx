@@ -6,7 +6,20 @@ import SubwaySurfersPlayer from "@/components/subway-surfers-player";
 export const metadata: Metadata = {
   title: "LB Maths Tuition | Student Portal & Online Lessons",
   description:
-    "Join your online maths tuition session with Luke. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
+    "Join your online maths tuition session with your tutor. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
+  openGraph: {
+    title: "LB Maths Tuition | Student Portal & Online Lessons",
+    description:
+      "Join your online maths tuition session with your tutor. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
+    type: "website",
+    siteName: "LB Maths Tuition",
+  },
+  twitter: {
+    card: "summary",
+    title: "LB Maths Tuition | Student Portal & Online Lessons",
+    description:
+      "Join your online maths tuition session with your tutor. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
+  },
 };
 
 export default function RootLayout({
