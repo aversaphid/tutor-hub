@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import CountdownTimer from "@/components/countdown-timer";
 import TeamsLauncher from "@/components/teams-launcher";
 import {
@@ -144,6 +145,7 @@ function StudentLobbyContent() {
             </Link>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -285,6 +287,8 @@ function StudentLobbyContent() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

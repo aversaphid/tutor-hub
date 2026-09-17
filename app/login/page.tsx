@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import Image from "next/image";
 import { Mail, Lock, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -126,6 +127,8 @@ export default function LoginPage() {
           </form>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

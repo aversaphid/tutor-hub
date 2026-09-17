@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import PinModal from "@/components/pin-modal";
+import Footer from "@/components/footer";
 import Image from "next/image";
 import { Lock, ArrowRight, Search, Users } from "lucide-react";
 
@@ -126,6 +127,8 @@ export default function HomePage() {
           setSelectedStudent(null);
         }}
       />
+
+      <Footer />
     </div>
   );
 }

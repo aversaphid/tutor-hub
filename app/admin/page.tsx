@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import {
   Calendar,
@@ -2744,6 +2745,8 @@ export default function AdminPage() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
+
+      <Footer />
     </div>
   );
 }

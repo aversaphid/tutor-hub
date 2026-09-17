@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import TutorCompletionModal from "@/components/tutor-completion-modal";
 import {
@@ -1280,6 +1281,8 @@ export default function TutorDashboardPage() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
+
+      <Footer />
     </div>
   );
 }
