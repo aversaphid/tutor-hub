@@ -193,24 +193,13 @@ function StudentLobbyContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setIsFormulaSheetOpen(true)}
-              className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
-              title="Open quick GCSE & A-Level Maths Formula Reference"
-            >
-              <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>Formula Sheet</span>
-            </button>
-            <Link
-              href="/"
-              className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Switch Student</span>
-            </Link>
-          </div>
+          <Link
+            href="/"
+            className="self-start sm:self-auto text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Switch Student</span>
+          </Link>
         </div>
 
         {/* Live Lesson Section */}
