@@ -157,7 +157,15 @@ export async function PATCH(
     } else {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
-      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.status !== undefined) {
+        updateData.status = updates.status;
+        if (updates.status === "CANCELLED") {
+          auditAction = "CANCELLED";
+          auditDetails = updates.notes
+            ? `Lesson cancelled. Reason: ${updates.notes}`
+            : "Lesson cancelled by tutor/admin.";
+        }
+      }
       if (updates.tutorId !== undefined && user.role === "HEAD_TUTOR" && !updateData.tutorId) {
         updateData.tutorId = updates.tutorId;
       }

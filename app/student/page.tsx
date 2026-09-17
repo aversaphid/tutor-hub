@@ -18,6 +18,9 @@ import {
   Mail,
   Copy,
   Check,
+  X,
+  XCircle,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
@@ -31,6 +34,8 @@ function StudentLobbyContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
+  const [cancelledSessions, setCancelledSessions] = useState<any[]>([]);
+  const [dismissedCancelledIds, setDismissedCancelledIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
 
@@ -123,8 +128,40 @@ function StudentLobbyContent() {
             new Date(s.scheduledEndTime).getTime() > now
         )
       );
+
+      // Cancelled lessons (within the past 7 days or scheduled in the future)
+      const cancelled = sessions.filter(
+        (s) =>
+          s.status === "CANCELLED" &&
+          new Date(s.scheduledEndTime).getTime() > now - 7 * 24 * 3600 * 1000
+      );
+      setCancelledSessions(cancelled);
     } catch {}
   };
+
+  // Real-time synchronization: poll every 3 seconds and sync when window/tab is focused
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const interval = setInterval(() => {
+      loadStudentSessions(currentUser.id);
+    }, 3000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadStudentSessions(currentUser.id);
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, [currentUser?.id]);
 
   if (loading) {
     return (
@@ -201,6 +238,83 @@ function StudentLobbyContent() {
             <span>Switch Student</span>
           </Link>
         </div>
+
+        {/* Cancelled Lessons Notice Banner */}
+        {cancelledSessions.filter((s) => !dismissedCancelledIds.includes(s.id)).length > 0 && (
+          <div className="space-y-3">
+            {cancelledSessions
+              .filter((s) => !dismissedCancelledIds.includes(s.id))
+              .map((session) => (
+                <div
+                  key={session.id}
+                  className="p-4 sm:p-5 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm space-y-3 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-bold">
+                        <XCircle className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-rose-800 dark:text-rose-300">
+                            Lesson Cancelled by Tutor
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-200/70 dark:bg-rose-900 text-rose-800 dark:text-rose-200 font-bold">
+                            Notice
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
+                          {session.title || "Maths Lesson"} scheduled for{" "}
+                          <strong>
+                            {new Date(session.scheduledStartTime).toLocaleDateString([], {
+                              weekday: "long",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </strong>{" "}
+                          at{" "}
+                          <strong>
+                            {new Date(session.scheduledStartTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </strong>
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Tutor: <strong>{formatTutorName(session.tutor?.name)}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setDismissedCancelledIds((prev) => [...prev, session.id])}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
+                      title="Dismiss cancellation notice"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {session.notes ? (
+                    <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-rose-100 dark:border-rose-900/40 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+                        <Info className="w-3.5 h-3.5" />
+                        <span>Reason for Cancellation:</span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium pl-5">
+                        {session.notes}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 pl-12">
+                      Your tutor cancelled this lesson. If you have any questions or wish to reschedule, feel free to email them.
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
 
         {/* Live Lesson Section */}
         {activeSession ? (
@@ -324,14 +438,14 @@ function StudentLobbyContent() {
               </div>
             )}
 
-            {/* Lesson Notes & Preparation */}
+            {/* Lesson Notes & Reschedule Reason */}
             {activeSession.notes && (
-              <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-sm transition-colors">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <FileText className="w-4 h-4 text-[#48A5EE]" />
-                  <span>Lesson Prep &amp; Notes from Tutor</span>
+              <div className="p-4 sm:p-5 rounded-3xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 space-y-1.5 shadow-sm transition-colors">
+                <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-300">
+                  <Info className="w-4 h-4 text-[#48A5EE]" />
+                  <span>Tutor Note &amp; Reschedule Reason</span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium pl-6">
                   {activeSession.notes}
                 </p>
               </div>
@@ -373,7 +487,7 @@ function StudentLobbyContent() {
               {upcomingSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 transition-colors"
+                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-800 dark:text-slate-100">{session.title}</span>
@@ -394,6 +508,14 @@ function StudentLobbyContent() {
                       {getTutorEmail(session.tutor?.name)}
                     </a>
                   </div>
+                  {session.notes && (
+                    <div className="p-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5">
+                      <span className="font-bold text-[#48A5EE] flex items-center gap-1">
+                        <Info className="w-3 h-3" /> Note from Tutor:
+                      </span>
+                      <p className="leading-snug pl-4">{session.notes}</p>
+                    </div>
+                  )}
                   <div className="pt-1 flex justify-end">
                     <AddToCalendar session={session} compact />
                   </div>

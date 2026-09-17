@@ -41,6 +41,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
+import CancelLessonModal from "@/components/cancel-lesson-modal";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -63,6 +64,10 @@ export default function TutorDashboardPage() {
   // Reschedule Modal
   const [rescheduleTargetLesson, setRescheduleTargetLesson] = useState<any>(null);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+
+  // Cancel Lesson Modal
+  const [cancelTargetLesson, setCancelTargetLesson] = useState<any>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   // Quick Controls
   const [teamsUrlInput, setTeamsUrlInput] = useState("");
@@ -353,38 +358,11 @@ export default function TutorDashboardPage() {
     setTimeout(() => setActionMessage(""), 4000);
   };
 
-  // Cancel Lesson Handler
-  const handleCancelSession = async (session: any) => {
+  // Cancel Lesson Handler - opens modal for optional cancellation reason
+  const handleCancelSession = (session: any) => {
     if (!session) return;
-    if (
-      !confirm(
-        `Cancel lesson "${session.title}" for ${
-          session.tutee?.name || "this student"
-        }?\n\nThe lesson will be moved to the Cancelled Lessons section where you can reschedule it.`
-      )
-    )
-      return;
-
-    try {
-      const res = await fetch(`/api/sessions/${session.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CANCELLED" }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to cancel lesson.");
-        return;
-      }
-
-      setActionMessage("Lesson marked as cancelled. You can reschedule it anytime.");
-      loadMySessions();
-      loadLiveSession();
-      setTimeout(() => setActionMessage(""), 4000);
-    } catch {
-      alert("Network error cancelling lesson.");
-    }
+    setCancelTargetLesson(session);
+    setIsCancelModalOpen(true);
   };
 
   // Open Reschedule Modal
@@ -1684,6 +1662,22 @@ export default function TutorDashboardPage() {
         }}
         onSuccess={() => {
           setActionMessage("Lesson rescheduled successfully!");
+          loadMySessions();
+          loadLiveSession();
+          setTimeout(() => setActionMessage(""), 4000);
+        }}
+      />
+
+      {/* Cancel Lesson Modal */}
+      <CancelLessonModal
+        isOpen={isCancelModalOpen}
+        session={cancelTargetLesson}
+        onClose={() => {
+          setIsCancelModalOpen(false);
+          setCancelTargetLesson(null);
+        }}
+        onSuccess={async () => {
+          setActionMessage("Lesson marked as cancelled. You can reschedule it anytime.");
           loadMySessions();
           loadLiveSession();
           setTimeout(() => setActionMessage(""), 4000);

@@ -240,15 +240,21 @@ export default function RescheduleModal({
 
           {/* Optional Notes */}
           <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">
-              Reschedule Reason &amp; Lesson Notes (Optional):
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Reason for Rescheduling &amp; Notes (Optional):
+              </label>
+              <span className="text-[10px] text-[#48A5EE] font-semibold">
+                Shown to student
+              </span>
+            </div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Rescheduled from Monday due to school exam. Will cover Trigonometry past paper."
+              placeholder="e.g. Rescheduled from Monday due to school exam. See you on Wednesday at 5pm!"
               rows={2}
-              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+              maxLength={500}
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-[#48A5EE]"
             />
           </div>
 
