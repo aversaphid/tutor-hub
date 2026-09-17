@@ -73,6 +73,71 @@ export function downloadICS(event: CalendarEvent): void {
 }
 
 /**
+ * Generates an RFC 5545 iCalendar (.ics) string containing multiple events
+ */
+export function generateMultiEventICS(events: CalendarEvent[], calendarTitle = "LB Maths Tuition - Weekly Schedule"): string {
+  const now = new Date();
+  const formattedStamp = formatDateToICS(now);
+
+  const vEvents = events.map((event) => {
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+    const formattedStart = formatDateToICS(start);
+    const formattedEnd = formatDateToICS(end);
+
+    const cleanTitle = event.title.replace(/\n/g, " ");
+    const cleanDescription = (event.description || "").replace(/\n/g, "\\n");
+    const cleanLocation = (event.location || "Microsoft Teams / LB Maths Tuition Portal").replace(/\n/g, " ");
+
+    return [
+      "BEGIN:VEVENT",
+      `UID:lb-maths-${event.id}@lbmathstuition.co.uk`,
+      `DTSTAMP:${formattedStamp}`,
+      `DTSTART:${formattedStart}`,
+      `DTEND:${formattedEnd}`,
+      `SUMMARY:${cleanTitle}`,
+      `DESCRIPTION:${cleanDescription}`,
+      `LOCATION:${cleanLocation}`,
+      "STATUS:CONFIRMED",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Maths lesson starting in 15 minutes",
+      "TRIGGER:-PT15M",
+      "END:VALARM",
+      "END:VEVENT",
+    ].join("\r\n");
+  });
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//LB Maths Tuition//Lesson Portal//EN",
+    `X-WR-CALNAME:${calendarTitle}`,
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...vEvents,
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+/**
+ * Downloads a multi-event .ics file (e.g. weekly schedule)
+ */
+export function downloadMultiEventICS(events: CalendarEvent[], filename = "lb-maths-week-schedule.ics"): void {
+  if (events.length === 0) return;
+  const icsContent = generateMultiEventICS(events);
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Generates a direct Google Calendar web link with prefilled session details
  */
 export function getGoogleCalendarUrl(event: CalendarEvent): string {
@@ -92,3 +157,4 @@ export function getGoogleCalendarUrl(event: CalendarEvent): string {
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
+

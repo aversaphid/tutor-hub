@@ -14,9 +14,14 @@ import {
   FileText,
   UserCheck,
   CheckCircle2,
+  Calculator,
+  Mail,
+  Copy,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
+import FormulaSheetModal from "@/components/formula-sheet-modal";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -28,6 +33,15 @@ function StudentLobbyContent() {
   const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
+
+  // Formula Sheet modal & copy tutor email state
+  const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
+  const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
+
+  const getTutorEmail = (tutorName?: string | null) => {
+    const cleanName = (tutorName || "tutor").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    return `${cleanName}@lbmathstuition.co.uk`;
+  };
 
   useEffect(() => {
     async function init() {
@@ -179,23 +193,62 @@ function StudentLobbyContent() {
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="self-start sm:self-auto text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Switch Student</span>
-          </Link>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setIsFormulaSheetOpen(true)}
+              className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open quick GCSE & A-Level Maths Formula Reference"
+            >
+              <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span>Formula Sheet</span>
+            </button>
+            <Link
+              href="/"
+              className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Switch Student</span>
+            </Link>
+          </div>
         </div>
 
         {/* Live Lesson Section */}
         {activeSession ? (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3 px-1">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                Lesson Scheduled for {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>
+                  Lesson Scheduled for{" "}
+                  <strong className="text-slate-700 dark:text-slate-200">
+                    {new Date(activeSession.scheduledStartTime).toLocaleDateString([], {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </strong>{" "}
+                  at{" "}
+                  <strong className="text-slate-700 dark:text-slate-200">
+                    {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </strong>
+                </span>
               </span>
-              <AddToCalendar session={activeSession} />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFormulaSheetOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
+                  title="Open GCSE & A-Level Maths Formula Sheet"
+                >
+                  <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span>Formula Sheet</span>
+                </button>
+                <AddToCalendar session={activeSession} />
+              </div>
             </div>
 
             {/* Countdown Box */}
@@ -211,6 +264,54 @@ function StudentLobbyContent() {
               sessionTitle={activeSession.title}
               tutorName={formatTutorName(activeSession.tutor?.name || "Tutor")}
             />
+
+            {/* Tutor Contact Info & Email */}
+            {activeSession.tutor && (
+              <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center font-bold">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <span>Tutor: {formatTutorName(activeSession.tutor.name)}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                        LB Maths Tuition
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Need to get in touch before your lesson? Email your tutor directly.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <a
+                    href={`mailto:${getTutorEmail(activeSession.tutor.name)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{getTutorEmail(activeSession.tutor.name)}</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(getTutorEmail(activeSession.tutor?.name));
+                      setCopiedTutorEmail(true);
+                      setTimeout(() => setCopiedTutorEmail(false), 2000);
+                    }}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Copy tutor email"
+                  >
+                    {copiedTutorEmail ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Status if Lesson Completed */}
             {activeSession.status === "COMPLETED" && (
@@ -258,6 +359,16 @@ function StudentLobbyContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
               When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
             </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsFormulaSheetOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Calculator className="w-4 h-4" />
+                <span>Open Maths Formula Sheet</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -277,8 +388,9 @@ function StudentLobbyContent() {
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-800 dark:text-slate-100">{session.title}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-medium">
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
                       {new Date(session.scheduledStartTime).toLocaleDateString([], {
+                        weekday: "short",
                         month: "short",
                         day: "numeric",
                       })}
@@ -286,12 +398,12 @@ function StudentLobbyContent() {
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>Tutor: {formatTutorName(session.tutor?.name || "Tutor")}</span>
-                    <span>
-                      {new Date(session.scheduledStartTime).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                    <a
+                      href={`mailto:${getTutorEmail(session.tutor?.name)}`}
+                      className="text-[#48A5EE] hover:underline text-[11px] font-semibold"
+                    >
+                      {getTutorEmail(session.tutor?.name)}
+                    </a>
                   </div>
                   <div className="pt-1 flex justify-end">
                     <AddToCalendar session={session} compact />
@@ -302,6 +414,12 @@ function StudentLobbyContent() {
           </div>
         )}
       </main>
+
+      {/* Maths Formula Sheet Modal */}
+      <FormulaSheetModal
+        isOpen={isFormulaSheetOpen}
+        onClose={() => setIsFormulaSheetOpen(false)}
+      />
 
       <Footer />
     </div>

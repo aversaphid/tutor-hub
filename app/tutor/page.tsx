@@ -7,6 +7,8 @@ import ChangePasswordModal from "@/components/change-password-modal";
 import TutorCompletionModal from "@/components/tutor-completion-modal";
 import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
+import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
+import FormulaSheetModal from "@/components/formula-sheet-modal";
 import {
   Calendar,
   Users,
@@ -33,6 +35,7 @@ import {
   Lock,
   Settings,
   Download,
+  Calculator,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
@@ -48,12 +51,15 @@ export default function TutorDashboardPage() {
   const [mySessions, setMySessions] = useState<any[]>([]);
   const [activeLesson, setActiveLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState("");
+
+  // Formula Sheet Modal
+  const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
 
   // Quick Controls
   const [teamsUrlInput, setTeamsUrlInput] = useState("");
   const [isUpdatingTeams, setIsUpdatingTeams] = useState(false);
   const [teamsSuccess, setTeamsSuccess] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
 
   // Password Modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -282,6 +288,57 @@ export default function TutorDashboardPage() {
     } catch {}
   };
 
+  // Export tutor's current week schedule to .ics
+  const handleExportWeekSchedule = () => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const weekSessions = mySessions.filter((s) => {
+      const t = new Date(s.scheduledStartTime).getTime();
+      return t >= monday.getTime() && t <= sunday.getTime() && s.status !== "CANCELLED";
+    });
+
+    if (weekSessions.length === 0) {
+      alert(
+        `No lessons scheduled for this week (${monday.toLocaleDateString([], {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })} - ${sunday.toLocaleDateString([], {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })}).`
+      );
+      return;
+    }
+
+    const portalUrl = window.location.origin;
+    const events: CalendarEvent[] = weekSessions.map((s) => ({
+      id: s.id,
+      title: `${s.title} (${s.tutee?.name || "Student"})`,
+      description: `LB Maths Tuition Lesson.\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nNotes: ${s.notes || "None"}`,
+      location: s.teamsMeetingUrl || `${portalUrl}/tutor`,
+      startTime: s.scheduledStartTime,
+      endTime: s.scheduledEndTime,
+      tutorName: currentUser?.name,
+      studentName: s.tutee?.name,
+    }));
+
+    const dateSlug = monday.toISOString().slice(0, 10);
+    downloadMultiEventICS(events, `my-tutor-schedule-${dateSlug}.ics`);
+    setActionMessage(`Exported ${events.length} lessons for this week to your calendar (.ics).`);
+    setTimeout(() => setActionMessage(""), 4000);
+  };
+
   const handleChangeTutorPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setTutorPasswordError("");
@@ -357,7 +414,23 @@ export default function TutorDashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsFormulaSheetOpen(true)}
+              className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open quick GCSE & A-Level Maths Formula Reference"
+            >
+              <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span className="hidden sm:inline">Formula Sheet</span>
+            </button>
+            <button
+              onClick={handleExportWeekSchedule}
+              className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Export all my lessons for this week to .ics calendar"
+            >
+              <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span className="hidden sm:inline">Export Week (.ics)</span>
+            </button>
             <button
               onClick={() => {
                 loadAssignedStudents();
@@ -449,6 +522,14 @@ export default function TutorDashboardPage() {
                         ● {activeLesson.status === "IN_PROGRESS" ? "Live Now" : activeLesson.status}
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        <span>&bull;</span>
                         <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
                         {new Date(activeLesson.scheduledStartTime).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -818,7 +899,15 @@ export default function TutorDashboardPage() {
                       </select>
                     </div>
 
-                    {/* Export CSV */}
+                    {/* Export Actions */}
+                    <button
+                      onClick={handleExportWeekSchedule}
+                      className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                      title="Export this week's scheduled lessons to .ics"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                      <span>Export Week (.ics)</span>
+                    </button>
                     <button
                       onClick={() => exportSessionsToCSV(filtered, "lb-maths-my-lessons")}
                       className="flex items-center gap-1.5 bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] px-3 py-1.5 rounded-xl border border-[#48A5EE]/30 text-xs font-bold transition-colors cursor-pointer"
@@ -894,6 +983,7 @@ export default function TutorDashboardPage() {
                             </td>
                             <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}{" "}
@@ -1004,6 +1094,7 @@ export default function TutorDashboardPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}{" "}
@@ -1099,6 +1190,7 @@ export default function TutorDashboardPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}
@@ -1294,6 +1386,12 @@ export default function TutorDashboardPage() {
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Maths Formula Sheet Modal */}
+      <FormulaSheetModal
+        isOpen={isFormulaSheetOpen}
+        onClose={() => setIsFormulaSheetOpen(false)}
       />
 
       <Footer />

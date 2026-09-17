@@ -6,6 +6,8 @@ import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
+import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
+import FormulaSheetModal from "@/components/formula-sheet-modal";
 import {
   Calendar,
   Users,
@@ -37,6 +39,8 @@ import {
   Settings,
   Download,
   Repeat,
+  Calculator,
+  X,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName } from "@/lib/format";
@@ -137,6 +141,17 @@ export default function AdminPage() {
   // Copied Key state
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Complete / Review Lesson Modal State
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [completeTargetLesson, setCompleteTargetLesson] = useState<any>(null);
+  const [completeRating, setCompleteRating] = useState<number>(5);
+  const [completeCovered, setCompleteCovered] = useState<string>("");
+  const [completeNotes, setCompleteNotes] = useState<string>("");
+  const [isSubmittingComplete, setIsSubmittingComplete] = useState<boolean>(false);
+
+  // Formula sheet modal state
+  const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
 
   useEffect(() => {
     initAdminData();
@@ -799,23 +814,103 @@ export default function AdminPage() {
     }
   };
 
-  // Mark Completed
-  const handleComplete = async () => {
-    if (!activeLesson) return;
-    if (!confirm("Are you sure you want to mark this lesson as completed?")) return;
+  // Open Complete / Review Lesson Feedback Modal
+  const openCompleteModal = (session: any) => {
+    if (!session) return;
+    setCompleteTargetLesson(session);
+    setCompleteRating(session.feedbackRating || 5);
+    setCompleteCovered(session.feedbackCovered || "");
+    setCompleteNotes(session.feedbackNotes || "");
+    setIsCompleteModalOpen(true);
+  };
+
+  // Submit Lesson Completion & Feedback
+  const handleSubmitComplete = async (skipFeedback = false) => {
+    if (!completeTargetLesson) return;
+    setIsSubmittingComplete(true);
     try {
-      const res = await fetch(`/api/sessions/${activeLesson.id}/complete`, { method: "POST" });
+      const payload = skipFeedback
+        ? {}
+        : {
+            feedbackRating: completeRating,
+            feedbackCovered: completeCovered.trim() || undefined,
+            feedbackNotes: completeNotes.trim() || undefined,
+          };
+
+      const res = await fetch(`/api/sessions/${completeTargetLesson.id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to complete lesson.");
+        setIsSubmittingComplete(false);
         return;
       }
-      setActionMessage("Lesson marked as completed.");
+
+      setActionMessage(data.message || "Lesson saved and marked as completed.");
+      setIsCompleteModalOpen(false);
+      setCompleteTargetLesson(null);
       await refreshAllData();
       setTimeout(() => setActionMessage(""), 4000);
     } catch {
       alert("Network error.");
+    } finally {
+      setIsSubmittingComplete(false);
     }
+  };
+
+  // Export current week's schedule as multi-event .ics file
+  const handleExportWeekSchedule = () => {
+    const now = new Date();
+    const currentDay = now.getDay();
+    const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const weekSessions = sessions.filter((s) => {
+      const t = new Date(s.scheduledStartTime).getTime();
+      return t >= monday.getTime() && t <= sunday.getTime() && s.status !== "CANCELLED";
+    });
+
+    if (weekSessions.length === 0) {
+      alert(
+        `No lessons scheduled for this week (${monday.toLocaleDateString([], {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })} - ${sunday.toLocaleDateString([], {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })}).`
+      );
+      return;
+    }
+
+    const portalUrl = window.location.origin;
+    const events: CalendarEvent[] = weekSessions.map((s) => ({
+      id: s.id,
+      title: `${s.title} (${s.tutee?.name || "Student"} & ${formatTutorName(s.tutor?.name)})`,
+      description: `LB Maths Tuition Lesson.\nTutor: ${formatTutorName(s.tutor?.name)}\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nNotes: ${s.notes || "None"}`,
+      location: s.teamsMeetingUrl || `${portalUrl}/admin`,
+      startTime: s.scheduledStartTime,
+      endTime: s.scheduledEndTime,
+      tutorName: s.tutor?.name,
+      studentName: s.tutee?.name,
+    }));
+
+    const dateSlug = monday.toISOString().slice(0, 10);
+    downloadMultiEventICS(events, `lb-maths-week-${dateSlug}.ics`);
+    setActionMessage(`Exported ${events.length} lessons for the week to .ics calendar.`);
+    setTimeout(() => setActionMessage(""), 4000);
   };
 
   const copyMagicLink = async (key?: string | null) => {
@@ -860,8 +955,24 @@ export default function AdminPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setIsFormulaSheetOpen(true)}
+              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open quick GCSE & A-Level Maths Formula Reference"
+            >
+              <Calculator className="w-4 h-4 text-[#48A5EE]" />
+              <span>Formula Sheet</span>
+            </button>
+            <button
+              onClick={handleExportWeekSchedule}
+              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Export all lessons for the current week to an .ics calendar file"
+            >
+              <Calendar className="w-4 h-4 text-[#48A5EE]" />
+              <span>Export Week (.ics)</span>
+            </button>
+            <button
               onClick={() => exportSessionsToCSV(sessions, "lb-maths-all-lessons")}
-              className="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Download all lesson records as CSV for Excel / Spreadsheets"
             >
               <Download className="w-4 h-4 text-[#48A5EE]" />
@@ -923,6 +1034,14 @@ export default function AdminPage() {
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong> &bull;{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>{" "}
+                  &bull;{" "}
                   {new Date(activeLesson.scheduledStartTime).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1068,11 +1187,12 @@ export default function AdminPage() {
                 )}
 
                 <button
-                  onClick={handleComplete}
+                  onClick={() => openCompleteModal(activeLesson)}
                   className="py-2 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+                  title="Mark lesson completed and optionally add personal rating, topics & notes"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
-                  <span>Mark Done</span>
+                  <span>Mark Done / Review</span>
                 </button>
               </div>
             </div>
@@ -1404,6 +1524,7 @@ export default function AdminPage() {
                             </td>
                             <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}{" "}
@@ -1571,6 +1692,7 @@ export default function AdminPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}{" "}
@@ -1650,6 +1772,14 @@ export default function AdminPage() {
                             <span>+2 Wks</span>
                           </button>
                           <button
+                            onClick={() => openCompleteModal(s)}
+                            className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                            title="Rate lesson, edit topics covered, or view/update tutor notes"
+                          >
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                            <span>{s.feedbackCovered ? "Edit Feedback" : "Review"}</span>
+                          </button>
+                          <button
                             onClick={() => handleToggleTutorPaid(s)}
                             className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                           >
@@ -1707,6 +1837,7 @@ export default function AdminPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                               {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
                                 month: "short",
                                 day: "numeric",
                               })}
@@ -2531,7 +2662,7 @@ export default function AdminPage() {
                     </div>
 
                     <div className="text-[11px] text-[#48A5EE] font-medium bg-[#48A5EE]/10 px-2.5 py-1.5 rounded-xl">
-                      Scheduling {repeatWeeks} sessions, {repeatIntervalWeeks === 2 ? "every two weeks" : "every week"} starting on {startTime ? new Date(startTime).toLocaleDateString([], { month: "short", day: "numeric" }) : "the selected date"}.
+                      Scheduling {repeatWeeks} sessions, {repeatIntervalWeeks === 2 ? "every two weeks" : "every week"} starting on {startTime ? new Date(startTime).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "the selected date"}.
                     </div>
                   </div>
                 )}
@@ -2910,6 +3041,143 @@ export default function AdminPage() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
+
+      {/* Maths Formula Sheet Modal */}
+      <FormulaSheetModal
+        isOpen={isFormulaSheetOpen}
+        onClose={() => setIsFormulaSheetOpen(false)}
+      />
+
+      {/* Admin Complete & Review Lesson Feedback Modal */}
+      {isCompleteModalOpen && completeTargetLesson && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setIsCompleteModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  <span>Complete Lesson &amp; Review</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {completeTargetLesson.title} ({completeTargetLesson.tutee?.name}) &bull;{" "}
+                  {new Date(completeTargetLesson.scheduledStartTime).toLocaleDateString([], {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCompleteModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Star Rating */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Lesson Rating (Optional)
+                  </label>
+                  <span className="text-[11px] font-bold text-amber-500">
+                    {completeRating} / 5 Stars
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setCompleteRating(star)}
+                      className="p-1 rounded-lg hover:scale-110 transition-transform cursor-pointer"
+                      title={`${star} Star${star > 1 ? "s" : ""}`}
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= completeRating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-slate-300 dark:text-slate-700"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Topics Covered */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Topics Covered (Optional)
+                </label>
+                <textarea
+                  value={completeCovered}
+                  onChange={(e) => setCompleteCovered(e.target.value)}
+                  placeholder="e.g. Quadratic equations, factorising, solving by completing the square..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              {/* Notes & Feedback */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  Tutor / Admin Notes (Optional)
+                </label>
+                <textarea
+                  value={completeNotes}
+                  onChange={(e) => setCompleteNotes(e.target.value)}
+                  placeholder="e.g. Excellent focus today. Next session work on word problems and exam past paper questions."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleSubmitComplete(true)}
+                disabled={isSubmittingComplete}
+                className="w-full sm:w-auto text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Skip Details &amp; Complete
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsCompleteModalOpen(false)}
+                  className="px-3.5 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSubmitComplete(false)}
+                  disabled={isSubmittingComplete}
+                  className="px-4 py-2 rounded-xl text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{isSubmittingComplete ? "Saving..." : "Save & Complete"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -63,10 +63,10 @@ export async function POST(
     let feedbackRating = body.feedbackRating;
     let feedbackNotes = body.feedbackNotes;
 
-    if (user.role === "HEAD_TUTOR" && !feedbackCovered) {
-      feedbackCovered = session.feedbackCovered || "Marked completed by administrator";
-      feedbackRating = session.feedbackRating || 5;
-      feedbackNotes = session.feedbackNotes || null;
+    if (user.role === "HEAD_TUTOR") {
+      feedbackCovered = body.feedbackCovered?.trim() || session.feedbackCovered || "Marked completed by administrator";
+      feedbackRating = typeof body.feedbackRating === "number" ? Math.max(1, Math.min(5, body.feedbackRating)) : (session.feedbackRating || 5);
+      feedbackNotes = body.feedbackNotes !== undefined ? (body.feedbackNotes?.trim() || null) : (session.feedbackNotes || null);
     } else {
       const parseResult = TutorCompleteSessionSchema.safeParse(body);
       if (!parseResult.success) {
