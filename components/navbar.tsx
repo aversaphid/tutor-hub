@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, Key, User, Clock, Eye } from "lucide-react";
+import { LogOut, Key, User, Clock, Eye, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import ChangePasswordModal from "./change-password-modal";
 import TutorLoginModal from "./tutor-login-modal";
@@ -48,6 +48,22 @@ export default function Navbar({ user }: NavbarProps) {
       router.refresh();
     } catch {
       router.push("/");
+    }
+  };
+
+  const handleOpenSettings = () => {
+    if (isHeadTutor) {
+      if (pathname === "/admin") {
+        window.dispatchEvent(new CustomEvent("switch-tab", { detail: "settings" }));
+      } else {
+        router.push("/admin?tab=settings");
+      }
+    } else if (isRegularTutor) {
+      if (pathname === "/tutor") {
+        window.dispatchEvent(new CustomEvent("switch-tab", { detail: "settings" }));
+      } else {
+        router.push("/tutor?tab=settings");
+      }
     }
   };
 
@@ -129,12 +145,12 @@ export default function Navbar({ user }: NavbarProps) {
                 )}
 
                 <button
-                  onClick={() => setIsPasswordModalOpen(true)}
+                  onClick={handleOpenSettings}
                   className="text-xs px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Change Password"
+                  title="Account & Platform Settings"
                 >
-                  <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                  <span className="hidden sm:inline">Password</span>
+                  <Settings className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span className="hidden sm:inline">Settings</span>
                 </button>
 
                 <button

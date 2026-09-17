@@ -28,6 +28,7 @@ import {
   Filter,
   Edit3,
   Lock,
+  Settings,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
@@ -37,7 +38,7 @@ import { formatTutorName } from "@/lib/format";
 export default function TutorDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons" | "settings">("active");
 
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [mySessions, setMySessions] = useState<any[]>([]);
@@ -68,12 +69,36 @@ export default function TutorDashboardPage() {
   >("soonest");
   const [currentTime, setCurrentTime] = useState(Date.now());
 
+  // Tutor Settings & Password state
+  const [tutorCurrentPassword, setTutorCurrentPassword] = useState("");
+  const [tutorNewPassword, setTutorNewPassword] = useState("");
+  const [tutorConfirmPassword, setTutorConfirmPassword] = useState("");
+  const [tutorPasswordError, setTutorPasswordError] = useState("");
+  const [tutorPasswordSuccess, setTutorPasswordSuccess] = useState("");
+  const [isSubmittingTutorPassword, setIsSubmittingTutorPassword] = useState(false);
+
   useEffect(() => {
     initTutorData();
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
     }, 15000);
-    return () => clearInterval(timer);
+
+    const handleSwitchTab = (e: any) => {
+      if (e.detail) setActiveTab(e.detail);
+    };
+    window.addEventListener("switch-tab", handleSwitchTab);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "settings") {
+        setActiveTab("settings");
+      }
+    }
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("switch-tab", handleSwitchTab);
+    };
   }, []);
 
   const initTutorData = async () => {
@@ -253,6 +278,52 @@ export default function TutorDashboardPage() {
     } catch {}
   };
 
+  const handleChangeTutorPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTutorPasswordError("");
+    setTutorPasswordSuccess("");
+
+    if (!tutorCurrentPassword) {
+      setTutorPasswordError("Current password is required.");
+      return;
+    }
+    if (tutorNewPassword.length < 5) {
+      setTutorPasswordError("New password must be at least 5 characters.");
+      return;
+    }
+    if (tutorNewPassword !== tutorConfirmPassword) {
+      setTutorPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsSubmittingTutorPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: tutorCurrentPassword,
+          newPassword: tutorNewPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setTutorPasswordError(data.error || "Failed to change password.");
+        return;
+      }
+
+      setTutorPasswordSuccess("Password updated successfully!");
+      setTutorCurrentPassword("");
+      setTutorNewPassword("");
+      setTutorConfirmPassword("");
+    } catch {
+      setTutorPasswordError("Network error. Please try again.");
+    } finally {
+      setIsSubmittingTutorPassword(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
       <Navbar user={currentUser} />
@@ -340,6 +411,17 @@ export default function TutorDashboardPage() {
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>My Scheduled Lessons ({mySessions.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "settings"
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
           </button>
         </div>
 
@@ -1045,6 +1127,136 @@ export default function TutorDashboardPage() {
             </div>
           );
         })()}
+
+        {/* TAB 4: TUTOR SETTINGS & SECURITY */}
+        {activeTab === "settings" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[#48A5EE]" />
+                  <span>Tutor Settings &amp; Security</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Manage your account credentials, view your profile details, and update your password.
+                </p>
+              </div>
+
+              {/* Account Information Card */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Account Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <span className="text-slate-400 block mb-0.5">Tutor Name</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                      {formatTutorName(currentUser?.name) || "Tutor"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block mb-0.5">Login Email</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-200 text-xs">
+                      {currentUser?.email || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block mb-0.5">Assigned Students</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
+                      {assignedStudents.length} student(s)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Change Password Form */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#48A5EE]/15 text-[#48A5EE] flex items-center justify-center">
+                    <Key className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Change Account Password
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Enter your current password and choose a new one (minimum 5 characters).
+                    </p>
+                  </div>
+                </div>
+
+                {tutorPasswordError && (
+                  <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{tutorPasswordError}</span>
+                  </div>
+                )}
+
+                {tutorPasswordSuccess && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{tutorPasswordSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleChangeTutorPassword} className="space-y-4 max-w-md text-xs">
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      Current Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={tutorCurrentPassword}
+                      onChange={(e) => setTutorCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      New Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={5}
+                      value={tutorNewPassword}
+                      onChange={(e) => setTutorNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 5 characters)"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      Confirm New Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={5}
+                      value={tutorConfirmPassword}
+                      onChange={(e) => setTutorConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingTutorPassword}
+                    className="py-2.5 px-5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSubmittingTutorPassword ? "Updating Password..." : "Update Password"}</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Tutor Completion Modal */}

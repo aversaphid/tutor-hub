@@ -110,6 +110,22 @@ export default function AdminPage() {
   const [passwordModalSuccess, setPasswordModalSuccess] = useState("");
   const [isSubmittingAdminPassword, setIsSubmittingAdminPassword] = useState(false);
 
+  // Settings Tab: Change Own Admin Password
+  const [adminSelfCurrentPassword, setAdminSelfCurrentPassword] = useState("");
+  const [adminSelfNewPassword, setAdminSelfNewPassword] = useState("");
+  const [adminSelfConfirmPassword, setAdminSelfConfirmPassword] = useState("");
+  const [adminSelfPasswordError, setAdminSelfPasswordError] = useState("");
+  const [adminSelfPasswordSuccess, setAdminSelfPasswordSuccess] = useState("");
+  const [isSubmittingAdminSelfPassword, setIsSubmittingAdminSelfPassword] = useState(false);
+
+  // Settings Tab: Set Tutor Password
+  const [settingsSelectedTutorId, setSettingsSelectedTutorId] = useState("");
+  const [settingsTutorNewPassword, setSettingsTutorNewPassword] = useState("");
+  const [settingsTutorConfirmPassword, setSettingsTutorConfirmPassword] = useState("");
+  const [settingsTutorPasswordError, setSettingsTutorPasswordError] = useState("");
+  const [settingsTutorPasswordSuccess, setSettingsTutorPasswordSuccess] = useState("");
+  const [isSubmittingSettingsTutorPassword, setIsSubmittingSettingsTutorPassword] = useState(false);
+
   // Copied Key state
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -119,7 +135,23 @@ export default function AdminPage() {
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
     }, 15000);
-    return () => clearInterval(timer);
+
+    const handleSwitchTab = (e: any) => {
+      if (e.detail) setActiveTab(e.detail);
+    };
+    window.addEventListener("switch-tab", handleSwitchTab);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "settings") {
+        setActiveTab("settings");
+      }
+    }
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("switch-tab", handleSwitchTab);
+    };
   }, []);
 
   const initAdminData = async () => {
@@ -355,6 +387,98 @@ export default function AdminPage() {
       setPasswordModalError("An unexpected network error occurred.");
     } finally {
       setIsSubmittingAdminPassword(false);
+    }
+  };
+
+  // Change Own Admin Password from Settings Tab
+  const handleAdminChangeOwnPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminSelfPasswordError("");
+    setAdminSelfPasswordSuccess("");
+
+    if (!adminSelfCurrentPassword) {
+      setAdminSelfPasswordError("Current password is required.");
+      return;
+    }
+    if (adminSelfNewPassword.length < 5) {
+      setAdminSelfPasswordError("New password must be at least 5 characters.");
+      return;
+    }
+    if (adminSelfNewPassword !== adminSelfConfirmPassword) {
+      setAdminSelfPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsSubmittingAdminSelfPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: adminSelfCurrentPassword,
+          newPassword: adminSelfNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAdminSelfPasswordError(data.error || "Failed to update password.");
+        return;
+      }
+      setAdminSelfPasswordSuccess("Your admin password has been updated successfully!");
+      setAdminSelfCurrentPassword("");
+      setAdminSelfNewPassword("");
+      setAdminSelfConfirmPassword("");
+    } catch {
+      setAdminSelfPasswordError("Network error. Please try again.");
+    } finally {
+      setIsSubmittingAdminSelfPassword(false);
+    }
+  };
+
+  // Set Tutor Password from Settings Tab
+  const handleSettingsSetTutorPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsTutorPasswordError("");
+    setSettingsTutorPasswordSuccess("");
+
+    if (!settingsSelectedTutorId) {
+      setSettingsTutorPasswordError("Please select a tutor account.");
+      return;
+    }
+    if (settingsTutorNewPassword.length < 5) {
+      setSettingsTutorPasswordError("New password must be at least 5 characters.");
+      return;
+    }
+    if (settingsTutorNewPassword !== settingsTutorConfirmPassword) {
+      setSettingsTutorPasswordError("Passwords do not match.");
+      return;
+    }
+
+    const selectedTutor = tutors.find((t) => t.id === settingsSelectedTutorId);
+    setIsSubmittingSettingsTutorPassword(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: settingsSelectedTutorId,
+          newPassword: settingsTutorNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSettingsTutorPasswordError(data.error || "Failed to update password.");
+        return;
+      }
+      setSettingsTutorPasswordSuccess(
+        `Password successfully set for ${formatTutorName(selectedTutor?.name || "tutor")}!`
+      );
+      setSettingsTutorNewPassword("");
+      setSettingsTutorConfirmPassword("");
+    } catch {
+      setSettingsTutorPasswordError("Network error. Please try again.");
+    } finally {
+      setIsSubmittingSettingsTutorPassword(false);
     }
   };
 
@@ -1898,6 +2022,190 @@ export default function AdminPage() {
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+
+              {/* Unified Password Management Section */}
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Key className="w-4 h-4 text-[#48A5EE]" />
+                    <span>Password &amp; Security Controls</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Manage your own administrator password or set new credentials for any tutor account.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  {/* Subsection 1: Admin Own Password */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Change Your Admin Password</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Logged in as <strong>Luke ({currentUser?.email})</strong>.
+                      </p>
+                    </div>
+
+                    {adminSelfPasswordError && (
+                      <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>{adminSelfPasswordError}</span>
+                      </div>
+                    )}
+
+                    {adminSelfPasswordSuccess && (
+                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                        <span>{adminSelfPasswordSuccess}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAdminChangeOwnPassword} className="space-y-3 text-xs">
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          Current Admin Password *
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={adminSelfCurrentPassword}
+                          onChange={(e) => setAdminSelfCurrentPassword(e.target.value)}
+                          placeholder="Enter your current password"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          New Admin Password *
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={5}
+                          value={adminSelfNewPassword}
+                          onChange={(e) => setAdminSelfNewPassword(e.target.value)}
+                          placeholder="Minimum 5 characters"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          Confirm New Password *
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={5}
+                          value={adminSelfConfirmPassword}
+                          onChange={(e) => setAdminSelfConfirmPassword(e.target.value)}
+                          placeholder="Repeat new password"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingAdminSelfPassword}
+                        className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSubmittingAdminSelfPassword ? "Updating..." : "Save Admin Password"}</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Subsection 2: Set Tutor Password */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Set Tutor Passwords (Admin)</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Tutor passwords cannot be viewed, but you can set and overwrite them here.
+                      </p>
+                    </div>
+
+                    {settingsTutorPasswordError && (
+                      <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>{settingsTutorPasswordError}</span>
+                      </div>
+                    )}
+
+                    {settingsTutorPasswordSuccess && (
+                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                        <span>{settingsTutorPasswordSuccess}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSettingsSetTutorPassword} className="space-y-3 text-xs">
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          Select Tutor Account *
+                        </label>
+                        <select
+                          required
+                          value={settingsSelectedTutorId}
+                          onChange={(e) => setSettingsSelectedTutorId(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        >
+                          <option value="">Choose tutor account...</option>
+                          {tutors.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {formatTutorName(t.name)} ({t.email}) - {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          New Password *
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={5}
+                          value={settingsTutorNewPassword}
+                          onChange={(e) => setSettingsTutorNewPassword(e.target.value)}
+                          placeholder="Minimum 5 characters"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                          Confirm New Password *
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={5}
+                          value={settingsTutorConfirmPassword}
+                          onChange={(e) => setSettingsTutorConfirmPassword(e.target.value)}
+                          placeholder="Repeat new password"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingSettingsTutorPassword}
+                        className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{isSubmittingSettingsTutorPassword ? "Updating..." : "Set Tutor Password"}</span>
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
