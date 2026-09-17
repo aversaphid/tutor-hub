@@ -41,7 +41,10 @@ import {
   Repeat,
   Calculator,
   X,
+  CalendarClock,
+  XCircle,
 } from "lucide-react";
+import RescheduleModal from "@/components/reschedule-modal";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName } from "@/lib/format";
 import { useRouter } from "next/navigation";
@@ -152,6 +155,10 @@ export default function AdminPage() {
 
   // Formula sheet modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
+
+  // Reschedule Modal state
+  const [rescheduleTargetLesson, setRescheduleTargetLesson] = useState<any>(null);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
 
   useEffect(() => {
     initAdminData();
@@ -913,6 +920,46 @@ export default function AdminPage() {
     setTimeout(() => setActionMessage(""), 4000);
   };
 
+  // Cancel Lesson Handler
+  const handleCancelSession = async (session: any) => {
+    if (!session) return;
+    if (
+      !confirm(
+        `Cancel lesson "${session.title}" for ${
+          session.tutee?.name || "this student"
+        }?\n\nThe lesson will be moved to the Cancelled Lessons section where you can reschedule it at any time.`
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(`/api/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to cancel lesson.");
+        return;
+      }
+
+      setActionMessage("Lesson marked as cancelled. You can reschedule it anytime.");
+      await refreshAllData();
+      setTimeout(() => setActionMessage(""), 4000);
+    } catch {
+      alert("Network error cancelling lesson.");
+    }
+  };
+
+  // Open Reschedule Modal
+  const handleOpenReschedule = (session: any) => {
+    if (!session) return;
+    setRescheduleTargetLesson(session);
+    setIsRescheduleOpen(true);
+  };
+
   const copyMagicLink = async (key?: string | null) => {
     if (!key) return;
     const url = `${window.location.origin}/student?key=${key}`;
@@ -1194,6 +1241,24 @@ export default function AdminPage() {
                   <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
                   <span>Mark Done / Review</span>
                 </button>
+
+                <button
+                  onClick={() => handleOpenReschedule(activeLesson)}
+                  className="py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer flex items-center gap-1"
+                  title="Reschedule this lesson"
+                >
+                  <CalendarClock className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Reschedule</span>
+                </button>
+
+                <button
+                  onClick={() => handleCancelSession(activeLesson)}
+                  className="py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-xs border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer flex items-center gap-1"
+                  title="Cancel this lesson"
+                >
+                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Cancel</span>
+                </button>
               </div>
             </div>
 
@@ -1354,6 +1419,11 @@ export default function AdminPage() {
             filtered.filter((s) => s.tutorPaid)
           );
 
+          // 4. Cancelled: status === "CANCELLED"
+          const cancelledList = sortList(
+            filtered.filter((s) => s.status === "CANCELLED")
+          );
+
           return (
             <div className="space-y-6">
               {/* Search, Filter & Sort Toolbar */}
@@ -1431,6 +1501,9 @@ export default function AdminPage() {
                   </span>
                   <span className="px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800">
                     Pending Tutor Payout: {completedUnpaidList.length}
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800">
+                    Cancelled: {cancelledList.length}
                   </span>
                   <span className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
                     Archived &amp; Paid: {archivedPaidList.length}
@@ -1620,6 +1693,14 @@ export default function AdminPage() {
                               )}
                               <AddToCalendar session={s} compact />
                               <button
+                                onClick={() => handleOpenReschedule(s)}
+                                className="px-2 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 border border-purple-200 dark:border-purple-800"
+                                title="Reschedule this lesson"
+                              >
+                                <CalendarClock className="w-3 h-3 text-purple-500" />
+                                <span>Reschedule</span>
+                              </button>
+                              <button
                                 onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
                                 className="px-2 py-1 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
                                 title="Schedule next week (+7 days)"
@@ -1636,9 +1717,17 @@ export default function AdminPage() {
                                 <span>+2 Wks</span>
                               </button>
                               <button
+                                onClick={() => handleCancelSession(s)}
+                                className="px-2 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 border border-rose-200 dark:border-rose-800"
+                                title="Cancel this lesson"
+                              >
+                                <XCircle className="w-3 h-3 text-rose-500" />
+                                <span>Cancel</span>
+                              </button>
+                              <button
                                 onClick={() => handleDeleteSession(s.id, s.title)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                                title="Delete Lesson"
+                                title="Delete Lesson Permanently"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -1800,7 +1889,106 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 3. ARCHIVED (TUTOR PAID) */}
+              {/* 3. CANCELLED LESSONS */}
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm space-y-3">
+                <div className="p-5 border-b border-rose-100 dark:border-rose-950/60 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-rose-500" />
+                      <span>Cancelled Lessons ({cancelledList.length})</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Lessons that were cancelled. Click Reschedule to reactivate them at a new date &amp; time.
+                    </p>
+                  </div>
+                  {cancelledList.length > 0 && (
+                    <span className="px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold">
+                      {cancelledList.length} Cancelled
+                    </span>
+                  )}
+                </div>
+
+                {cancelledList.length === 0 ? (
+                  <div className="text-center py-8 px-4 space-y-1 text-xs text-slate-400">
+                    No cancelled lessons. All scheduled lessons are active.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {cancelledList.map((s) => (
+                      <div
+                        key={s.id}
+                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                              {s.tutee?.name}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {s.title}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              })}{" "}
+                              {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-bold">
+                              ● Cancelled
+                            </span>
+                          </div>
+
+                          {s.notes && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              <strong>Notes:</strong> &quot;{s.notes}&quot;
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="shrink-0 flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenReschedule(s)}
+                            className="py-2 px-3.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                            title="Reschedule this cancelled lesson"
+                          >
+                            <CalendarClock className="w-3.5 h-3.5" />
+                            <span>Reschedule Lesson</span>
+                          </button>
+                          <button
+                            onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                            className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                            title="Schedule next week (+7 days)"
+                          >
+                            <Repeat className="w-3.5 h-3.5" />
+                            <span>+1 Wk</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSession(s.id, s.title)}
+                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                            title="Delete Permanently"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. ARCHIVED (TUTOR PAID) */}
               <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm space-y-3">
                 <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <div>
@@ -3178,6 +3366,21 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Reschedule Lesson Modal */}
+      <RescheduleModal
+        isOpen={isRescheduleOpen}
+        session={rescheduleTargetLesson}
+        onClose={() => {
+          setIsRescheduleOpen(false);
+          setRescheduleTargetLesson(null);
+        }}
+        onSuccess={() => {
+          setActionMessage("Lesson rescheduled successfully!");
+          refreshAllData();
+          setTimeout(() => setActionMessage(""), 4000);
+        }}
+      />
 
       <Footer />
     </div>
