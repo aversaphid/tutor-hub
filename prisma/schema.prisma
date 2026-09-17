@@ -42,6 +42,7 @@ model User {
   tutorSessions Session[] @relation("TutorSessions")
   tuteeSessions Session[] @relation("TuteeSessions")
   auditLogs     AuditLog[]
+  resources     Resource[]
 
   @@index([role])
   @@index([pin])
@@ -61,6 +62,7 @@ model Session {
   actualEndTime      DateTime?
   status             SessionStatus @default(SCHEDULED)
   delayMinutes       Int           @default(0)
+  delayReason        String?
   teamsMeetingUrl    String?
   notes              String?
 
@@ -111,5 +113,21 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  url         String
+  description String?
+  category    String   @default("General")
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([createdAt])
+  @@index([createdById])
 }
 

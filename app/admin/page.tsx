@@ -48,6 +48,8 @@ import {
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
+import DelayReasonModal from "@/components/delay-reason-modal";
+import SharedResourcesHub from "@/components/shared-resources-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName } from "@/lib/format";
 import { useRouter } from "next/navigation";
@@ -55,7 +57,7 @@ import { useRouter } from "next/navigation";
 export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "audit" | "settings">("lessons");
+  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "resources" | "audit" | "settings">("lessons");
 
   const [sessions, setSessions] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -112,6 +114,17 @@ export default function AdminPage() {
   const [reminderModalSession, setReminderModalSession] = useState<any>(null);
   const [editReminderText, setEditReminderText] = useState("");
   const [isSavingReminder, setIsSavingReminder] = useState(false);
+
+  // Delay Reason Modal
+  const [delayModal, setDelayModal] = useState<{
+    isOpen: boolean;
+    minutes: number;
+    studentName?: string;
+  }>({
+    isOpen: false,
+    minutes: 5,
+  });
+  const [isSubmittingDelay, setIsSubmittingDelay] = useState(false);
 
   // New User Modal State (Student or Tutor)
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
@@ -200,6 +213,8 @@ export default function AdminPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("tab") === "settings") {
         setActiveTab("settings");
+      } else if (params.get("tab") === "resources") {
+        setActiveTab("resources");
       }
     }
 
@@ -822,14 +837,27 @@ export default function AdminPage() {
     }
   };
 
-  // Delay Lesson
-  const handleDelay = async (minutes: number) => {
+  // Delay Lesson Handlers
+  const handleOpenDelayModal = (minutes: number) => {
     if (!activeLesson) return;
+    setDelayModal({
+      isOpen: true,
+      minutes,
+      studentName: activeLesson?.tutee?.name,
+    });
+  };
+
+  const handleConfirmDelay = async (minutes: number, reason?: string) => {
+    if (!activeLesson) return;
+    setIsSubmittingDelay(true);
     try {
       const res = await fetch(`/api/sessions/${activeLesson.id}/delay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delayMinutes: minutes }),
+        body: JSON.stringify({
+          delayMinutes: minutes,
+          reason: reason?.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -837,14 +865,20 @@ export default function AdminPage() {
         return;
       }
       playDelayAlertChime();
-      setActionMessage(`Lesson delayed by ${minutes}m.`);
+      const reasonMsg = reason?.trim() ? ` (${reason.trim()})` : "";
+      setActionMessage(`Lesson delayed by ${minutes}m${reasonMsg}.`);
+      setDelayModal({ isOpen: false, minutes: 5 });
       setActiveLesson(data.session);
       await refreshAllData();
       setTimeout(() => setActionMessage(""), 4000);
     } catch {
       alert("Network error.");
+    } finally {
+      setIsSubmittingDelay(false);
     }
   };
+
+  const handleDelay = (minutes: number) => handleOpenDelayModal(minutes);
 
   // Open Complete / Review Lesson Feedback Modal
   const openCompleteModal = (session: any) => {
@@ -1174,6 +1208,11 @@ export default function AdminPage() {
                       (+{activeLesson.delayMinutes}m delay)
                     </span>
                   )}
+                  {activeLesson.status === "DELAYED" && activeLesson.delayReason && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
+                      Reason: {activeLesson.delayReason}
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">
@@ -1427,6 +1466,17 @@ export default function AdminPage() {
             }`}
           >
             Tutors ({tutors.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("resources")}
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "resources"
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Shared Resources</span>
           </button>
           <button
             onClick={() => setActiveTab("audit")}
@@ -2842,6 +2892,13 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: SHARED RESOURCES */}
+        {activeTab === "resources" && currentUser && (
+          <div className="animate-in fade-in">
+            <SharedResourcesHub currentUser={currentUser} />
+          </div>
+        )}
+
         {/* TAB 4: AUDIT LOGS */}
         {activeTab === "audit" && (
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm space-y-3">
@@ -3920,6 +3977,16 @@ export default function AdminPage() {
           await refreshAllData();
           setTimeout(() => setActionMessage(""), 4000);
         }}
+      />
+
+      {/* Delay Lesson with Reason Modal */}
+      <DelayReasonModal
+        isOpen={delayModal.isOpen}
+        minutes={delayModal.minutes}
+        studentName={delayModal.studentName}
+        onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelay}
+        isSubmitting={isSubmittingDelay}
       />
 
       <Footer />

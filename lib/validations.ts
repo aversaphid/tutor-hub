@@ -122,3 +122,19 @@ export const DelaySessionSchema = z.object({
   delayMinutes: z.number().int().min(1).max(180),
   reason: z.string().max(250).optional(),
 });
+
+// Shared Resource schemas
+export const CreateResourceSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(150),
+  url: z.string().trim().min(1, "URL is required").max(1000),
+  description: z.string().trim().max(1000).optional().nullable(),
+  category: z.string().trim().max(50).optional().default("General"),
+});
+
+export const UpdateResourceSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(150).optional(),
+  url: z.string().trim().min(1, "URL is required").max(1000).optional(),
+  description: z.string().trim().max(1000).optional().nullable(),
+  category: z.string().trim().max(50).optional(),
+});
+

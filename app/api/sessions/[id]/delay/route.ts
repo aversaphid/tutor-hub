@@ -67,6 +67,7 @@ export async function POST(
       where: { id },
       data: {
         delayMinutes: newDelayTotal,
+        delayReason: reason?.trim() || null,
         scheduledStartTime: newStart,
         scheduledEndTime: newEnd,
         status: "DELAYED",

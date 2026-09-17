@@ -42,9 +42,12 @@ import {
   XCircle,
   ChevronDown,
   X,
+  BookOpen,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
+import DelayReasonModal from "@/components/delay-reason-modal";
+import SharedResourcesHub from "@/components/shared-resources-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -53,7 +56,7 @@ import { formatTutorName } from "@/lib/format";
 export default function TutorDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons" | "settings">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons" | "resources" | "settings">("active");
 
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [mySessions, setMySessions] = useState<any[]>([]);
@@ -87,6 +90,17 @@ export default function TutorDashboardPage() {
   // Tutor Completion Modal
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [sessionToComplete, setSessionToComplete] = useState<any>(null);
+
+  // Delay Reason Modal
+  const [delayModal, setDelayModal] = useState<{
+    isOpen: boolean;
+    minutes: number;
+    studentName?: string;
+  }>({
+    isOpen: false,
+    minutes: 5,
+  });
+  const [isSubmittingDelay, setIsSubmittingDelay] = useState(false);
 
   // Lesson Search, Filter & Sort
   const [lessonSearchTerm, setLessonSearchTerm] = useState("");
@@ -126,6 +140,8 @@ export default function TutorDashboardPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("tab") === "settings") {
         setActiveTab("settings");
+      } else if (params.get("tab") === "resources") {
+        setActiveTab("resources");
       }
     }
 
@@ -291,24 +307,50 @@ export default function TutorDashboardPage() {
     } catch {}
   };
 
-  const handleDelayLesson = async (mins: number) => {
+  const handleOpenDelayModal = (mins: number) => {
     if (!activeLesson) return;
+    setDelayModal({
+      isOpen: true,
+      minutes: mins,
+      studentName: activeLesson.tutee?.name,
+    });
+  };
+
+  const handleConfirmDelay = async (mins: number, reason?: string) => {
+    if (!activeLesson) return;
+    setIsSubmittingDelay(true);
     try {
       const res = await fetch(`/api/sessions/${activeLesson.id}/delay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delayMinutes: mins }),
+        body: JSON.stringify({
+          delayMinutes: mins,
+          reason: reason?.trim() || undefined,
+        }),
       });
 
-      if (res.ok) {
-        playDelayAlertChime();
-        setActionMessage(`Delayed by ${mins} minutes. Student notification updated.`);
-        loadLiveSession();
-        loadMySessions();
-        setTimeout(() => setActionMessage(""), 4000);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to delay lesson.");
+        return;
       }
-    } catch {}
+
+      playDelayAlertChime();
+      const reasonMsg = reason?.trim() ? ` (${reason.trim()})` : "";
+      setActionMessage(`Delayed by ${mins} minutes${reasonMsg}. Student notification updated.`);
+      setDelayModal({ isOpen: false, minutes: 5 });
+      loadLiveSession();
+      loadMySessions();
+      setTimeout(() => setActionMessage(""), 4000);
+    } catch {
+      alert("Network error while delaying lesson.");
+    } finally {
+      setIsSubmittingDelay(false);
+    }
   };
+
+  // Backwards compatible alias
+  const handleDelayLesson = (mins: number) => handleOpenDelayModal(mins);
 
   const handleCompleteLesson = async () => {
     if (!activeLesson) return;
@@ -554,6 +596,17 @@ export default function TutorDashboardPage() {
             <span>My Scheduled Lessons ({mySessions.length})</span>
           </button>
           <button
+            onClick={() => setActiveTab("resources")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "resources"
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Shared Resources</span>
+          </button>
+          <button
             onClick={() => setActiveTab("settings")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === "settings"
@@ -573,7 +626,7 @@ export default function TutorDashboardPage() {
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 shadow-sm space-y-6 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span
                         className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                           activeLesson.status === "IN_PROGRESS"
@@ -583,8 +636,13 @@ export default function TutorDashboardPage() {
                             : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
                         }`}
                       >
-                        ● {activeLesson.status === "IN_PROGRESS" ? "Live Now" : activeLesson.status}
+                        ● {activeLesson.status === "IN_PROGRESS" ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                       </span>
+                      {activeLesson.status === "DELAYED" && activeLesson.delayReason && (
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
+                          Reason: {activeLesson.delayReason}
+                        </span>
+                      )}
                       <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <span className="font-semibold text-slate-700 dark:text-slate-300">
                           {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
@@ -1556,6 +1614,13 @@ export default function TutorDashboardPage() {
           );
         })()}
 
+        {/* TAB: SHARED RESOURCES */}
+        {activeTab === "resources" && currentUser && (
+          <div className="animate-in fade-in">
+            <SharedResourcesHub currentUser={currentUser} />
+          </div>
+        )}
+
         {/* TAB 4: TUTOR SETTINGS & SECURITY */}
         {activeTab === "settings" && (
           <div className="space-y-6 animate-in fade-in">
@@ -1751,6 +1816,16 @@ export default function TutorDashboardPage() {
           loadLiveSession();
           setTimeout(() => setActionMessage(""), 4000);
         }}
+      />
+
+      {/* Delay Lesson with Reason Modal */}
+      <DelayReasonModal
+        isOpen={delayModal.isOpen}
+        minutes={delayModal.minutes}
+        studentName={delayModal.studentName}
+        onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelay}
+        isSubmitting={isSubmittingDelay}
       />
 
       <Footer />

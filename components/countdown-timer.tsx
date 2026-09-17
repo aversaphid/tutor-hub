@@ -26,6 +26,7 @@ interface SessionData {
   scheduledEndTime: string;
   status: "SCHEDULED" | "DELAYED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   delayMinutes: number;
+  delayReason?: string | null;
   teamsMeetingUrl?: string | null;
   tutor: { id: string; name: string; email?: string | null };
   tutee: { id: string; name: string; magicKey?: string | null };
@@ -67,9 +68,10 @@ export default function CountdownTimer({
     if (newSession.delayMinutes > prevDelayRef.current) {
       const addedMinutes = newSession.delayMinutes - prevDelayRef.current;
       playDelayAlertChime();
+      const reasonSuffix = newSession.delayReason ? ` (${newSession.delayReason})` : "";
       setNotification({
         type: "delay",
-        message: `${newSession.tutor?.name || "Your tutor"} added +${addedMinutes} mins to the lesson start time.`,
+        message: `${newSession.tutor?.name || "Your tutor"} added +${addedMinutes} mins to the lesson start time${reasonSuffix}.`,
       });
       prevDelayRef.current = newSession.delayMinutes;
     }
@@ -262,6 +264,15 @@ export default function CountdownTimer({
               Tutor: <strong className="text-slate-700 dark:text-slate-200">{session.tutor?.name || "Tutor"}</strong> • Student:{" "}
               <strong className="text-slate-700 dark:text-slate-200">{session.tutee.name}</strong>
             </p>
+
+            {session.status === "DELAYED" && session.delayReason && (
+              <div className="pt-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Reason: {session.delayReason}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Countdown Clock Display */}

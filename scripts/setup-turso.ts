@@ -49,6 +49,7 @@ async function setup() {
       "actualEndTime" DATETIME,
       "status" TEXT NOT NULL DEFAULT 'SCHEDULED',
       "delayMinutes" INTEGER NOT NULL DEFAULT 0,
+      "delayReason" TEXT,
       "teamsMeetingUrl" TEXT,
       "notes" TEXT,
       "adminReminder" TEXT,
@@ -90,7 +91,22 @@ async function setup() {
     );
   `);
 
-  // 5. Create Indexes
+  // 5. Create Resource table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS "Resource" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "title" TEXT NOT NULL,
+      "url" TEXT NOT NULL,
+      "description" TEXT,
+      "category" TEXT NOT NULL DEFAULT 'General',
+      "createdById" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL,
+      CONSTRAINT "Resource_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `);
+
+  // 6. Create Indexes
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");`);
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_magicKey_key" ON "User"("magicKey");`);
   await client.execute(`CREATE INDEX IF NOT EXISTS "User_role_idx" ON "User"("role");`);
@@ -107,6 +123,10 @@ async function setup() {
 
   await client.execute(`CREATE INDEX IF NOT EXISTS "AuditLog_sessionId_idx" ON "AuditLog"("sessionId");`);
   await client.execute(`CREATE INDEX IF NOT EXISTS "AuditLog_timestamp_idx" ON "AuditLog"("timestamp");`);
+
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_category_idx" ON "Resource"("category");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_createdAt_idx" ON "Resource"("createdAt");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_createdById_idx" ON "Resource"("createdById");`);
 
   console.log("✅ All tables and indexes created on Turso.");
 
