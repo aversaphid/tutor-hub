@@ -111,6 +111,7 @@ export async function POST(request: Request) {
       tutorConfirmed,
       tuteeConfirmed,
       repeatWeeks = 1,
+      repeatIntervalWeeks = 1,
     } = parseResult.data;
 
     const baseStart = new Date(scheduledStartTime);
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
     const durationMs = baseEnd.getTime() - baseStart.getTime();
 
     const weeksToSchedule = Math.max(1, Math.min(repeatWeeks, 12));
+    const intervalDays = Math.max(1, Math.min(repeatIntervalWeeks, 4)) * 7;
 
     // Lookup student name for clean default title if omitted
     const student = await prisma.user.findUnique({
@@ -126,22 +128,22 @@ export async function POST(request: Request) {
     });
     const finalTitle = title?.trim() || `${student?.name || "Student"} - Maths Lesson`;
 
-    // 1. Conflict detection engine across all scheduled weeks
+    // 1. Conflict detection engine across all scheduled sessions
     for (let w = 0; w < weeksToSchedule; w++) {
-      const weekStart = new Date(baseStart.getTime() + w * 7 * 24 * 3600 * 1000);
-      const weekEnd = new Date(weekStart.getTime() + durationMs);
+      const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + durationMs);
 
       const conflict = await detectSessionConflict({
         tutorId,
         tuteeId,
-        startTime: weekStart,
-        endTime: weekEnd,
+        startTime: sessionStart,
+        endTime: sessionEnd,
       });
 
       if (conflict.hasConflict) {
-        const weekLabel = weeksToSchedule > 1 ? ` (Week ${w + 1} - ${weekStart.toLocaleDateString([], { month: "short", day: "numeric" })})` : "";
+        const sessionLabel = weeksToSchedule > 1 ? ` (Session ${w + 1} - ${sessionStart.toLocaleDateString([], { month: "short", day: "numeric" })})` : "";
         return NextResponse.json(
-          { error: `${conflict.reason}${weekLabel}`, conflict: true },
+          { error: `${conflict.reason}${sessionLabel}`, conflict: true },
           { status: 409 }
         );
       }
@@ -150,16 +152,16 @@ export async function POST(request: Request) {
     // 2. Create the sessions
     const createdSessions = [];
     for (let w = 0; w < weeksToSchedule; w++) {
-      const weekStart = new Date(baseStart.getTime() + w * 7 * 24 * 3600 * 1000);
-      const weekEnd = new Date(weekStart.getTime() + durationMs);
+      const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + durationMs);
 
       const session = await prisma.session.create({
         data: {
           title: finalTitle,
           tutorId,
           tuteeId,
-          scheduledStartTime: weekStart,
-          scheduledEndTime: weekEnd,
+          scheduledStartTime: sessionStart,
+          scheduledEndTime: sessionEnd,
           teamsMeetingUrl: teamsMeetingUrl || null,
           notes: notes || null,
           adminReminder: adminReminder ? adminReminder.trim() : null,
@@ -178,7 +180,7 @@ export async function POST(request: Request) {
         actorId: user.id,
         action: "CREATED",
         details: weeksToSchedule > 1
-          ? `Recurring lesson (week ${w + 1} of ${weeksToSchedule}) scheduled by Admin.`
+          ? `Recurring ${repeatIntervalWeeks === 2 ? "biweekly" : "weekly"} lesson (session ${w + 1} of ${weeksToSchedule}) scheduled by Admin.`
           : `Lesson scheduled by Admin.`,
       });
 
@@ -191,7 +193,7 @@ export async function POST(request: Request) {
       sessions: createdSessions,
       count: createdSessions.length,
       message: weeksToSchedule > 1
-        ? `Successfully scheduled ${weeksToSchedule} weekly lessons!`
+        ? `Successfully scheduled ${weeksToSchedule} ${repeatIntervalWeeks === 2 ? "biweekly" : "weekly"} lessons!`
         : "Lesson scheduled successfully!",
     }, { status: 201 });
   } catch (err) {

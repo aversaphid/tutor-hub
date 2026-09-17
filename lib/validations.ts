@@ -96,6 +96,7 @@ export const CreateSessionSchema = z.object({
   tutorConfirmed: z.boolean().optional(),
   tuteeConfirmed: z.boolean().optional(),
   repeatWeeks: z.number().int().min(1).max(12).optional(),
+  repeatIntervalWeeks: z.number().int().min(1).max(4).optional(),
 });
 
 // Session update
