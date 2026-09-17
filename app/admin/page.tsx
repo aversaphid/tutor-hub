@@ -1586,19 +1586,20 @@ export default function AdminPage() {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
                         <tr>
-                          <th className="px-5 py-3.5">Student &amp; Lesson</th>
-                          <th className="px-5 py-3.5">Tutor Assigned</th>
-                          <th className="px-5 py-3.5">Date &amp; Time</th>
-                          <th className="px-5 py-3.5">Status</th>
-                          <th className="px-5 py-3.5">Admin Attendance Checklist</th>
-                          <th className="px-5 py-3.5">PIN &amp; Magic Link</th>
-                          <th className="px-5 py-3.5 text-right">Actions</th>
+                          <th className="px-4 py-3">Student &amp; Lesson</th>
+                          <th className="px-3 py-3">Tutor</th>
+                          <th className="px-3 py-3">Date &amp; Time</th>
+                          <th className="px-2 py-3 text-center">Status</th>
+                          <th className="px-3 py-3 text-center">Attendance</th>
+                          <th className="px-3 py-3">PIN &amp; Link</th>
+                          <th className="px-3 py-3 text-center">Reschedule / Repeat</th>
+                          <th className="px-3 py-3 text-center">Cancel / Delete</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {upcomingList.map((s) => (
                           <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                            <td className="px-5 py-3.5">
+                            <td className="px-4 py-3">
                               <div className="font-bold text-slate-800 dark:text-slate-100">
                                 {s.tutee?.name}
                               </div>
@@ -1607,9 +1608,9 @@ export default function AdminPage() {
                               </div>
                               {/* Personal Admin Reminder */}
                               {s.adminReminder ? (
-                                <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[11px]">
-                                  <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                                  <span className="font-semibold truncate max-w-[200px]" title={s.adminReminder}>
+                                <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                  <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                  <span className="font-semibold truncate max-w-[140px]" title={s.adminReminder}>
                                     {s.adminReminder}
                                   </span>
                                   <button
@@ -1637,24 +1638,42 @@ export default function AdminPage() {
                                 </button>
                               )}
                             </td>
-                            <td className="px-5 py-3.5 text-slate-600 dark:text-slate-300 font-medium">
+                            <td className="px-3 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
                               {formatTutorName(s.tutor?.name)}
                             </td>
-                            <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}{" "}
-                              &bull;{" "}
-                              {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                            <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                              <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })}{" "}
+                                &bull;{" "}
+                                {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2 font-sans">
+                                {s.teamsMeetingUrl ? (
+                                  <a
+                                    href={s.teamsMeetingUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                  >
+                                    <Video className="w-3 h-3" />
+                                    <span>Teams</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                )}
+                                <AddToCalendar session={s} compact />
+                              </div>
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-2 py-3 text-center whitespace-nowrap">
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                   s.status === "IN_PROGRESS"
                                     ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                     : s.status === "DELAYED"
@@ -1665,13 +1684,13 @@ export default function AdminPage() {
                                 {s.status}
                               </span>
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="px-3 py-3">
                               {/* Confirmation Toggles */}
-                              <div className="flex flex-col gap-1.5 min-w-[130px]">
+                              <div className="flex flex-col gap-1 min-w-[105px]">
                                 <button
                                   type="button"
                                   onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
-                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1.5 transition-all cursor-pointer border ${
+                                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${
                                     s.tutorConfirmed
                                       ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
                                       : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -1680,19 +1699,19 @@ export default function AdminPage() {
                                 >
                                   <span className="flex items-center gap-1">
                                     {s.tutorConfirmed ? (
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
                                     ) : (
-                                      <Clock className="w-3 h-3 text-slate-400" />
+                                      <Clock className="w-2.5 h-2.5 text-slate-400" />
                                     )}
                                     <span>Tutor</span>
                                   </span>
-                                  <span>{s.tutorConfirmed ? "Confirmed ✓" : "Pending"}</span>
+                                  <span>{s.tutorConfirmed ? "✓" : "—"}</span>
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
-                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1.5 transition-all cursor-pointer border ${
+                                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${
                                     s.tuteeConfirmed
                                       ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
                                       : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -1701,81 +1720,81 @@ export default function AdminPage() {
                                 >
                                   <span className="flex items-center gap-1">
                                     {s.tuteeConfirmed ? (
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
                                     ) : (
-                                      <Clock className="w-3 h-3 text-slate-400" />
+                                      <Clock className="w-2.5 h-2.5 text-slate-400" />
                                     )}
                                     <span>Student</span>
                                   </span>
-                                  <span>{s.tuteeConfirmed ? "Confirmed ✓" : "Pending"}</span>
+                                  <span>{s.tuteeConfirmed ? "✓" : "—"}</span>
                                 </button>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px]">
+                            <td className="px-3 py-3">
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
                                   PIN: {s.tutee?.pin || "----"}
                                 </span>
                                 <button
                                   onClick={() => copyMagicLink(s.tutee?.magicKey)}
-                                  className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer"
+                                  className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
                                   title="Copy Magic Link"
                                 >
-                                  {copiedKey === s.tutee?.magicKey ? "Copied!" : "Copy Link"}
+                                  {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
                                 </button>
                               </div>
                             </td>
-                            <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
-                              {s.teamsMeetingUrl && (
-                                <a
-                                  href={s.teamsMeetingUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#48A5EE] font-semibold hover:underline mr-1 text-xs"
+                            {/* Reschedule, +1 Wk, +2 Wks in one column */}
+                            <td className="px-3 py-3 text-center">
+                              <div className="flex flex-col items-center gap-1 min-w-[125px]">
+                                <button
+                                  onClick={() => handleOpenReschedule(s)}
+                                  className="w-full px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
+                                  title="Reschedule this lesson"
                                 >
-                                  Teams
-                                </a>
-                              )}
-                              <AddToCalendar session={s} compact />
-                              <button
-                                onClick={() => handleOpenReschedule(s)}
-                                className="px-2 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 border border-purple-200 dark:border-purple-800"
-                                title="Reschedule this lesson"
-                              >
-                                <CalendarClock className="w-3 h-3 text-purple-500" />
-                                <span>Reschedule</span>
-                              </button>
-                              <button
-                                onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                                className="px-2 py-1 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
-                                title="Schedule next week (+7 days)"
-                              >
-                                <Repeat className="w-3 h-3" />
-                                <span>+1 Wk</span>
-                              </button>
-                              <button
-                                onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                                className="px-2 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 border border-purple-200 dark:border-purple-800"
-                                title="Schedule biweekly (+14 days)"
-                              >
-                                <Repeat className="w-3 h-3 text-purple-500" />
-                                <span>+2 Wks</span>
-                              </button>
-                              <button
-                                onClick={() => handleCancelSession(s)}
-                                className="px-2 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 border border-rose-200 dark:border-rose-800"
-                                title="Cancel this lesson"
-                              >
-                                <XCircle className="w-3 h-3 text-rose-500" />
-                                <span>Cancel</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSession(s.id, s.title)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                                title="Delete Lesson Permanently"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                                  <CalendarClock className="w-3 h-3 text-purple-500 shrink-0" />
+                                  <span>Reschedule</span>
+                                </button>
+                                <div className="flex items-center gap-1 w-full">
+                                  <button
+                                    onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                    className="flex-1 px-1 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5"
+                                    title="Schedule next week (+7 days)"
+                                  >
+                                    <Repeat className="w-2.5 h-2.5 shrink-0" />
+                                    <span>+1 Wk</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                    className="flex-1 px-1 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-purple-200 dark:border-purple-800"
+                                    title="Schedule biweekly (+14 days)"
+                                  >
+                                    <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                    <span>+2 Wks</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                            {/* Cancel and Delete in separate column */}
+                            <td className="px-3 py-3 text-center">
+                              <div className="flex flex-col items-center gap-1 min-w-[70px]">
+                                <button
+                                  onClick={() => handleCancelSession(s)}
+                                  className="w-full px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800"
+                                  title="Cancel this lesson"
+                                >
+                                  <XCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                  <span>Cancel</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSession(s.id, s.title)}
+                                  className="w-full px-1.5 py-0.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
+                                  title="Delete Lesson Permanently"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5 shrink-0" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
