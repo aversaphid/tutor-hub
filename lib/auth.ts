@@ -63,6 +63,22 @@ export function parseAuthToken(token: string): { sub: string; role: string } | n
   }
 }
 
+interface CachedUser {
+  user: SessionUser;
+  expiresAt: number;
+}
+
+const userCache = new Map<string, CachedUser>();
+const USER_CACHE_TTL_MS = 30_000; // 30 seconds cache TTL to eliminate DB queries during polling
+
+export function clearUserCache(userId?: string) {
+  if (userId) {
+    userCache.delete(userId);
+  } else {
+    userCache.clear();
+  }
+}
+
 export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
@@ -71,6 +87,12 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
     const parsed = parseAuthToken(token);
     if (!parsed) return null;
+
+    const now = Date.now();
+    const cached = userCache.get(parsed.sub);
+    if (cached && cached.expiresAt > now) {
+      return cached.user;
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: parsed.sub, active: true },
@@ -82,6 +104,15 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         magicKey: true,
       },
     });
+
+    if (user) {
+      userCache.set(parsed.sub, {
+        user,
+        expiresAt: now + USER_CACHE_TTL_MS,
+      });
+    } else {
+      userCache.delete(parsed.sub);
+    }
 
     return user;
   } catch {

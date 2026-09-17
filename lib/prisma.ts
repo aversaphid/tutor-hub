@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client/web";
+import { createClient } from "@libsql/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -47,7 +47,8 @@ function createPrismaClient() {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (getEnv("NODE_ENV") !== "production") globalForPrisma.prisma = prisma;
+// Ensure the client instance is reused across hot reloads and standalone server worker threads
+globalForPrisma.prisma = prisma;
 
 export default prisma;
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, verifyPassword, hashPassword } from "@/lib/auth";
+import { getCurrentUser, verifyPassword, hashPassword, clearUserCache } from "@/lib/auth";
 import { z } from "zod";
 
 const ChangePasswordSchema = z.object({
@@ -48,6 +48,8 @@ export async function POST(request: Request) {
       where: { id: user.id },
       data: { passwordHash: newHash },
     });
+
+    clearUserCache(user.id);
 
     return NextResponse.json({
       success: true,

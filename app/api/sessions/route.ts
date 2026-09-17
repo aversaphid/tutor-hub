@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { CreateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
 import { logSessionAudit } from "@/lib/audit";
+import crypto from "crypto";
 
 export async function GET(request: Request) {
   try {
@@ -16,12 +17,19 @@ export async function GET(request: Request) {
     const tutorId = searchParams.get("tutorId");
     const tuteeId = searchParams.get("tuteeId");
     const status = searchParams.get("status");
+    const activeOnly = searchParams.get("active") === "true";
 
     const where: any = {};
 
     if (user.role === "TUTEE") {
       // Students can ONLY ever view their own sessions
       where.tuteeId = user.id;
+      // Optimize: student lobby only needs active/upcoming sessions and recent cancelled (last 7 days)
+      if (activeOnly || !status) {
+        where.scheduledEndTime = {
+          gte: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+        };
+      }
     } else if (user.role === "TUTOR") {
       // Tutors can only view their own sessions or sessions of students assigned to them
       where.OR = [
@@ -68,7 +76,32 @@ export async function GET(request: Request) {
       orderBy: { scheduledStartTime: "asc" },
     });
 
-    return NextResponse.json({ sessions });
+    // Compute lightweight ETag for cache validation
+    const etagSeed = sessions
+      .map((s) => `${s.id}-${new Date(s.updatedAt).getTime()}`)
+      .join(":");
+    const etag = `"${crypto.createHash("md5").update(etagSeed).digest("hex")}"`;
+
+    const ifNoneMatch = request.headers.get("if-none-match");
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, no-cache",
+        },
+      });
+    }
+
+    return NextResponse.json(
+      { sessions },
+      {
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, no-cache",
+        },
+      }
+    );
   } catch (err) {
     console.error("Sessions GET error:", err);
     return NextResponse.json(

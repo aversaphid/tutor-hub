@@ -59,50 +59,41 @@ export default function CountdownTimer({
   const prevDelayRef = useRef(initialSession.delayMinutes);
   const hasTriggeredZeroChime = useRef(false);
 
+  // Sync with session updates from parent (e.g. status changes, delays, start chimes) without duplicate network polling
   useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/sessions/live?sessionId=${session.id}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.session) {
-          const newSession: SessionData = data.session;
+    if (!initialSession) return;
+    const newSession = initialSession;
 
-          if (newSession.delayMinutes > prevDelayRef.current) {
-            const addedMinutes = newSession.delayMinutes - prevDelayRef.current;
-            playDelayAlertChime();
-            setNotification({
-              type: "delay",
-              message: `${newSession.tutor?.name || "Your tutor"} added +${addedMinutes} mins to the lesson start time.`,
-            });
-            prevDelayRef.current = newSession.delayMinutes;
-          }
+    if (newSession.delayMinutes > prevDelayRef.current) {
+      const addedMinutes = newSession.delayMinutes - prevDelayRef.current;
+      playDelayAlertChime();
+      setNotification({
+        type: "delay",
+        message: `${newSession.tutor?.name || "Your tutor"} added +${addedMinutes} mins to the lesson start time.`,
+      });
+      prevDelayRef.current = newSession.delayMinutes;
+    }
 
-          if (
-            prevStatusRef.current !== "IN_PROGRESS" &&
-            newSession.status === "IN_PROGRESS"
-          ) {
-            playSessionStartChime();
-            if (!preferences.reducedMotion) {
-              try {
-                confetti({ particleCount: 70, spread: 60 });
-              } catch {}
-            }
-            setNotification({
-              type: "started",
-              message: `${newSession.tutor?.name || "Your tutor"} has started the lesson early! Click below to join.`,
-            });
-          }
+    if (
+      prevStatusRef.current !== "IN_PROGRESS" &&
+      newSession.status === "IN_PROGRESS"
+    ) {
+      playSessionStartChime();
+      if (!preferences.reducedMotion) {
+        try {
+          confetti({ particleCount: 70, spread: 60 });
+        } catch {}
+      }
+      setNotification({
+        type: "started",
+        message: `${newSession.tutor?.name || "Your tutor"} has started the lesson early! Click below to join.`,
+      });
+    }
 
-          prevStatusRef.current = newSession.status;
-          setSession(newSession);
-          onStatusChange?.(newSession);
-        }
-      } catch {}
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [session.id, onStatusChange, preferences.reducedMotion]);
+    prevStatusRef.current = newSession.status;
+    setSession(newSession);
+    onStatusChange?.(newSession);
+  }, [initialSession, onStatusChange, preferences.reducedMotion]);
 
   useEffect(() => {
     const calculateTime = () => {

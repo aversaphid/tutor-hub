@@ -145,7 +145,6 @@ export default function TutorDashboardPage() {
       await Promise.all([
         loadAssignedStudents(),
         loadMySessions(),
-        loadLiveSession(),
       ]);
     } catch (err) {
       console.error("Tutor init error:", err);
@@ -170,7 +169,26 @@ export default function TutorDashboardPage() {
       const res = await fetch("/api/sessions");
       if (!res.ok) return;
       const data = await res.json();
-      setMySessions(data.sessions || []);
+      const sessions = data.sessions || [];
+      setMySessions(sessions);
+
+      // Derive active lesson without issuing a duplicate network call
+      const now = Date.now();
+      const live =
+        sessions.find(
+          (s: any) =>
+            s.status === "IN_PROGRESS" &&
+            new Date(s.scheduledEndTime).getTime() > now - 2 * 3600 * 1000
+        ) ||
+        sessions.find(
+          (s: any) =>
+            (s.status === "DELAYED" || s.status === "SCHEDULED") &&
+            new Date(s.scheduledEndTime).getTime() > now
+        );
+      if (live) {
+        setActiveLesson(live);
+        setTeamsUrlInput(live.teamsMeetingUrl || "");
+      }
     } catch (err) {
       console.error("Error loading sessions:", err);
     }

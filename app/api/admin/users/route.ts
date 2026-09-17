@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, hashPassword } from "@/lib/auth";
+import { getCurrentUser, hashPassword, clearUserCache } from "@/lib/auth";
 import { CreateUserSchema, ReassignStudentSchema, AdminUpdateUserPasswordSchema } from "@/lib/validations";
 import crypto from "crypto";
 
@@ -174,6 +174,7 @@ export async function PATCH(request: Request) {
         where: { id: userId },
         data: { passwordHash },
       });
+      clearUserCache(userId);
 
       return NextResponse.json({
         success: true,
@@ -201,6 +202,7 @@ export async function PATCH(request: Request) {
         assignedTutor: { select: { id: true, name: true, email: true } },
       },
     });
+    clearUserCache(studentId);
 
     return NextResponse.json({
       success: true,
@@ -268,6 +270,7 @@ export async function DELETE(request: Request) {
       await prisma.session.deleteMany({ where: { tuteeId: targetUser.id } });
       // 4. Delete the student
       await prisma.user.delete({ where: { id: targetUser.id } });
+      clearUserCache(targetUser.id);
 
       return NextResponse.json({
         success: true,
@@ -299,6 +302,7 @@ export async function DELETE(request: Request) {
       await prisma.session.deleteMany({ where: { tutorId: targetUser.id } });
       // 5. Delete the tutor
       await prisma.user.delete({ where: { id: targetUser.id } });
+      clearUserCache(targetUser.id);
 
       return NextResponse.json({
         success: true,

@@ -93,6 +93,20 @@ async function setup() {
   // 5. Create Indexes
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");`);
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_magicKey_key" ON "User"("magicKey");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "User_role_idx" ON "User"("role");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "User_pin_idx" ON "User"("pin");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "User_assignedTutorId_idx" ON "User"("assignedTutorId");`);
+
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_tutorId_idx" ON "Session"("tutorId");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_tuteeId_idx" ON "Session"("tuteeId");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_status_idx" ON "Session"("status");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_scheduledStartTime_idx" ON "Session"("scheduledStartTime");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_scheduledEndTime_idx" ON "Session"("scheduledEndTime");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_tuteeId_status_idx" ON "Session"("tuteeId", "status");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "Session_tutorId_status_idx" ON "Session"("tutorId", "status");`);
+
+  await client.execute(`CREATE INDEX IF NOT EXISTS "AuditLog_sessionId_idx" ON "AuditLog"("sessionId");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "AuditLog_timestamp_idx" ON "AuditLog"("timestamp");`);
 
   console.log("✅ All tables and indexes created on Turso.");
 

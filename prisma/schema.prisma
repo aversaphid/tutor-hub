@@ -42,6 +42,10 @@ model User {
   tutorSessions Session[] @relation("TutorSessions")
   tuteeSessions Session[] @relation("TuteeSessions")
   auditLogs     AuditLog[]
+
+  @@index([role])
+  @@index([pin])
+  @@index([assignedTutorId])
 }
 
 model Session {
@@ -79,6 +83,14 @@ model Session {
   updatedAt          DateTime      @updatedAt
 
   auditLogs          AuditLog[]
+
+  @@index([tutorId])
+  @@index([tuteeId])
+  @@index([status])
+  @@index([scheduledStartTime])
+  @@index([scheduledEndTime])
+  @@index([tuteeId, status])
+  @@index([tutorId, status])
 }
 
 model AuditLog {
@@ -90,6 +102,9 @@ model AuditLog {
   action     String
   details    String?
   timestamp  DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([timestamp])
 }
 
 model SystemSetting {

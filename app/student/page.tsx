@@ -101,7 +101,7 @@ function StudentLobbyContent() {
 
   const loadStudentSessions = async (tuteeId: string) => {
     try {
-      const res = await fetch(`/api/sessions?tuteeId=${tuteeId}`);
+      const res = await fetch(`/api/sessions?tuteeId=${tuteeId}&active=true`);
       if (!res.ok) return;
       const data = await res.json();
       const sessions: any[] = data.sessions || [];
@@ -139,29 +139,57 @@ function StudentLobbyContent() {
     } catch {}
   };
 
-  // Real-time synchronization: poll every 3 seconds and sync when window/tab is focused
+  // Smart real-time sync: pause completely when tab is hidden, sync immediately when tab is focused
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const interval = setInterval(() => {
-      loadStudentSessions(currentUser.id);
-    }, 3000);
+    let timer: NodeJS.Timeout | null = null;
 
-    const handleVisibility = () => {
+    const scheduleNextPoll = () => {
+      if (timer) clearTimeout(timer);
+
+      // Stop polling when tab is minimized or in the background to save CPU and battery
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+
+      // 8s if a lesson is starting soon or in progress, otherwise 12s
+      const now = Date.now();
+      const isStartingSoonOrLive =
+        activeSession &&
+        (activeSession.status === "IN_PROGRESS" ||
+          new Date(activeSession.scheduledStartTime).getTime() - now < 5 * 60 * 1000);
+
+      const delay = isStartingSoonOrLive ? 8000 : 12000;
+
+      timer = setTimeout(async () => {
+        await loadStudentSessions(currentUser.id);
+        scheduleNextPoll();
+      }, delay);
+    };
+
+    const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
+        // Immediate sync upon returning to tab
         loadStudentSessions(currentUser.id);
+        scheduleNextPoll();
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = null;
       }
     };
 
-    window.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", handleVisibility);
+    window.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
+    scheduleNextPoll();
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", handleVisibility);
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, activeSession?.status, activeSession?.scheduledStartTime]);
 
   if (loading) {
     return (
