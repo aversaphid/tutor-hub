@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
+import CasioCalculatorModal from "@/components/casio-calculator-modal";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -39,8 +40,9 @@ function StudentLobbyContent() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
 
-  // Formula Sheet modal & copy tutor email state
+  // Formula Sheet & Casio Calculator modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
 
   const getTutorEmail = (tutorName?: string | null) => {
@@ -371,11 +373,20 @@ function StudentLobbyContent() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setIsCalculatorOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
+                  title="Open Casio fx-83GTX Scientific Calculator"
+                >
+                  <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span>Casio fx-83GTX</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsFormulaSheetOpen(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
                   title="Open GCSE & A-Level Maths Formula Sheet"
                 >
-                  <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
                   <span>Formula Sheet</span>
                 </button>
                 <AddToCalendar session={activeSession} />
@@ -490,14 +501,22 @@ function StudentLobbyContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
               When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsFormulaSheetOpen(true)}
+                onClick={() => setIsCalculatorOpen(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
               >
                 <Calculator className="w-4 h-4" />
-                <span>Open Maths Formula Sheet</span>
+                <span>Casio fx-83GTX Calculator</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFormulaSheetOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+              >
+                <FileText className="w-4 h-4 text-[#48A5EE]" />
+                <span>Formula Sheet</span>
               </button>
             </div>
           </div>
@@ -558,6 +577,12 @@ function StudentLobbyContent() {
       <FormulaSheetModal
         isOpen={isFormulaSheetOpen}
         onClose={() => setIsFormulaSheetOpen(false)}
+      />
+
+      {/* Casio fx-83GTX Scientific Calculator Modal */}
+      <CasioCalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
       />
 
       <Footer />

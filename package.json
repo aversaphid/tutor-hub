@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
-    "db:setup-turso": "tsx scripts/setup-turso.ts"
+    "db:setup-turso": "tsx scripts/setup-turso.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

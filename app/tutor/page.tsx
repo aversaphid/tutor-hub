@@ -9,6 +9,7 @@ import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
+import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import {
   Calendar,
   Users,
@@ -23,6 +24,7 @@ import {
   CheckCircle2,
   Sparkles,
   ExternalLink,
+  FileText,
   ShieldCheck,
   RefreshCw,
   Search,
@@ -59,8 +61,9 @@ export default function TutorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState("");
 
-  // Formula Sheet Modal
+  // Formula Sheet & Casio Calculator Modals
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
   // Reschedule Modal
   const [rescheduleTargetLesson, setRescheduleTargetLesson] = useState<any>(null);
@@ -469,11 +472,19 @@ export default function TutorDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setIsCalculatorOpen(true)}
+              className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open Casio fx-83GTX Scientific Calculator"
+            >
+              <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span className="hidden sm:inline">fx-83GTX</span>
+            </button>
+            <button
               onClick={() => setIsFormulaSheetOpen(true)}
               className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Open quick GCSE & A-Level Maths Formula Reference"
             >
-              <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
               <span className="hidden sm:inline">Formula Sheet</span>
             </button>
             <button
@@ -1702,6 +1713,12 @@ export default function TutorDashboardPage() {
       <FormulaSheetModal
         isOpen={isFormulaSheetOpen}
         onClose={() => setIsFormulaSheetOpen(false)}
+      />
+
+      {/* Casio fx-83GTX Scientific Calculator Modal */}
+      <CasioCalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
       />
 
       {/* Reschedule Lesson Modal */}
