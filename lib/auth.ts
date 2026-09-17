@@ -22,7 +22,8 @@ export interface SessionUser {
   magicKey: string | null;
 }
 
-const SECRET = process.env.SESSION_SECRET || process.env.TURSO_AUTH_TOKEN || "lb-maths-tuition-session-secret";
+const FALLBACK_SECRET = crypto.randomBytes(32).toString("hex");
+const SECRET = process.env.SESSION_SECRET || process.env.TURSO_AUTH_TOKEN || FALLBACK_SECRET;
 
 // Encode cryptographically signed secure token
 export function createAuthToken(user: { id: string; role: string }): string {

@@ -86,10 +86,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
     console.error("[Auth API] Login error:", err);
     return NextResponse.json(
-      { error: `Server error: ${message}` },
+      { error: "An unexpected server error occurred. Please try again later." },
       { status: 500 }
     );
   }

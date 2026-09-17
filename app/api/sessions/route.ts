@@ -8,6 +8,10 @@ import { logSessionAudit } from "@/lib/audit";
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const tutorId = searchParams.get("tutorId");
     const tuteeId = searchParams.get("tuteeId");
@@ -15,23 +19,29 @@ export async function GET(request: Request) {
 
     const where: any = {};
 
-    if (user?.role === "TUTOR") {
+    if (user.role === "TUTEE") {
+      // Students can ONLY ever view their own sessions
+      where.tuteeId = user.id;
+    } else if (user.role === "TUTOR") {
+      // Tutors can only view their own sessions or sessions of students assigned to them
       where.OR = [
         { tutorId: user.id },
         { tutee: { assignedTutorId: user.id } },
       ];
-    } else if (user?.role === "TUTEE") {
-      where.tuteeId = user.id;
-    } else if (user?.role === "HEAD_TUTOR") {
+      if (status) where.status = status;
+    } else if (user.role === "HEAD_TUTOR") {
+      // Admin can filter by tutor or student
       if (tutorId) where.tutorId = tutorId;
       if (tuteeId) where.tuteeId = tuteeId;
-    } else if (tuteeId) {
-      where.tuteeId = tuteeId;
+    } else {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
-    if (status) {
+    if (status && user.role !== "TUTOR") {
       where.status = status;
     }
+
+    const isStudent = user.role === "TUTEE";
 
     const sessions = await prisma.session.findMany({
       where,
@@ -41,16 +51,19 @@ export async function GET(request: Request) {
           select: {
             id: true,
             name: true,
-            pin: true,
-            magicKey: true,
+            // Only expose PIN and magicKey to Tutors and Admins for student assistance
+            pin: !isStudent,
+            magicKey: !isStudent,
             assignedTutorId: true,
           },
         },
-        auditLogs: {
-          take: 5,
-          orderBy: { timestamp: "desc" },
-          include: { actor: { select: { name: true, role: true } } },
-        },
+        auditLogs: isStudent
+          ? false
+          : {
+              take: 5,
+              orderBy: { timestamp: "desc" },
+              include: { actor: { select: { name: true, role: true } } },
+            },
       },
       orderBy: { scheduledStartTime: "asc" },
     });

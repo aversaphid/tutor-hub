@@ -10,21 +10,49 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const { id } = await params;
+    const isStudent = user.role === "TUTEE";
+
     const session = await prisma.session.findUnique({
       where: { id },
       include: {
         tutor: { select: { id: true, name: true, email: true } },
-        tutee: { select: { id: true, name: true, magicKey: true } },
-        auditLogs: {
-          orderBy: { timestamp: "desc" },
-          include: { actor: { select: { name: true, role: true } } },
+        tutee: {
+          select: {
+            id: true,
+            name: true,
+            magicKey: !isStudent,
+            assignedTutorId: true,
+          },
         },
+        auditLogs: isStudent
+          ? false
+          : {
+              orderBy: { timestamp: "desc" },
+              include: { actor: { select: { name: true, role: true } } },
+            },
       },
     });
 
     if (!session) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    }
+
+    // Permission check
+    if (user.role === "TUTEE" && session.tuteeId !== user.id) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+    if (
+      user.role === "TUTOR" &&
+      session.tutorId !== user.id &&
+      session.tutee.assignedTutorId !== user.id
+    ) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
     return NextResponse.json({ session });

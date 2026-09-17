@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+import { getCurrentUser } from "@/lib/auth";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
     const tuteeId = searchParams.get("tuteeId");
@@ -13,43 +20,43 @@ export async function GET(request: Request) {
     let session = null;
     const now = new Date();
 
+    const isStudent = user.role === "TUTEE";
     const include = {
       tutor: { select: { id: true, name: true, email: true } },
-      tutee: { select: { id: true, name: true, pin: true, magicKey: true } },
+      tutee: {
+        select: {
+          id: true,
+          name: true,
+          pin: !isStudent,
+          magicKey: !isStudent,
+        },
+      },
     };
 
+    let baseWhere: any = {};
+
+    if (user.role === "TUTEE") {
+      baseWhere = { tuteeId: user.id };
+    } else if (user.role === "TUTOR") {
+      baseWhere = {
+        OR: [
+          { tutorId: user.id },
+          { tutee: { assignedTutorId: user.id } },
+        ],
+      };
+    } else if (user.role === "HEAD_TUTOR") {
+      if (tuteeId) baseWhere.tuteeId = tuteeId;
+      if (tutorId) baseWhere.tutorId = tutorId;
+    } else {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+
     if (sessionId) {
-      session = await prisma.session.findUnique({
-        where: { id: sessionId },
+      session = await prisma.session.findFirst({
+        where: { id: sessionId, ...baseWhere },
         include,
       });
     } else {
-      let baseWhere: any = {};
-
-      if (tuteeId) {
-        baseWhere = { tuteeId };
-      } else if (tutorId) {
-        baseWhere = {
-          OR: [
-            { tutorId },
-            { tutee: { assignedTutorId: tutorId } },
-          ],
-        };
-      } else {
-        const { getCurrentUser } = await import("@/lib/auth");
-        const user = await getCurrentUser();
-        if (user?.role === "TUTOR") {
-          baseWhere = {
-            OR: [
-              { tutorId: user.id },
-              { tutee: { assignedTutorId: user.id } },
-            ],
-          };
-        } else if (user?.role === "HEAD_TUTOR") {
-          baseWhere = {};
-        }
-      }
-
       // Priority 1: Any lesson currently IN_PROGRESS whose end time hasn't long passed (within 2h)
       session = await prisma.session.findFirst({
         where: {
