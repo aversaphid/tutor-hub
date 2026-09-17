@@ -31,6 +31,7 @@ import {
   BookOpen,
   Trash2,
   Bell,
+  Settings,
 } from "lucide-react";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
@@ -38,13 +39,18 @@ import { useRouter } from "next/navigation";
 export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "audit">("lessons");
+  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "audit" | "settings">("lessons");
 
   const [sessions, setSessions] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // System Settings state
+  const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(true);
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState("");
 
   // Search, filter, and sort state for lessons
   const [lessonSearchTerm, setLessonSearchTerm] = useState("");
@@ -134,10 +140,11 @@ export default function AdminPage() {
 
   const refreshAllData = async () => {
     try {
-      const [sessRes, usersRes, auditRes] = await Promise.all([
+      const [sessRes, usersRes, auditRes, settingsRes] = await Promise.all([
         fetch("/api/sessions"),
         fetch("/api/admin/users"),
         fetch("/api/admin/audit-logs"),
+        fetch("/api/admin/settings"),
       ]);
 
       if (sessRes.ok) {
@@ -175,7 +182,46 @@ export default function AdminPage() {
         const d = await auditRes.json();
         setAuditLogs(d.auditLogs || []);
       }
+      if (settingsRes.ok) {
+        const d = await settingsRes.json();
+        if (typeof d.subwaySurfersEnabled === "boolean") {
+          setSubwaySurfersEnabled(d.subwaySurfersEnabled);
+        }
+      }
     } catch {}
+  };
+
+  const handleToggleSubwaySurfers = async (enabled: boolean) => {
+    setIsUpdatingSettings(true);
+    setSettingsMessage("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subwaySurfersEnabled: enabled }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSubwaySurfersEnabled(data.subwaySurfersEnabled);
+        setSettingsMessage(
+          data.subwaySurfersEnabled
+            ? "Subway Surfers easter egg enabled across the platform."
+            : "Subway Surfers easter egg completely hidden from the platform."
+        );
+        // Broadcast to local window for instantaneous update
+        window.dispatchEvent(
+          new CustomEvent("th_settings_updated", {
+            detail: { subwaySurfersEnabled: data.subwaySurfersEnabled },
+          })
+        );
+      } else {
+        setSettingsMessage("Failed to update settings. Please try again.");
+      }
+    } catch {
+      setSettingsMessage("Network error updating settings.");
+    } finally {
+      setIsUpdatingSettings(false);
+    }
   };
 
   // Toggle Tutor Paid Status
@@ -902,6 +948,17 @@ export default function AdminPage() {
             }`}
           >
             Activity Logs ({auditLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "settings"
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
           </button>
         </div>
 
@@ -1694,6 +1751,87 @@ export default function AdminPage() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 5: PLATFORM SETTINGS */}
+        {activeTab === "settings" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[#48A5EE]" />
+                  <span>Platform Settings & Feature Controls</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Manage global system settings, accessibility features, and easter eggs across the platform.
+                </p>
+              </div>
+
+              {settingsMessage && (
+                <div className="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-[#3292dc] dark:text-blue-300 text-xs flex items-center justify-between animate-in fade-in">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#48A5EE] shrink-0" />
+                    <span>{settingsMessage}</span>
+                  </span>
+                  <button
+                    onClick={() => setSettingsMessage("")}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold px-2 py-0.5 cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              {/* Subway Surfers Mode Control */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl" role="img" aria-label="skateboard">
+                      🛹
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Subway Surfers Focus Mode
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${
+                        subwaySurfersEnabled
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                      }`}
+                    >
+                      {subwaySurfersEnabled ? "Active" : "Disabled / Hidden"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                    Controls whether the secret Subway Surfers focus stream is available in the student and tutor accessibility menu. When toggled off, the feature disappears from the entire platform.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {subwaySurfersEnabled ? "Enabled" : "Hidden"}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    disabled={isUpdatingSettings}
+                    aria-checked={subwaySurfersEnabled}
+                    onClick={() => handleToggleSubwaySurfers(!subwaySurfersEnabled)}
+                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      subwaySurfersEnabled ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
+                    } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                    title={subwaySurfersEnabled ? "Click to hide Subway Surfers mode" : "Click to enable Subway Surfers mode"}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                        subwaySurfersEnabled ? "translate-x-7" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

@@ -22,7 +22,7 @@ interface AccessibilityModalProps {
 }
 
 export default function AccessibilityModal({ isOpen, onClose }: AccessibilityModalProps) {
-  const { preferences, updatePreferences, resetPreferences } = useAccessibility();
+  const { preferences, updatePreferences, resetPreferences, isSubwaySurfersFeatureEnabled } = useAccessibility();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key
@@ -332,55 +332,57 @@ export default function AccessibilityModal({ isOpen, onClose }: AccessibilityMod
             </div>
           </div>
 
-          {/* 5. SECRET EASTER EGG */}
-          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <span>🤫 Secret Mode</span>
-              </h3>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 tracking-wider">
-                EASTER EGG
-              </span>
-            </div>
-
-            {/* Subway Surfers Option */}
-            <div
-              className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
-                preferences.subwaySurfers
-                  ? "bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-cyan-500/10 border-[#48A5EE]/50 shadow-sm"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              <div className="space-y-0.5 pr-4">
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <span role="img" aria-label="skateboard" className="text-sm">
-                    🛹
-                  </span>
-                  <span>Subway Surfers Focus Video</span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Plays endless Subway Surfers gameplay in the top-left corner of the screen for maximum focus and stimulation.
-                </p>
+          {/* 5. SECRET EASTER EGG (Configured via Admin Settings) */}
+          {isSubwaySurfersFeatureEnabled && (
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span>🤫 Secret Mode</span>
+                </h3>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20 tracking-wider">
+                  EASTER EGG
+                </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={preferences.subwaySurfers}
-                onClick={() =>
-                  updatePreferences({ subwaySurfers: !preferences.subwaySurfers })
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  preferences.subwaySurfers ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
+
+              {/* Subway Surfers Option */}
+              <div
+                className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                  preferences.subwaySurfers
+                    ? "bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-cyan-500/10 border-[#48A5EE]/50 shadow-sm"
+                    : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
                 }`}
               >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                    preferences.subwaySurfers ? "translate-x-5" : "translate-x-0"
+                <div className="space-y-0.5 pr-4">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span role="img" aria-label="skateboard" className="text-sm">
+                      🛹
+                    </span>
+                    <span>Subway Surfers Focus Video</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Plays endless Subway Surfers gameplay in the top-left corner of the screen for maximum focus and stimulation.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={preferences.subwaySurfers}
+                  onClick={() =>
+                    updatePreferences({ subwaySurfers: !preferences.subwaySurfers })
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    preferences.subwaySurfers ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                      preferences.subwaySurfers ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}

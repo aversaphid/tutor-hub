@@ -81,7 +81,16 @@ async function setup() {
     );
   `);
 
-  // 4. Create Indexes
+  // 4. Create SystemSetting table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS "SystemSetting" (
+      "key" TEXT NOT NULL PRIMARY KEY,
+      "value" TEXT NOT NULL,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // 5. Create Indexes
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");`);
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_magicKey_key" ON "User"("magicKey");`);
 

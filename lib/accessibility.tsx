@@ -32,6 +32,8 @@ interface AccessibilityContextType {
   resetPreferences: () => void;
   isModalOpen: boolean;
   setIsModalOpen: (open: boolean) => void;
+  isSubwaySurfersFeatureEnabled: boolean;
+  setSubwaySurfersFeatureEnabled: (enabled: boolean) => void;
 }
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
@@ -40,8 +42,9 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
   const [preferences, setPreferences] = useState<AccessibilityPreferences>(DEFAULT_PREFERENCES);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [readingGuideY, setReadingGuideY] = useState<number>(-100);
+  const [isSubwaySurfersFeatureEnabled, setSubwaySurfersFeatureEnabled] = useState(true);
 
-  // Initialize from localStorage on mount
+  // Initialize from localStorage on mount and fetch public settings
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -50,6 +53,32 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
         setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
       }
     } catch {}
+
+    // Fetch public settings for feature flags
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.subwaySurfersEnabled === "boolean") {
+            setSubwaySurfersFeatureEnabled(data.subwaySurfersEnabled);
+          }
+        }
+      } catch {}
+    };
+
+    fetchSettings();
+
+    // Listen to real-time local updates from admin panel
+    const handleSettingsUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ subwaySurfersEnabled?: boolean }>;
+      if (typeof customEvent.detail?.subwaySurfersEnabled === "boolean") {
+        setSubwaySurfersFeatureEnabled(customEvent.detail.subwaySurfersEnabled);
+      }
+    };
+
+    window.addEventListener("th_settings_updated", handleSettingsUpdated);
+    return () => window.removeEventListener("th_settings_updated", handleSettingsUpdated);
   }, []);
 
   // Synchronize CSS classes and attributes to DOM
@@ -125,6 +154,8 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
         resetPreferences,
         isModalOpen,
         setIsModalOpen,
+        isSubwaySurfersFeatureEnabled,
+        setSubwaySurfersFeatureEnabled,
       }}
     >
       {children}

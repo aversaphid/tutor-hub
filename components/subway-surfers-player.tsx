@@ -5,10 +5,10 @@ import { X, Minus, Maximize2, Sparkles } from "lucide-react";
 import { useAccessibility } from "@/lib/accessibility";
 
 export default function SubwaySurfersPlayer() {
-  const { preferences, updatePreferences } = useAccessibility();
+  const { preferences, updatePreferences, isSubwaySurfersFeatureEnabled } = useAccessibility();
   const [isMinimized, setIsMinimized] = useState(false);
 
-  if (!preferences.subwaySurfers) return null;
+  if (!isSubwaySurfersFeatureEnabled || !preferences.subwaySurfers) return null;
 
   return (
     <div
