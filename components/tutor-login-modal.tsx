@@ -31,21 +31,27 @@ export default function TutorLoginModal({ isOpen, onClose }: TutorLoginModalProp
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Response was not JSON (e.g. 500 or 502 HTML error)
+      }
+
       if (!res.ok) {
-        setError(data.error || "Invalid email or password.");
+        setError(data?.error || `Server error (${res.status}). Please check Deno Deploy logs.`);
         return;
       }
 
       onClose();
-      if (data.user?.role === "HEAD_TUTOR") {
+      if (data?.user?.role === "HEAD_TUTOR") {
         router.push("/admin");
       } else {
         router.push("/tutor");
       }
       router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err: any) {
+      setError(err?.message || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }
