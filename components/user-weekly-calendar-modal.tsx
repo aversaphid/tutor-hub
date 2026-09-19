@@ -256,15 +256,27 @@ export default function UserWeeklyCalendarModal({
 
   if (!isOpen || !targetUser) return null;
 
-  // Handle clicking on an empty 30-minute slot to autofill 1-hour lesson (ADMIN ONLY)
+  // Handle clicking on an empty 30-minute slot
   const handleSlotClick = (dayDate: Date, hour: number, minute: number = 0) => {
-    if (!isAdmin) return; // Tutors cannot schedule lessons directly
     const pad = (n: number) => String(n).padStart(2, "0");
     const dateStr = `${dayDate.getFullYear()}-${pad(dayDate.getMonth() + 1)}-${pad(dayDate.getDate())}`;
     const safeMin = Math.floor(minute / 5) * 5;
     const startStr = `${pad(hour)}:${pad(safeMin)}`;
     const endStr = addMinutesToTime(startStr, 60);
 
+    if (!isAdmin) {
+      // Tutor clicking directly on their calendar -> immediately open Set Unavailability for this slot
+      const tutorId = targetUser?.id || currentUserId || (activeTutors[0]?.id ?? "");
+      openSetUnavailableModal({
+        date: dateStr,
+        startTime: startStr,
+        endTime: endStr,
+        tutorId,
+      });
+      return;
+    }
+
+    // Admin clicking on calendar: prefill Quick Add lesson modal
     setQuickAddDate(dateStr);
     setQuickAddStartTime(startStr);
     setQuickAddEndTime(endStr);
@@ -365,24 +377,31 @@ export default function UserWeeklyCalendarModal({
   };
 
   // Open the Set Unavailable / Book Holiday form
-  const openSetUnavailableModal = () => {
-    const todayStr = new Date().toISOString().split("T")[0];
+  const openSetUnavailableModal = (initial?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    tutorId?: string;
+  }) => {
+    const todayStr = initial?.date || new Date().toISOString().split("T")[0];
     setUnavailDate(todayStr);
     setHolidayStartDate(todayStr);
     setHolidayEndDate(todayStr);
-    setUnavailStartTime("09:00");
-    setUnavailEndTime("17:00");
+    setUnavailStartTime(initial?.startTime || "09:00");
+    setUnavailEndTime(initial?.endTime || "10:00");
     setUnavailReason("");
     setUnavailError("");
     setUnavailSuccess("");
     setUnavailType("BUSY");
     setUnavailRepeatWeeks(0);
 
-    const defaultTutorId = !isStudent
-      ? targetUser?.id
-      : targetUser?.assignedTutorId || currentUserId || (activeTutors[0]?.id ?? "");
+    const defaultTutorId =
+      initial?.tutorId ||
+      (!isStudent
+        ? targetUser?.id
+        : targetUser?.assignedTutorId || currentUserId || (activeTutors[0]?.id ?? ""));
 
-    setUnavailTutorId(defaultTutorId);
+    setUnavailTutorId(defaultTutorId || (isAdmin ? "ALL" : ""));
     setIsSetUnavailableOpen(true);
   };
 
@@ -740,7 +759,7 @@ export default function UserWeeklyCalendarModal({
               <>
                 <button
                   type="button"
-                  onClick={openSetUnavailableModal}
+                  onClick={() => openSetUnavailableModal()}
                   className="py-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                   title="Mark unavailable hours or book multi-day holidays"
                 >
@@ -759,9 +778,13 @@ export default function UserWeeklyCalendarModal({
                 </button>
               </>
             )}
-            {isAdmin && (
+            {isAdmin ? (
               <span className="hidden sm:inline text-slate-400">
-                (Click any 30-min slot to schedule a 1-hour lesson)
+                (Click any slot to schedule a lesson or set unavailability for all)
+              </span>
+            ) : (
+              <span className="hidden sm:inline text-slate-400">
+                (Click any slot on the calendar to mark your unavailable hours)
               </span>
             )}
           </div>
@@ -947,39 +970,53 @@ export default function UserWeeklyCalendarModal({
                           {/* 00 - 30 min slot */}
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
-                            onClick={() => isAdmin && handleSlotClick(dayDate, hour, 0)}
-                            className={`border-b border-dashed border-slate-100 dark:border-slate-800/50 transition-colors relative ${
+                            onClick={() => handleSlotClick(dayDate, hour, 0)}
+                            className="border-b border-dashed border-slate-100 dark:border-slate-800/50 transition-colors relative cursor-pointer group hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                            title={
                               isAdmin
-                                ? "hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10 cursor-pointer group"
-                                : "cursor-default"
-                            }`}
-                            title={isAdmin ? `Click to schedule 1-hour lesson starting at ${String(hour).padStart(2, "0")}:00` : undefined}
+                                ? `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:00`
+                                : `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:00`
+                            }
                           >
-                            {isAdmin && (
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
-                                <Plus className="w-3 h-3" />
-                                <span>+ 1h from {String(hour).padStart(2, "0")}:00</span>
-                              </div>
-                            )}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
+                              {isAdmin ? (
+                                <>
+                                  <Plus className="w-3 h-3" />
+                                  <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:00)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-3 h-3 text-amber-500" />
+                                  <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:00)</span>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {/* 30 - 00 min slot */}
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
-                            onClick={() => isAdmin && handleSlotClick(dayDate, hour, 30)}
-                            className={`transition-colors relative ${
+                            onClick={() => handleSlotClick(dayDate, hour, 30)}
+                            className="transition-colors relative cursor-pointer group hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                            title={
                               isAdmin
-                                ? "hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10 cursor-pointer group"
-                                : "cursor-default"
-                            }`}
-                            title={isAdmin ? `Click to schedule 1-hour lesson starting at ${String(hour).padStart(2, "0")}:30` : undefined}
+                                ? `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:30`
+                                : `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:30`
+                            }
                           >
-                            {isAdmin && (
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
-                                <Plus className="w-3 h-3" />
-                                <span>+ 1h from {String(hour).padStart(2, "0")}:30</span>
-                              </div>
-                            )}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
+                              {isAdmin ? (
+                                <>
+                                  <Plus className="w-3 h-3" />
+                                  <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:30)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-3 h-3 text-amber-500" />
+                                  <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:30)</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1172,6 +1209,34 @@ export default function UserWeeklyCalendarModal({
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mode Switcher for Admin: Schedule Lesson vs Set Unavailability */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                className="py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-xs flex items-center justify-center gap-1.5 cursor-default"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Schedule Lesson</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsQuickAddOpen(false);
+                  openSetUnavailableModal({
+                    date: quickAddDate,
+                    startTime: quickAddStartTime,
+                    endTime: quickAddEndTime,
+                    tutorId: quickAddTutorId || (isAdmin ? "ALL" : ""),
+                  });
+                }}
+                className="py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                title="Switch to set tutor unavailability for this slot"
+              >
+                <Ban className="w-3.5 h-3.5 text-amber-500" />
+                <span>Set Unavailability</span>
               </button>
             </div>
 
@@ -1682,12 +1747,20 @@ export default function UserWeeklyCalendarModal({
                   onChange={(e) => setUnavailTutorId(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE] disabled:opacity-80"
                 >
+                  {isAdmin && (
+                    <option value="ALL">⭐ All Tutors (Entire Platform)</option>
+                  )}
                   {activeTutors.map((t) => (
                     <option key={t.id} value={t.id}>
                       {formatTutorName(t.name)}
                     </option>
                   ))}
                 </select>
+                {isAdmin && unavailTutorId === "ALL" && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                    <span>⚡ This unavailability will apply across all active tutors on the platform simultaneously.</span>
+                  </p>
+                )}
               </div>
 
               {/* HOURLY BLACKOUT FIELDS */}
