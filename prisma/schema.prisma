@@ -39,6 +39,10 @@ model User {
   assignedTutor   User?    @relation("TutorStudentAssignment", fields: [assignedTutorId], references: [id])
   assignedStudents User[]  @relation("TutorStudentAssignment")
 
+  // For Students: payment amounts (optional / can be left blank)
+  studentPay      Float?
+  tutorPay        Float?
+
   tutorSessions Session[] @relation("TutorSessions")
   tuteeSessions Session[] @relation("TuteeSessions")
   auditLogs     AuditLog[]

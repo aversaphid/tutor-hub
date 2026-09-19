@@ -232,11 +232,8 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "HEAD_TUTOR") {
-      return NextResponse.json(
-        { error: "Unauthorized. Only the admin can delete lessons." },
-        { status: 403 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
     const { id } = await params;
@@ -245,11 +242,21 @@ export async function DELETE(
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
 
+    const isAllowed =
+      user.role === "HEAD_TUTOR" ||
+      (user.role === "TUTOR" && existing.tutorId === user.id);
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: "Unauthorized. Only the admin or assigned tutor can delete this lesson." },
+        { status: 403 }
+      );
+    }
+
     // Delete associated audit logs first
     await prisma.auditLog.deleteMany({ where: { sessionId: id } });
     await prisma.session.delete({ where: { id } });
 
-    return NextResponse.json({ success: true, message: "Session deleted successfully." });
+    return NextResponse.json({ success: true, message: "Lesson deleted successfully." });
   } catch (err) {
     console.error("Session delete error:", err);
     return NextResponse.json(

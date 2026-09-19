@@ -32,9 +32,19 @@ async function setup() {
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" DATETIME NOT NULL,
       "assignedTutorId" TEXT,
+      "studentPay" REAL,
+      "tutorPay" REAL,
       CONSTRAINT "User_assignedTutorId_fkey" FOREIGN KEY ("assignedTutorId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
     );
   `);
+
+  // Migrate existing User table if columns missing
+  try {
+    await client.execute(`ALTER TABLE "User" ADD COLUMN "studentPay" REAL;`);
+  } catch {}
+  try {
+    await client.execute(`ALTER TABLE "User" ADD COLUMN "tutorPay" REAL;`);
+  } catch {}
 
   // 2. Create Session table
   await client.execute(`

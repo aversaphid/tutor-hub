@@ -45,13 +45,16 @@ import {
   XCircle,
   ChevronDown,
   GraduationCap,
+  Edit3,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
 import SharedResourcesHub from "@/components/shared-resources-hub";
+import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
-import { formatTutorName } from "@/lib/format";
+import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import TimeSelect from "@/components/time-select";
 import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
@@ -64,6 +67,10 @@ export default function AdminPage() {
   const [tutors, setTutors] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Active-only users for selection combo lists
+  const activeStudents = useMemo(() => students.filter((s) => s.active !== false), [students]);
+  const activeTutors = useMemo(() => tutors.filter((t) => t.active !== false), [tutors]);
 
   // System Settings state
   const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(true);
@@ -99,8 +106,9 @@ export default function AdminPage() {
   const [isNewLessonOpen, setIsNewLessonOpen] = useState(false);
   const [selectedTutorId, setSelectedTutorId] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [lessonDate, setLessonDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [lessonStartTime, setLessonStartTime] = useState("10:00");
+  const [lessonEndTime, setLessonEndTime] = useState("11:00");
   const [teamsUrl, setTeamsUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [newLessonAdminReminder, setNewLessonAdminReminder] = useState("");
@@ -134,8 +142,39 @@ export default function AdminPage() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState("");
   const [newUserAssignedTutorId, setNewUserAssignedTutorId] = useState("");
+  const [newUserStudentPay, setNewUserStudentPay] = useState("");
+  const [newUserTutorPay, setNewUserTutorPay] = useState("");
   const [userError, setUserError] = useState("");
   const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+
+  // Edit Student Modal State
+  const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
+  const [editStudentTarget, setEditStudentTarget] = useState<any>(null);
+  const [editStudentName, setEditStudentName] = useState("");
+  const [editStudentAssignedTutorId, setEditStudentAssignedTutorId] = useState("");
+  const [editStudentStudentPay, setEditStudentStudentPay] = useState("");
+  const [editStudentTutorPay, setEditStudentTutorPay] = useState("");
+  const [editStudentPin, setEditStudentPin] = useState("");
+  const [editStudentActive, setEditStudentActive] = useState(true);
+  const [isSubmittingEditStudent, setIsSubmittingEditStudent] = useState(false);
+  const [editStudentError, setEditStudentError] = useState("");
+
+  // Weekly Calendar Modal State
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [calendarModalUser, setCalendarModalUser] = useState<any>(null);
+
+  // Batch Archive by Date Range State
+  const [isBatchArchiveOpen, setIsBatchArchiveOpen] = useState(false);
+  const [batchArchiveStartDate, setBatchArchiveStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [batchArchiveEndDate, setBatchArchiveEndDate] = useState(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+  const [isBatchArchiving, setIsBatchArchiving] = useState(false);
+  const [batchArchiveMessage, setBatchArchiveMessage] = useState("");
 
   // Reassign Tutor Modal State
   const [reassignModalStudent, setReassignModalStudent] = useState<any>(null);
@@ -648,11 +687,15 @@ export default function AdminPage() {
     const nextEnd = new Date(origEnd.getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
 
     const pad = (n: number) => String(n).padStart(2, "0");
-    const formatLocal = (d: Date) =>
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const dateStr = `${nextStart.getFullYear()}-${pad(nextStart.getMonth() + 1)}-${pad(nextStart.getDate())}`;
+    const startMin = Math.floor(nextStart.getMinutes() / 5) * 5;
+    const endMin = Math.floor(nextEnd.getMinutes() / 5) * 5;
+    const startStr = `${pad(nextStart.getHours())}:${pad(startMin)}`;
+    const endStr = `${pad(nextEnd.getHours())}:${pad(endMin)}`;
 
-    setStartTime(formatLocal(nextStart));
-    setEndTime(formatLocal(nextEnd));
+    setLessonDate(dateStr);
+    setLessonStartTime(startStr);
+    setLessonEndTime(endStr);
     setTeamsUrl(session.teamsMeetingUrl || "");
     setNotes(session.notes || "");
     setNewLessonAdminReminder(session.adminReminder || "");
@@ -667,17 +710,30 @@ export default function AdminPage() {
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     setConflictError("");
+
+    if (!lessonDate || !lessonStartTime || !lessonEndTime) {
+      setConflictError("Please select date, start time, and end time.");
+      return;
+    }
+    if (lessonStartTime >= lessonEndTime) {
+      setConflictError("End time must be after start time.");
+      return;
+    }
+
     setIsSubmittingLesson(true);
 
     try {
+      const startIso = new Date(`${lessonDate}T${lessonStartTime}:00`).toISOString();
+      const endIso = new Date(`${lessonDate}T${lessonEndTime}:00`).toISOString();
+
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tutorId: selectedTutorId || currentUser.id,
           tuteeId: selectedStudentId,
-          scheduledStartTime: new Date(startTime).toISOString(),
-          scheduledEndTime: new Date(endTime).toISOString(),
+          scheduledStartTime: startIso,
+          scheduledEndTime: endIso,
           teamsMeetingUrl: teamsUrl || undefined,
           notes: notes || undefined,
           adminReminder: newLessonAdminReminder.trim() || undefined,
@@ -695,8 +751,9 @@ export default function AdminPage() {
       setIsNewLessonOpen(false);
       setSelectedStudentId("");
       setSelectedTutorId("");
-      setStartTime("");
-      setEndTime("");
+      setLessonDate(new Date().toISOString().split("T")[0]);
+      setLessonStartTime("10:00");
+      setLessonEndTime("11:00");
       setTeamsUrl("");
       setNotes("");
       setNewLessonAdminReminder("");
@@ -717,6 +774,16 @@ export default function AdminPage() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setUserError("");
+
+    if (newUserRole === "TUTEE" && newUserStudentPay && newUserTutorPay) {
+      const sPay = parseFloat(newUserStudentPay);
+      const tPay = parseFloat(newUserTutorPay);
+      if (sPay < tPay) {
+        setUserError("Student fee cannot be less than tutor pay.");
+        return;
+      }
+    }
+
     setIsSubmittingUser(true);
 
     try {
@@ -730,6 +797,8 @@ export default function AdminPage() {
           password: newUserRole === "TUTOR" ? newUserPassword : undefined,
           pin: newUserRole === "TUTEE" ? newUserPin : undefined,
           assignedTutorId: newUserRole === "TUTEE" ? newUserAssignedTutorId || null : undefined,
+          studentPay: newUserRole === "TUTEE" && newUserStudentPay ? parseFloat(newUserStudentPay) : undefined,
+          tutorPay: newUserRole === "TUTEE" && newUserTutorPay ? parseFloat(newUserTutorPay) : undefined,
         }),
       });
 
@@ -745,6 +814,8 @@ export default function AdminPage() {
       setNewUserPassword("");
       setNewUserPin("");
       setNewUserAssignedTutorId("");
+      setNewUserStudentPay("");
+      setNewUserTutorPay("");
       await refreshAllData();
       setActionMessage(`${newUserRole === "TUTOR" ? "Tutor" : "Student"} ${data.user.name} created!`);
       setTimeout(() => setActionMessage(""), 4000);
@@ -752,6 +823,160 @@ export default function AdminPage() {
       setUserError("Network error.");
     } finally {
       setIsSubmittingUser(false);
+    }
+  };
+
+  // Open Edit Student Modal
+  const handleOpenEditStudent = (student: any) => {
+    setEditStudentTarget(student);
+    setEditStudentName(student.name || "");
+    setEditStudentAssignedTutorId(student.assignedTutorId || "");
+    setEditStudentStudentPay(
+      student.studentPay !== null && student.studentPay !== undefined
+        ? String(student.studentPay)
+        : ""
+    );
+    setEditStudentTutorPay(
+      student.tutorPay !== null && student.tutorPay !== undefined
+        ? String(student.tutorPay)
+        : ""
+    );
+    setEditStudentPin(student.pin || "");
+    setEditStudentActive(student.active !== false);
+    setEditStudentError("");
+    setIsEditStudentOpen(true);
+  };
+
+  // Toggle User Active Status (Student or Tutor)
+  const handleToggleUserActive = async (userId: string, currentActive: boolean) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, active: !currentActive }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await refreshAllData();
+        setActionMessage(data.message || "User active status updated!");
+        setTimeout(() => setActionMessage(""), 4000);
+      } else {
+        alert(data.error || "Failed to update user status.");
+      }
+    } catch {
+      alert("Network error updating user status.");
+    }
+  };
+
+  // Save Edit Student
+  const handleSaveEditStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editStudentTarget) return;
+    setEditStudentError("");
+
+    if (editStudentStudentPay && editStudentTutorPay) {
+      const sPay = parseFloat(editStudentStudentPay);
+      const tPay = parseFloat(editStudentTutorPay);
+      if (sPay < tPay) {
+        setEditStudentError("Student fee cannot be less than tutor pay.");
+        return;
+      }
+    }
+
+    setIsSubmittingEditStudent(true);
+
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: editStudentTarget.id,
+          name: editStudentName.trim() || undefined,
+          assignedTutorId: editStudentAssignedTutorId || null,
+          studentPay: editStudentStudentPay ? parseFloat(editStudentStudentPay) : null,
+          tutorPay: editStudentTutorPay ? parseFloat(editStudentTutorPay) : null,
+          pin: editStudentPin.trim() || undefined,
+          active: editStudentActive,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setEditStudentError(data.error || "Failed to update student.");
+        return;
+      }
+
+      setIsEditStudentOpen(false);
+      await refreshAllData();
+      setActionMessage(`Student "${data.student?.name || editStudentName}" updated successfully!`);
+      setTimeout(() => setActionMessage(""), 4000);
+    } catch {
+      setEditStudentError("Network error updating student.");
+    } finally {
+      setIsSubmittingEditStudent(false);
+    }
+  };
+
+  // Open Weekly Calendar for Student or Tutor
+  const handleOpenCalendar = (user: any) => {
+    setCalendarModalUser(user);
+    setIsCalendarModalOpen(true);
+  };
+
+  // Batch Archive by Date Range Handler
+  const handleBatchArchive = async () => {
+    if (!batchArchiveStartDate || !batchArchiveEndDate) {
+      alert("Please select both a start and end date.");
+      return;
+    }
+
+    const start = new Date(batchArchiveStartDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(batchArchiveEndDate);
+    end.setHours(23, 59, 59, 999);
+
+    if (end < start) {
+      alert("End date must be after start date.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to move all completed unpaid lessons between ${start.toLocaleDateString()} and ${end.toLocaleDateString()} to Archived (Marked as Paid)?`
+      )
+    ) {
+      return;
+    }
+
+    setIsBatchArchiving(true);
+    setBatchArchiveMessage("");
+
+    try {
+      const res = await fetch("/api/sessions/batch-archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage(data.message || "Lessons moved to Archived successfully!");
+        setBatchArchiveMessage(data.message);
+        await refreshAllData();
+        setTimeout(() => {
+          setActionMessage("");
+          setBatchArchiveMessage("");
+        }, 5000);
+      } else {
+        alert(data.error || "Failed to batch archive lessons.");
+      }
+    } catch {
+      alert("Network error executing batch archive.");
+    } finally {
+      setIsBatchArchiving(false);
     }
   };
 
@@ -1565,6 +1790,27 @@ export default function AdminPage() {
             })
           );
 
+          // Total payout sum for all completed unpaid lessons
+          const totalUnpaidTutorPayout = completedUnpaidList.reduce(
+            (sum, s) => sum + (s.tutee?.tutorPay || 0),
+            0
+          );
+
+          // Matching lessons for batch archive date range
+          const batchMatchingSessions = completedUnpaidList.filter((s) => {
+            if (!batchArchiveStartDate || !batchArchiveEndDate) return true;
+            const sStart = new Date(s.scheduledStartTime);
+            const start = new Date(batchArchiveStartDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(batchArchiveEndDate);
+            end.setHours(23, 59, 59, 999);
+            return sStart >= start && sStart <= end;
+          });
+          const batchMatchingPayout = batchMatchingSessions.reduce(
+            (sum, s) => sum + (s.tutee?.tutorPay || 0),
+            0
+          );
+
           // 3. Archived (Tutor Paid): tutorPaid === true
           const archivedPaidList = sortList(
             filtered.filter((s) => s.tutorPaid)
@@ -1969,6 +2215,9 @@ export default function AdminPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
+                    <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 text-xs font-bold font-mono border border-amber-200 dark:border-amber-800">
+                      Total Payout: {formatCurrency(totalUnpaidTutorPayout)}
+                    </span>
                     <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
                       {isCompletedOpen ? "Hide" : "Show"}
                     </span>
@@ -1979,7 +2228,154 @@ export default function AdminPage() {
                 </button>
 
                 {isCompletedOpen && (
-                  <div className="space-y-3">
+                  <div className="space-y-0">
+                    {/* Section Payout Bar & Batch Archive Button */}
+                    <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/70 dark:border-amber-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                          <DollarSign className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                            Total Unpaid Tutor Payout:{" "}
+                            <span className="font-extrabold font-mono text-sm">
+                              {formatCurrency(totalUnpaidTutorPayout)}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                            Across {completedUnpaidList.length} completed lesson
+                            {completedUnpaidList.length === 1 ? "" : "s"} awaiting tutor settlement
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsBatchArchiveOpen(!isBatchArchiveOpen)}
+                        className="py-2 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer self-start sm:self-auto shrink-0"
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        <span>{isBatchArchiveOpen ? "Hide Date Range Filter" : "Select by Date Range & Archive"}</span>
+                      </button>
+                    </div>
+
+                    {/* Batch Date-Range Archive Toolbar */}
+                    {isBatchArchiveOpen && (
+                      <div className="p-4 bg-amber-100/40 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/60 space-y-3 animate-in fade-in">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+                              <Archive className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Batch Move Lessons to Archived</span>
+                            </h4>
+                            <p className="text-[11px] text-amber-800/80 dark:text-amber-400">
+                              Select lessons between dates and move all of them from &quot;To Be Paid&quot; to &quot;Archived&quot;.
+                            </p>
+                          </div>
+
+                          {/* Quick Presets */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const day = now.getDay();
+                                const diff = day === 0 ? -6 : 1 - day;
+                                const mon = new Date(now);
+                                mon.setDate(now.getDate() + diff);
+                                const fri = new Date(mon);
+                                fri.setDate(mon.getDate() + 4);
+                                setBatchArchiveStartDate(mon.toISOString().slice(0, 10));
+                                setBatchArchiveEndDate(fri.toISOString().slice(0, 10));
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-50 cursor-pointer"
+                            >
+                              This Week
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const day = now.getDay();
+                                const diff = day === 0 ? -6 : 1 - day;
+                                const lastMon = new Date(now);
+                                lastMon.setDate(now.getDate() + diff - 7);
+                                const lastFri = new Date(lastMon);
+                                lastFri.setDate(lastMon.getDate() + 4);
+                                setBatchArchiveStartDate(lastMon.toISOString().slice(0, 10));
+                                setBatchArchiveEndDate(lastFri.toISOString().slice(0, 10));
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-50 cursor-pointer"
+                            >
+                              Last Week
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                                setBatchArchiveStartDate(firstDay.toISOString().slice(0, 10));
+                                setBatchArchiveEndDate(now.toISOString().slice(0, 10));
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-50 cursor-pointer"
+                            >
+                              This Month
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBatchArchiveStartDate("2020-01-01");
+                                setBatchArchiveEndDate(new Date().toISOString().slice(0, 10));
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-50 cursor-pointer"
+                            >
+                              All Unpaid
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                          <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-amber-900 dark:text-amber-300">From:</label>
+                            <input
+                              type="date"
+                              value={batchArchiveStartDate}
+                              onChange={(e) => setBatchArchiveStartDate(e.target.value)}
+                              className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-xs font-mono text-slate-800 dark:text-slate-100 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-amber-900 dark:text-amber-300">To:</label>
+                            <input
+                              type="date"
+                              value={batchArchiveEndDate}
+                              onChange={(e) => setBatchArchiveEndDate(e.target.value)}
+                              className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800 text-xs font-mono text-slate-800 dark:text-slate-100 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-3 sm:ml-auto">
+                            <div className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                              <span>{batchMatchingSessions.length} selected</span>
+                              <span className="text-amber-700 dark:text-amber-400 font-mono ml-1">
+                                ({formatCurrency(batchMatchingPayout)})
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleBatchArchive}
+                              disabled={isBatchArchiving || batchMatchingSessions.length === 0}
+                              className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{isBatchArchiving ? "Moving..." : `Move ${batchMatchingSessions.length} to Archived`}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                 {completedUnpaidList.length === 0 ? (
                   <div className="text-center py-10 px-4 space-y-1">
@@ -1996,7 +2392,7 @@ export default function AdminPage() {
                         key={s.id}
                         className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
                       >
-                        <div className="space-y-1.5 flex-1">
+                        <div className="space-y-2 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
                               {s.tutee?.name}
@@ -2049,6 +2445,28 @@ export default function AdminPage() {
                                 <span>Reminder: {s.adminReminder}</span>
                               </span>
                             )}
+                          </div>
+
+                          {/* Pay Breakdown Banner Under Lesson Header */}
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs font-semibold">
+                              <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                              <span>Needs to be Paid to Tutor:</span>
+                              <strong className="font-extrabold text-amber-800 dark:text-amber-300 font-mono">
+                                {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
+                                  ? formatCurrency(s.tutee.tutorPay)
+                                  : "Rate not set"}
+                              </strong>
+                            </div>
+
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                              <span>Student Fee:</span>
+                              <strong className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
+                                  ? formatCurrency(s.tutee.studentPay)
+                                  : "Rate not set"}
+                              </strong>
+                            </div>
                           </div>
 
                           {/* What was covered by tutor */}
@@ -2326,6 +2744,28 @@ export default function AdminPage() {
                             )}
                           </div>
 
+                          {/* Paid Breakdown */}
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Paid to Tutor:</span>
+                              <span className="font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
+                                {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
+                                  ? formatCurrency(s.tutee.tutorPay)
+                                  : "Rate not set"}
+                              </span>
+                            </div>
+
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                              <span>Student Fee:</span>
+                              <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
+                                  ? formatCurrency(s.tutee.studentPay)
+                                  : "Rate not set"}
+                              </span>
+                            </div>
+                          </div>
+
                           {s.feedbackCovered && (
                             <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                               <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
@@ -2535,8 +2975,11 @@ export default function AdminPage() {
                     <tr>
                       <th className="px-5 py-3.5">Student Name</th>
                       <th className="px-5 py-3.5">Normal Assigned Tutor</th>
+                      <th className="px-5 py-3.5">Student Fee</th>
+                      <th className="px-5 py-3.5">Tutor Pay</th>
                       <th className="px-5 py-3.5">Secret PIN</th>
                       <th className="px-5 py-3.5">Magic Link</th>
+                      <th className="px-5 py-3.5">Status</th>
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -2586,6 +3029,28 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
+                          <span
+                            className={`font-semibold text-xs px-2.5 py-1 rounded-lg ${
+                              st.studentPay !== null && st.studentPay !== undefined
+                                ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono"
+                                : "text-slate-400 italic"
+                            }`}
+                          >
+                            {formatCurrency(st.studentPay, "Not set")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={`font-semibold text-xs px-2.5 py-1 rounded-lg ${
+                              st.tutorPay !== null && st.tutorPay !== undefined
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-mono border border-emerald-200/60 dark:border-emerald-800/60"
+                                : "text-slate-400 italic"
+                            }`}
+                          >
+                            {formatCurrency(st.tutorPay, "Not set")}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
                           <div className="flex items-center gap-1.5">
                             <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700">
                               {st.pin || "----"}
@@ -2614,21 +3079,55 @@ export default function AdminPage() {
                         <td className="px-5 py-3.5 font-mono text-[11px] text-[#48A5EE]">
                           /student?key={st.magicKey}
                         </td>
-                        <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
+                        <td className="px-5 py-3.5">
                           <button
-                            onClick={() => copyMagicLink(st.magicKey)}
-                            className="inline-flex items-center gap-1.5 py-1 px-3 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
+                            type="button"
+                            onClick={() => handleToggleUserActive(st.id, st.active !== false)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              st.active !== false
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
+                                : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
+                            }`}
+                            title={`Click to set as ${st.active !== false ? "Inactive" : "Active"}`}
                           >
-                            {copiedKey === st.magicKey ? (
+                            {st.active !== false ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span className="text-emerald-700">Copied!</span>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>Active</span>
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copy Link</span>
+                                <XCircle className="w-3 h-3 text-slate-400" />
+                                <span>Inactive</span>
                               </>
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3.5 text-right flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenCalendar(st)}
+                            className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
+                            title="Open Weekly Timetable"
+                          >
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Calendar</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditStudent(st)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#48A5EE] hover:bg-[#48A5EE]/10 transition-colors cursor-pointer"
+                            title="Edit Student & Rates"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => copyMagicLink(st.magicKey)}
+                            className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                            title="Copy Magic Link"
+                          >
+                            {copiedKey === st.magicKey ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
                             )}
                           </button>
                           <button
@@ -2805,6 +3304,7 @@ export default function AdminPage() {
                       <th className="px-5 py-3.5">Email / Handle</th>
                       <th className="px-5 py-3.5">Role</th>
                       <th className="px-5 py-3.5">Assigned Students</th>
+                      <th className="px-5 py-3.5">Status</th>
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -2850,38 +3350,73 @@ export default function AdminPage() {
                             )}
                           </div>
                         </td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleUserActive(t.id, t.active !== false)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              t.active !== false
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
+                                : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
+                            }`}
+                            title={`Click to set as ${t.active !== false ? "Inactive" : "Active"}`}
+                          >
+                            {t.active !== false ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>Active</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3 h-3 text-slate-400" />
+                                <span>Inactive</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
                         <td className="px-5 py-3.5 text-right">
-                          {t.role !== "HEAD_TUTOR" &&
-                          t.id !== currentUser?.id &&
-                          t.email !== "luke@lbmathstuition.co.uk" ? (
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => {
-                                  setPasswordModalUser(t);
-                                  setAdminNewPassword("");
-                                  setAdminConfirmPassword("");
-                                  setPasswordModalError("");
-                                  setPasswordModalSuccess("");
-                                }}
-                                className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-                                title="Set Password"
-                              >
-                                <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                                <span>Set Password</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTutor(t.id, t.name)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                                title="Delete Tutor"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 italic">
-                              Primary Admin (You)
-                            </span>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenCalendar(t)}
+                              className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
+                              title="Open Weekly Timetable"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Calendar</span>
+                            </button>
+
+                            {t.role !== "HEAD_TUTOR" &&
+                            t.id !== currentUser?.id &&
+                            t.email !== "luke@lbmathstuition.co.uk" ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setPasswordModalUser(t);
+                                    setAdminNewPassword("");
+                                    setAdminConfirmPassword("");
+                                    setPasswordModalError("");
+                                    setPasswordModalSuccess("");
+                                  }}
+                                  className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE]/10 hover:text-[#48A5EE] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                                  title="Set Password"
+                                >
+                                  <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                                  <span className="hidden sm:inline">Set Password</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTutor(t.id, t.name)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Delete Tutor"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic ml-1">
+                                (You)
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -3271,7 +3806,7 @@ export default function AdminPage() {
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                   >
                     <option value="">Choose student</option>
-                    {students.map((st) => (
+                    {activeStudents.map((st) => (
                       <option key={st.id} value={st.id}>
                         {st.name} {st.assignedTutor ? `(Tutor: ${formatTutorName(st.assignedTutor.name)})` : ""}
                       </option>
@@ -3290,7 +3825,7 @@ export default function AdminPage() {
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                   >
                     <option value="">Choose tutor</option>
-                    {tutors.map((t) => (
+                    {activeTutors.map((t) => (
                       <option key={t.id} value={t.id}>
                         {formatTutorName(t.name)}
                       </option>
@@ -3299,31 +3834,44 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Date & Start/End Times (strictly 5-minute intervals) */}
+              <div className="space-y-2">
                 <div>
                   <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
-                    Start Time *
+                    Lesson Date *
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     required
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                    value={lessonDate}
+                    onChange={(e) => setLessonDate(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
                   />
                 </div>
 
-                <div>
-                  <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
-                    End Time *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      Start Time *
+                    </label>
+                    <TimeSelect
+                      value={lessonStartTime}
+                      onChange={(newStart) => {
+                        setLessonStartTime(newStart);
+                        setLessonEndTime(addMinutesToTime(newStart, 60));
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      End Time *
+                    </label>
+                    <TimeSelect
+                      value={lessonEndTime}
+                      onChange={(newEnd) => setLessonEndTime(newEnd)}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -3432,8 +3980,9 @@ export default function AdminPage() {
                     </div>
 
                     <div className="text-[11px] text-[#48A5EE] font-medium bg-[#48A5EE]/10 px-2.5 py-1.5 rounded-xl">
-                      Scheduling {repeatWeeks} sessions, {repeatIntervalWeeks === 2 ? "every two weeks" : "every week"} starting on {startTime ? new Date(startTime).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "the selected date"}.
+                      Scheduling {repeatWeeks} sessions, {repeatIntervalWeeks === 2 ? "every two weeks" : "every week"} starting on {lessonDate ? new Date(`${lessonDate}T${lessonStartTime || "10:00"}:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) : "the selected date"}.
                     </div>
+
                   </div>
                 )}
               </div>
@@ -3522,7 +4071,7 @@ export default function AdminPage() {
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                     >
                       <option value="">Unassigned</option>
-                      {tutors.map((t) => (
+                      {activeTutors.map((t) => (
                         <option key={t.id} value={t.id}>
                           {formatTutorName(t.name)} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
                         </option>
@@ -3543,6 +4092,51 @@ export default function AdminPage() {
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                     />
                   </div>
+
+                  {/* Student Pay & Tutor Pay */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                        Student Fee (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="e.g. 25.00"
+                        value={newUserStudentPay}
+                        onChange={(e) => setNewUserStudentPay(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                      />
+                      <span className="text-[10px] text-slate-400">Student pays / lesson</span>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                        Tutor Pay (£)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="e.g. 15.00"
+                        value={newUserTutorPay}
+                        onChange={(e) => setNewUserTutorPay(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                      />
+                      <span className="text-[10px] text-slate-400">Tutor receives / lesson</span>
+                    </div>
+
+                    {newUserRole === "TUTEE" &&
+                      Boolean(newUserStudentPay) &&
+                      Boolean(newUserTutorPay) &&
+                      parseFloat(newUserStudentPay) < parseFloat(newUserTutorPay) && (
+                        <div className="col-span-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-semibold flex items-center gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                          <span>Student fee (£{newUserStudentPay}) cannot be less than tutor pay (£{newUserTutorPay}).</span>
+                        </div>
+                      )}
+                  </div>
                 </>
               )}
 
@@ -3556,7 +4150,13 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingUser}
+                  disabled={
+                    isSubmittingUser ||
+                    (newUserRole === "TUTEE" &&
+                      Boolean(newUserStudentPay) &&
+                      Boolean(newUserTutorPay) &&
+                      parseFloat(newUserStudentPay) < parseFloat(newUserTutorPay))
+                  }
                   className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmittingUser ? "Creating..." : newUserRole === "TUTOR" ? "Add Tutor" : "Add Student"}
@@ -3589,7 +4189,7 @@ export default function AdminPage() {
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 >
                   <option value="">Unassigned</option>
-                  {tutors.map((t) => (
+                  {activeTutors.map((t) => (
                     <option key={t.id} value={t.id}>
                       {formatTutorName(t.name)} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"})
                     </option>
@@ -3617,6 +4217,200 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* EDIT STUDENT MODAL */}
+      {isEditStudentOpen && editStudentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE]">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                    Edit Student: {editStudentTarget.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Update student rates, assigned tutor, and login PIN.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditStudentOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editStudentError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
+                {editStudentError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditStudent} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Student Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editStudentName}
+                  onChange={(e) => setEditStudentName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Assigned Tutor
+                </label>
+                <select
+                  value={editStudentAssignedTutorId}
+                  onChange={(e) => setEditStudentAssignedTutorId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                >
+                  <option value="">Unassigned</option>
+                  {tutors
+                    .filter((t) => t.active !== false || t.id === editStudentAssignedTutorId)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {formatTutorName(t.name)} ({t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}) {t.active === false ? "(Inactive)" : ""}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Pay Rates */}
+              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">
+                    Student Fee (£)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 25.00"
+                    value={editStudentStudentPay}
+                    onChange={(e) => setEditStudentStudentPay(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                  />
+                  <span className="text-[10px] text-slate-400">Student pays / lesson</span>
+                </div>
+
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">
+                    Tutor Pay (£)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 15.00"
+                    value={editStudentTutorPay}
+                    onChange={(e) => setEditStudentTutorPay(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                  />
+                  <span className="text-[10px] text-slate-400">Tutor receives / lesson</span>
+                </div>
+
+                {Boolean(editStudentStudentPay) &&
+                  Boolean(editStudentTutorPay) &&
+                  parseFloat(editStudentStudentPay) < parseFloat(editStudentTutorPay) && (
+                    <div className="col-span-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                      <span>Student fee (£{editStudentStudentPay}) cannot be less than tutor pay (£{editStudentTutorPay}).</span>
+                    </div>
+                  )}
+              </div>
+
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  4-Digit Login PIN
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  placeholder="e.g. 4821"
+                  value={editStudentPin}
+                  onChange={(e) => setEditStudentPin(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              {/* Active / Inactive Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                    Account Active Status
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    When inactive, student is excluded from booking combo lists.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditStudentActive(!editStudentActive)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    editStudentActive
+                      ? "bg-emerald-500 text-white shadow-sm"
+                      : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  }`}
+                >
+                  {editStudentActive ? "Active" : "Inactive"}
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditStudentOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    isSubmittingEditStudent ||
+                    (Boolean(editStudentStudentPay) &&
+                      Boolean(editStudentTutorPay) &&
+                      parseFloat(editStudentStudentPay) < parseFloat(editStudentTutorPay))
+                  }
+                  className="px-5 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingEditStudent ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* USER WEEKLY CALENDAR MODAL */}
+      <UserWeeklyCalendarModal
+        isOpen={isCalendarModalOpen}
+        onClose={() => {
+          setIsCalendarModalOpen(false);
+          setCalendarModalUser(null);
+        }}
+        targetUser={calendarModalUser}
+        allSessions={sessions}
+        students={students}
+        tutors={tutors}
+        currentUserId={currentUser?.id}
+        isAdmin={true}
+        onSessionCreated={async () => {
+          await refreshAllData();
+        }}
+        onUserSelect={(u) => setCalendarModalUser(u)}
+      />
+
 
       {/* EDIT PERSONAL REMINDER MODAL */}
       {reminderModalSession && (

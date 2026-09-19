@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 import { getCurrentUser } from "@/lib/auth";
 import { CreateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
@@ -31,11 +33,24 @@ export async function GET(request: Request) {
         };
       }
     } else if (user.role === "TUTOR") {
-      // Tutors can only view their own sessions or sessions of students assigned to them
-      where.OR = [
+      // Tutors can view sessions where they are the tutor OR sessions of their assigned students
+      const tutorFilter: any[] = [
         { tutorId: user.id },
         { tutee: { assignedTutorId: user.id } },
       ];
+      if (tuteeId) {
+        where.AND = [
+          { OR: tutorFilter },
+          { tuteeId },
+        ];
+      } else if (tutorId) {
+        where.AND = [
+          { OR: tutorFilter },
+          { tutorId },
+        ];
+      } else {
+        where.OR = tutorFilter;
+      }
       if (status) where.status = status;
     } else if (user.role === "HEAD_TUTOR") {
       // Admin can filter by tutor or student
@@ -63,6 +78,8 @@ export async function GET(request: Request) {
             pin: !isStudent,
             magicKey: !isStudent,
             assignedTutorId: true,
+            studentPay: !isStudent,
+            tutorPay: !isStudent,
           },
         },
         auditLogs: isStudent
@@ -97,8 +114,7 @@ export async function GET(request: Request) {
       { sessions },
       {
         headers: {
-          ETag: etag,
-          "Cache-Control": "private, no-cache",
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
         },
       }
     );

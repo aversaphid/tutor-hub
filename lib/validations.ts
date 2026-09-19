@@ -56,7 +56,20 @@ export const CreateUserSchema = z.object({
   password: z.string().min(5, "Password must be at least 5 characters").optional(),
   pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().or(z.literal("")),
   assignedTutorId: z.string().optional().nullable(),
-});
+  studentPay: z.number().min(0, "Student pay must be 0 or more").optional().nullable(),
+  tutorPay: z.number().min(0, "Tutor pay must be 0 or more").optional().nullable(),
+}).refine(
+  (data) => {
+    if (data.studentPay !== undefined && data.studentPay !== null && data.tutorPay !== undefined && data.tutorPay !== null) {
+      return data.studentPay >= data.tutorPay;
+    }
+    return true;
+  },
+  {
+    message: "Student fee cannot be less than tutor pay.",
+    path: ["studentPay"],
+  }
+);
 
 // Change password schema
 export const ChangePasswordSchema = z.object({
@@ -68,6 +81,41 @@ export const ChangePasswordSchema = z.object({
 export const ReassignStudentSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
   assignedTutorId: z.string().nullable().optional(),
+});
+
+// Update student profile and pay rates
+export const UpdateStudentSchema = z.object({
+  studentId: z.string().min(1, "Student ID is required"),
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100).optional(),
+  assignedTutorId: z.string().nullable().optional(),
+  studentPay: z.number().min(0).nullable().optional(),
+  tutorPay: z.number().min(0).nullable().optional(),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().nullable().or(z.literal("")),
+  active: z.boolean().optional(),
+}).refine(
+  (data) => {
+    if (data.studentPay !== undefined && data.studentPay !== null && data.tutorPay !== undefined && data.tutorPay !== null) {
+      return data.studentPay >= data.tutorPay;
+    }
+    return true;
+  },
+  {
+    message: "Student fee cannot be less than tutor pay.",
+    path: ["studentPay"],
+  }
+);
+
+// Toggle user active status
+export const ToggleUserActiveSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  active: z.boolean().optional(),
+});
+
+// Batch archive sessions by date range
+export const BatchArchiveSessionsSchema = z.object({
+  startDate: z.string().datetime({ message: "Invalid ISO start date" }),
+  endDate: z.string().datetime({ message: "Invalid ISO end date" }),
+  sessionIds: z.array(z.string()).optional(),
 });
 
 // Admin update user password

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 import { getCurrentUser, hashPassword, clearUserCache } from "@/lib/auth";
-import { CreateUserSchema, ReassignStudentSchema, AdminUpdateUserPasswordSchema } from "@/lib/validations";
+import {
+  CreateUserSchema,
+  ReassignStudentSchema,
+  UpdateStudentSchema,
+  AdminUpdateUserPasswordSchema,
+} from "@/lib/validations";
 import crypto from "crypto";
 
 export async function GET() {
@@ -24,6 +31,8 @@ export async function GET() {
           active: true,
           createdAt: true,
           assignedTutorId: true,
+          studentPay: true,
+          tutorPay: true,
           assignedTutor: {
             select: { id: true, name: true, email: true },
           },
@@ -52,6 +61,10 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            email: true,
+            role: true,
+            active: true,
+            assignedTutorId: true,
             pin: true,
             magicKey: true,
             createdAt: true,
@@ -87,7 +100,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parseResult.error.issues[0]?.message || "Validation error" }, { status: 400 });
     }
 
-    const { name, email, role, password, pin, assignedTutorId } = parseResult.data;
+    const { name, email, role, password, pin, assignedTutorId, studentPay, tutorPay } = parseResult.data;
 
     let passwordHash = null;
     let finalPin = null;
@@ -126,6 +139,8 @@ export async function POST(request: Request) {
         pin: finalPin,
         magicKey,
         assignedTutorId: role === "TUTEE" ? assignedTutorId || null : null,
+        studentPay: role === "TUTEE" ? (studentPay ?? null) : null,
+        tutorPay: role === "TUTEE" ? (tutorPay ?? null) : null,
         active: true,
       },
       include: {
@@ -153,8 +168,28 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
+    // 0. Active status toggle flow
+    if (body.active !== undefined && (body.userId || body.studentId) && body.newPassword === undefined && !body.name && body.studentPay === undefined && body.tutorPay === undefined) {
+      const targetId = body.userId || body.studentId;
+      const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!targetUser) {
+        return NextResponse.json({ error: "User not found." }, { status: 404 });
+      }
+      const newActive = Boolean(body.active);
+      const updated = await prisma.user.update({
+        where: { id: targetId },
+        data: { active: newActive },
+      });
+      clearUserCache(targetId);
+      return NextResponse.json({
+        success: true,
+        user: updated,
+        message: `${targetUser.name} is now ${newActive ? "Active" : "Inactive"}.`,
+      });
+    }
+
     // 1. Password update flow
-    if (body.newPassword !== undefined || body.userId !== undefined) {
+    if (body.newPassword !== undefined) {
       const parseResult = AdminUpdateUserPasswordSchema.safeParse(body);
       if (!parseResult.success) {
         return NextResponse.json(
@@ -182,8 +217,8 @@ export async function PATCH(request: Request) {
       });
     }
 
-    // 2. Student reassignment flow
-    const parseResult = ReassignStudentSchema.safeParse(body);
+    // 2. Student update / reassignment flow
+    const parseResult = UpdateStudentSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(
         { error: parseResult.error.issues[0]?.message || "Validation error" },
@@ -191,13 +226,56 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { studentId, assignedTutorId } = parseResult.data;
+    const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active } = parseResult.data;
+
+    // Verify student fee cannot be less than tutor pay against current/new rates
+    if (studentPay !== undefined || tutorPay !== undefined) {
+      const existingStudent = await prisma.user.findUnique({
+        where: { id: studentId, role: "TUTEE" },
+        select: { studentPay: true, tutorPay: true },
+      });
+      if (!existingStudent) {
+        return NextResponse.json({ error: "Student not found." }, { status: 404 });
+      }
+      const effectiveStudentPay = studentPay !== undefined ? studentPay : existingStudent.studentPay;
+      const effectiveTutorPay = tutorPay !== undefined ? tutorPay : existingStudent.tutorPay;
+      if (
+        effectiveStudentPay !== null &&
+        effectiveStudentPay !== undefined &&
+        effectiveTutorPay !== null &&
+        effectiveTutorPay !== undefined &&
+        effectiveStudentPay < effectiveTutorPay
+      ) {
+        return NextResponse.json(
+          { error: "Student fee cannot be less than tutor pay." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updateData: any = {};
+    if (assignedTutorId !== undefined) {
+      updateData.assignedTutorId = assignedTutorId || null;
+    }
+    if (name !== undefined && name.trim()) {
+      updateData.name = name.trim();
+    }
+    if (studentPay !== undefined) {
+      updateData.studentPay = studentPay === null ? null : studentPay;
+    }
+    if (tutorPay !== undefined) {
+      updateData.tutorPay = tutorPay === null ? null : tutorPay;
+    }
+    if (active !== undefined) {
+      updateData.active = active;
+    }
+    if (pin !== undefined) {
+      updateData.pin = pin && pin.trim() ? pin.trim() : null;
+    }
 
     const updatedStudent = await prisma.user.update({
       where: { id: studentId, role: "TUTEE" },
-      data: {
-        assignedTutorId: assignedTutorId || null,
-      },
+      data: updateData,
       include: {
         assignedTutor: { select: { id: true, name: true, email: true } },
       },
@@ -207,7 +285,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       success: true,
       student: updatedStudent,
-      message: `Assigned tutor updated for ${updatedStudent.name}.`,
+      message: `Student details updated for ${updatedStudent.name}.`,
     });
   } catch (err) {
     console.error("Admin user PATCH error:", err);

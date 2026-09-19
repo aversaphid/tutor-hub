@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Calendar, Clock, AlertCircle, Check, CalendarClock } from "lucide-react";
-import { formatTutorName } from "@/lib/format";
+import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import TimeSelect from "@/components/time-select";
 
 interface RescheduleModalProps {
   isOpen: boolean;
@@ -35,13 +36,13 @@ export default function RescheduleModal({
       const day = String(start.getDate()).padStart(2, "0");
       setDate(`${year}-${month}-${day}`);
 
-      // Local time HH:MM
+      // Local time HH:MM (rounded to 5-min interval)
       const startHours = String(start.getHours()).padStart(2, "0");
-      const startMinutes = String(start.getMinutes()).padStart(2, "0");
+      const startMinutes = String(Math.floor(start.getMinutes() / 5) * 5).padStart(2, "0");
       setStartTime(`${startHours}:${startMinutes}`);
 
       const endHours = String(end.getHours()).padStart(2, "0");
-      const endMinutes = String(end.getMinutes()).padStart(2, "0");
+      const endMinutes = String(Math.floor(end.getMinutes() / 5) * 5).padStart(2, "0");
       setEndTime(`${endHours}:${endMinutes}`);
 
       setNotes(session.notes || "");
@@ -207,19 +208,19 @@ export default function RescheduleModal({
             />
           </div>
 
-          {/* Time pickers */}
+          {/* Time pickers (strictly 5-minute intervals) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>Start Time:</span>
               </label>
-              <input
-                type="time"
-                required
+              <TimeSelect
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                onChange={(newStart) => {
+                  setStartTime(newStart);
+                  setEndTime(addMinutesToTime(newStart, 60));
+                }}
               />
             </div>
 
@@ -228,12 +229,9 @@ export default function RescheduleModal({
                 <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>End Time:</span>
               </label>
-              <input
-                type="time"
-                required
+              <TimeSelect
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                onChange={(newEnd) => setEndTime(newEnd)}
               />
             </div>
           </div>

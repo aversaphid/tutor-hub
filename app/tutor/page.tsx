@@ -52,6 +52,7 @@ import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
+import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 
 export default function TutorDashboardPage() {
   const router = useRouter();
@@ -63,6 +64,16 @@ export default function TutorDashboardPage() {
   const [activeLesson, setActiveLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState("");
+
+  // User Weekly Calendar Modal
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [calendarModalUser, setCalendarModalUser] = useState<any>(null);
+
+  const handleOpenCalendar = async (user: any) => {
+    setCalendarModalUser(user);
+    setIsCalendarModalOpen(true);
+    await Promise.all([loadMySessions(), loadAssignedStudents()]);
+  };
 
   // Formula Sheet & Casio Calculator Modals
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
@@ -176,7 +187,7 @@ export default function TutorDashboardPage() {
 
   const loadAssignedStudents = async () => {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       setAssignedStudents(data.users || []);
@@ -187,7 +198,7 @@ export default function TutorDashboardPage() {
 
   const loadMySessions = async () => {
     try {
-      const res = await fetch("/api/sessions");
+      const res = await fetch("/api/sessions", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       const sessions = data.sessions || [];
@@ -528,6 +539,14 @@ export default function TutorDashboardPage() {
             >
               <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
               <span className="hidden sm:inline">Formula Sheet</span>
+            </button>
+            <button
+              onClick={() => currentUser && handleOpenCalendar(currentUser)}
+              className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open My Weekly Timetable"
+            >
+              <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span className="hidden sm:inline">My Weekly Timetable</span>
             </button>
             <button
               onClick={handleExportWeekSchedule}
@@ -902,6 +921,16 @@ export default function TutorDashboardPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* Weekly Calendar Modal Button */}
+                      <button
+                        onClick={() => handleOpenCalendar(student)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/70 dark:border-slate-700"
+                        title="Open Weekly Timetable"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Weekly Calendar</span>
+                      </button>
+
                       {/* Visible PIN */}
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                         <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
@@ -1826,6 +1855,26 @@ export default function TutorDashboardPage() {
         onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDelay}
         isSubmitting={isSubmittingDelay}
+      />
+
+      {/* User Weekly Calendar Timetable Modal */}
+      <UserWeeklyCalendarModal
+        isOpen={isCalendarModalOpen}
+        onClose={() => {
+          setIsCalendarModalOpen(false);
+          setCalendarModalUser(null);
+        }}
+        targetUser={calendarModalUser}
+        allSessions={mySessions}
+        students={assignedStudents}
+        tutors={currentUser ? [currentUser] : []}
+        currentUserId={currentUser?.id}
+        isAdmin={false}
+        onSessionCreated={() => {
+          loadMySessions();
+          loadLiveSession();
+        }}
+        onUserSelect={(u) => setCalendarModalUser(u)}
       />
 
       <Footer />
