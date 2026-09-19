@@ -1,48 +1,47 @@
 # LB MATHS TUITION LTD — Platform Legal Documentation Pack
 
-> **Document Status:** Draft for Review  
+> **Company:** LB MATHS TUITION LTD (Company Number: 17119191)  
+> **Registered Office:** 38 Macmurdo Road, Leigh-On-Sea, England, SS9 5AQ  
+> **Contact / Support Email:** `luke@lbmathstuition.co.uk`  
+> **Designated Safeguarding Lead (DSL):** Luke Terry Bowdery (`luke@lbmathstuition.co.uk`)  
 > **Jurisdiction:** England and Wales (UK Law, UK GDPR, Data Protection Act 2018)  
-> **Target Platform:** Tutor Hub Portal / `lbmathstuition.co.uk`
+> **Target Platform:** Tutor Hub Portal (`lbmathstuition.co.uk`)
 
 ---
 
-## 📌 Checklist of Information Still Needed Before Publishing
+## 📌 ICO Registration Note (What to Do If Not Yet Registered)
 
-Please review and fill in the highlighted placeholder details below before making these documents live:
+Under the UK *Data Protection (Charges and Information) Regulations 2018*, any UK business that processes personal data electronically on servers, computers, or databases (such as managing tutor accounts and student names) is generally required to register with the **Information Commissioner's Office (ICO)** and pay an annual data protection fee.
 
-1. **[ ] Official Contact Email Address:**  
-   Confirm the general enquiries/support email for LB MATHS TUITION LTD (e.g. `luke@lbmathstuition.co.uk` or `support@lbmathstuition.co.uk`).
-2. **[ ] Designated Safeguarding Lead (DSL) Name & Direct Contact:**  
-   Specify the exact person (e.g. *Luke [Surname]*) and direct phone number/email to contact for any child welfare or online safety queries.
-3. **[ ] ICO Registration Number:**  
-   If registered with the Information Commissioner's Office (ICO) as a data controller, insert your registration number (e.g., `ZB123456`). If not yet registered, verify via the ICO registration self-assessment.
-4. **[ ] Customer Support / Contact Phone Number:**  
-   *(Optional, for urgent technical support or lesson queries).*
+- **Fee Tier:** For micro-businesses (under 10 staff or turnover under £632,000), this is **Tier 1: £40 per year** (or £35 if paying by direct debit).
+- **How to register:** It takes ~10 minutes to complete online at [ico.org.uk/registration](https://ico.org.uk/registration).
+- **Can you publish this website without it right now?** **Yes.** You do not need to display an ICO number for your Privacy Policy to be valid. You only need to clearly identify LB MATHS TUITION LTD as the Data Controller, provide your contact email (`luke@lbmathstuition.co.uk`), and inform users of their right to contact the ICO. Once you obtain your registration number, you can simply append it to Document 2.
 
 ---
 
 # Document 1: Platform Terms of Use
 
-**Last Updated:** [Insert Date]  
+**Last Updated:** September 2026  
 **Company:** LB MATHS TUITION LTD (Company Number: 17119191)  
 **Registered Office:** 38 Macmurdo Road, Leigh-On-Sea, England, SS9 5AQ  
+**Contact Email:** luke@lbmathstuition.co.uk  
 
 ### 1. Platform Purpose & Scope
 1.1 These Terms of Use ("Terms") govern access to and use of the **Tutor Hub** web portal operated by **LB MATHS TUITION LTD** ("the Company", "we", "us", or "our") at `lbmathstuition.co.uk`.  
-1.2 **External Lesson Bookings:**  
-   - **Lessons are NOT booked or purchased through this platform.** All tuition bookings, enrollments, fee arrangements, and payments are agreed upon externally between the client (parent/guardian) and the Company.  
-   - This platform functions strictly as an operational portal for displaying scheduled lesson timetables, launching Microsoft Teams video meeting links, tracking attendance, and accessing formula sheets and learning resources.
-1.3 **Minors and Parental Consent:** Tutoring services are provided to students under the age of 18 ("Student"). Student profiles on this platform are created following external enrollment authorized by the Student's parent or legal guardian.
+1.2 **External Lesson Bookings & Billing:**  
+   - **Lessons and tuition packages are NOT booked or purchased through this platform.** All bookings, tuition contracts, hourly rates, and payments are arranged externally between the client (parent/legal guardian) and the Company.  
+   - This platform serves solely as an authenticated operational portal for displaying scheduled lesson timetables, launching Microsoft Teams video meeting links, recording attendance, and accessing learning formula sheets and resources.  
+1.3 **Minors & Parental Authority:** Tutoring services are provided to students under the age of 18 ("Student"). Student profiles on this portal are set up following external enrollment authorized by the Student's parent or legal guardian.
 
 ### 2. Student Profiles & Security Access
-2.1 **Profile Creation:** Student profiles are created manually by the platform administrator using solely the student's name provided during external onboarding. No student email address, physical address, or payment details are collected or stored on this platform.  
-2.2 **Access Credentials:** Students access their personalized timetable and lesson links using their name combined with an administrator-issued **4-digit PIN** or private **Magic Link**.  
-2.3 Parents and students are responsible for maintaining the confidentiality of their PIN and Magic Link. You must notify us immediately if you suspect unauthorized access.
+2.1 **Profile Creation:** Student profiles are created manually by the platform administrator using solely the student's name provided during external onboarding. No student email address, home address, or payment details are collected, requested, or stored on this website.  
+2.2 **Access Credentials:** Students access their individual timetable and lesson links using their name combined with an administrator-issued **4-digit PIN** or private **Magic Link**.  
+2.3 Parents and students are responsible for maintaining the confidentiality of their PIN and Magic Link. You must notify us immediately at `luke@lbmathstuition.co.uk` if you suspect unauthorized access.
 
 ### 3. Lesson Cancellations & Rescheduling
 3.1 **24-Hour Notice Rule:** In accordance with your external tuition agreement, any cancellation or request to reschedule a scheduled lesson must be made with at least **24 hours' notice** prior to the scheduled start time.  
 3.2 **Late Notice & Missed Sessions:** Cancellations made with less than 24 hours' notice, or instances where a student fails to join the Microsoft Teams meeting within 15 minutes of the start time, remain chargeable in full under your external tuition arrangement.  
-3.3 **Tutor Delay Notifications:** In the event of an unavoidable delay, tutors may update the lesson status in the portal (e.g. +5m or +10m). Lost time will be made up at the end of the session or credited accordingly.
+3.3 **Tutor Delay Notifications:** In the event of an unavoidable delay, tutors will update the lesson status in the portal (e.g. +5m or +10m). Any time lost will be added to the session or credited accordingly.
 
 ### 4. Online Delivery (Microsoft Teams) & Appropriate Use
 4.1 Lessons are conducted remotely via Microsoft Teams. Clients are responsible for providing suitable hardware, microphone, camera, and stable internet connectivity.  
@@ -56,10 +55,10 @@ Please review and fill in the highlighted placeholder details below before makin
 
 # Document 2: Privacy Policy (UK GDPR & Data Protection Act 2018)
 
-**Last Updated:** [Insert Date]  
+**Last Updated:** September 2026  
 **Data Controller:** LB MATHS TUITION LTD (Company No. 17119191)  
 **Registered Office:** 38 Macmurdo Road, Leigh-On-Sea, England, SS9 5AQ  
-**Contact Email:** [Insert Contact Email]  
+**Contact / Privacy Email:** luke@lbmathstuition.co.uk  
 
 ### 1. Overview
 LB MATHS TUITION LTD is committed to protecting the privacy of our tutors, parents, and students. This Privacy Policy sets out how personal data is handled on our **Tutor Hub** web portal in compliance with the **UK General Data Protection Regulation (UK GDPR)** and the **Data Protection Act 2018**.
@@ -89,7 +88,7 @@ Your data is securely stored and processed through reputable infrastructure prov
 ### 5. Data Retention & Deletion
 - Student and tutor profiles remain active while tuition is ongoing.
 - **Account Deletion:** When an administrator deletes a student profile from the portal, the student record, all associated lesson history, and related audit log entries are permanently erased from our database.
-- Tutors or parents may request the correction or deletion of profile details at any time by contacting us.
+- Tutors or parents may request the correction or deletion of profile details at any time by contacting `luke@lbmathstuition.co.uk`.
 
 ### 6. Your Rights Under UK GDPR
 Under the UK GDPR, parents (and students) have the right to:
@@ -106,10 +105,10 @@ Under the UK GDPR, parents (and students) have the right to:
 
 # Document 3: Child Safeguarding & Online Safety Policy
 
-**Last Updated:** [Insert Date]  
+**Last Updated:** September 2026  
 **Company:** LB MATHS TUITION LTD  
-**Designated Safeguarding Lead (DSL):** [Insert Name, e.g. Luke [Surname]]  
-**Emergency Contact:** [Insert Phone / Email]  
+**Designated Safeguarding Lead (DSL):** Luke Terry Bowdery  
+**DSL Direct Contact Email:** luke@lbmathstuition.co.uk  
 
 ### 1. Safeguarding Commitment
 LB MATHS TUITION LTD provides 1-to-1 mathematics tutoring to children and young people under 18 years old. We operate in accordance with the principles of *Keeping Children Safe in Education (KCSIE)* and *Working Together to Safeguard Children*.
@@ -131,9 +130,8 @@ All tutors engaged by LB MATHS TUITION LTD hold a valid, clean **Enhanced Disclo
 
 ### 4. Reporting Child Protection Concerns
 Any concerns regarding child welfare, inappropriate conduct, or safety must be reported immediately to our **Designated Safeguarding Lead (DSL)**:
-- **DSL Name:** [Insert DSL Name]  
-- **Email:** [Insert Contact Email]  
-- **Phone:** [Insert Phone Number]  
+- **DSL Name:** Luke Terry Bowdery  
+- **Email:** luke@lbmathstuition.co.uk  
 
 *In any case where a child is believed to be in immediate danger, contact the emergency services on **999** or the NSPCC Helpline on **0808 800 5000** without delay.*
 
@@ -141,7 +139,7 @@ Any concerns regarding child welfare, inappropriate conduct, or safety must be r
 
 # Document 4: Cookie and Local Storage Policy
 
-**Last Updated:** [Insert Date]  
+**Last Updated:** September 2026  
 **Platform:** Tutor Hub (`lbmathstuition.co.uk`)  
 
 ### 1. Purpose of This Policy
