@@ -9,7 +9,9 @@
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
     "db:setup-turso": "tsx scripts/setup-turso.ts",
-    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts"
+    "test:engine": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts",
+    "test:buttons": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

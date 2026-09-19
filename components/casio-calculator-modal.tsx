@@ -15,12 +15,18 @@ interface CasioCalculatorModalProps {
   onClose: () => void;
 }
 
-type CursorTarget =
-  | { location: "main" }
+export type CursorTarget =
+  | { location: "main"; index?: number }
   | { location: "sqrt"; itemId: string }
   | { location: "frac-num"; itemId: string }
   | { location: "frac-den"; itemId: string }
+  | { location: "mixed-whole"; itemId: string }
+  | { location: "mixed-num"; itemId: string }
+  | { location: "mixed-den"; itemId: string }
+  | { location: "pow-base"; itemId: string }
   | { location: "pow"; itemId: string }
+  | { location: "log-base"; itemId: string }
+  | { location: "log-arg"; itemId: string }
   | { location: "abs"; itemId: string };
 
 interface HistoryEntry {
@@ -29,9 +35,112 @@ interface HistoryEntry {
   num: number | null;
 }
 
+// Deletes entire multi-letter function names in one keystroke (e.g. sin(, cos(, abs(, etc.)
+function deleteTrailingToken(text: string): string {
+  const multiTokens = [
+    "sin⁻¹(", "cos⁻¹(", "tan⁻¹(",
+    "asinh(", "acosh(", "atanh(",
+    "asin(", "acos(", "atan(",
+    "sinh(", "cosh(", "tanh(",
+    "sin(", "cos(", "tan(",
+    "sin⁻¹", "cos⁻¹", "tan⁻¹",
+    "asin", "acos", "atan",
+    "sinh", "cosh", "tanh",
+    "sin", "cos", "tan",
+    "log_(", "log(", "ln(",
+    "log_", "log", "ln",
+    "abs(", "Abs(", "|",
+    "abs", "Abs",
+    "Pol(", "Rec(",
+    "10^(", "e^(", "^(",
+    "10^", "e^",
+    "³√(", "√(", "³√", "√",
+    "Ans", " P ", " C ", "×10^("
+  ];
+  for (const tok of multiTokens) {
+    if (text.endsWith(tok)) {
+      return text.slice(0, -tok.length);
+    }
+  }
+  return text.slice(0, -1);
+}
+
 // Sub-expression formatter for rendering inside fractions, roots, and powers
-function formatSubExpression(val: string) {
+function formatSubExpression(val: string): React.ReactNode {
   if (!val) return null;
+
+  // 1. Check for absolute value: abs(...) or Abs(...) or |...|
+  const absMatch = val.match(/(.*?)(?:abs|Abs)\(([^()]*)\)(.*)/) || val.match(/(.*?)\|([^|]+)\|(.*)/);
+  if (absMatch) {
+    const [, before, content, after] = absMatch;
+    return (
+      <span className="inline-flex items-center align-middle flex-wrap">
+        {before && formatSubExpression(before)}
+        <span className="inline-flex items-center align-middle mx-0.5 font-mono font-bold">
+          <span className="text-xs sm:text-sm">|</span>
+          <span className="px-0.5">{formatSubExpression(content) || <span className="text-[#121d12]/40 select-none">■</span>}</span>
+          <span className="text-xs sm:text-sm">|</span>
+        </span>
+        {after && formatSubExpression(after)}
+      </span>
+    );
+  }
+  const openAbsMatch = val.match(/(.*?)(?:abs|Abs)\((.*)/) || val.match(/(.*?)\|(.*)/);
+  if (openAbsMatch) {
+    const [, before, content] = openAbsMatch;
+    return (
+      <span className="inline-flex items-center align-middle flex-wrap">
+        {before && formatSubExpression(before)}
+        <span className="inline-flex items-center align-middle mx-0.5 font-mono font-bold">
+          <span className="text-xs sm:text-sm">|</span>
+          <span className="px-0.5">{formatSubExpression(content) || <span className="text-[#121d12]/40 select-none">■</span>}</span>
+          <span className="text-xs sm:text-sm text-[#121d12]/40">|</span>
+        </span>
+      </span>
+    );
+  }
+
+  // 2. Parenthesized fraction: (num)/(den) or (num)/()
+  const parenFracMatch = val.match(/(.*?)\(([^()]+)\)\/\(?([^()]*)\)?(.*)/);
+  if (parenFracMatch) {
+    const [, before, num, den, after] = parenFracMatch;
+    return (
+      <span className="inline-flex items-center align-middle flex-wrap">
+        {before && formatSubExpression(before)}
+        <span className="inline-flex flex-col items-center justify-center leading-none align-middle mx-1 font-mono shrink-0 py-0.5">
+          <span className="text-[10px] sm:text-[11px] border-b border-[#121d12] px-1 pb-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none">
+            {formatSubExpression(num)}
+          </span>
+          <span className="text-[10px] sm:text-[11px] px-1 pt-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none">
+            {den ? formatSubExpression(den) : <span className="text-[#121d12]/40 select-none">■</span>}
+          </span>
+        </span>
+        {after && formatSubExpression(after)}
+      </span>
+    );
+  }
+
+  // 3. Simple fraction or fraction in progress: e.g. 3²/5, 9/16, (5)/, or 5/
+  const simpleFracMatch = val.match(/(.*?)([\d\w²³\.\^\(\)]+)\/([\d\w²³\.\^\(\)]*)(.*)/);
+  if (simpleFracMatch) {
+    const [, before, num, den, after] = simpleFracMatch;
+    const cleanNum = num.startsWith("(") && num.endsWith(")") ? num.slice(1, -1) : num;
+    return (
+      <span className="inline-flex items-center align-middle flex-wrap">
+        {before && formatSubExpression(before)}
+        <span className="inline-flex flex-col items-center justify-center leading-none align-middle mx-1 font-mono shrink-0 py-0.5">
+          <span className="text-[10px] sm:text-[11px] border-b border-[#121d12] px-1 pb-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none">
+            {formatSubExpression(cleanNum)}
+          </span>
+          <span className="text-[10px] sm:text-[11px] px-1 pt-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none">
+            {den ? formatSubExpression(den) : <span className="text-[#121d12]/40 select-none">■</span>}
+          </span>
+        </span>
+        {after && formatSubExpression(after)}
+      </span>
+    );
+  }
+
   const displayVal = val
     .replace(/asin\(/g, "sin⁻¹(")
     .replace(/acos\(/g, "cos⁻¹(")
@@ -146,24 +255,107 @@ export default function CasioCalculatorModal({
     } catch {}
   };
 
-  // Extract trailing numeric string from items (used when turning base into power or fraction)
+  const getItemIndex = (id: string, currentItems: ExprItem[]): number => {
+    return currentItems.findIndex((i) => i.id === id);
+  };
+
+  // Extract trailing numeric string or power from items (used when turning base into power or fraction)
   const extractTrailingNumber = (): { remainingItems: ExprItem[]; extracted: string } => {
     if (items.length === 0) return { remainingItems: [], extracted: "" };
-    const last = items[items.length - 1];
+    const curIdx = cursor.location === "main" ? (cursor.index ?? items.length) : items.length;
+    if (curIdx <= 0) return { remainingItems: items, extracted: "" };
+
+    const last = items[curIdx - 1];
+    if (!last) return { remainingItems: items, extracted: "" };
+
+    // Case 1: Preceding item is a power (e.g. 3²)
+    if (last.type === "pow") {
+      const extracted = last.exp === "2" ? `${last.base}²` : last.exp === "3" ? `${last.base}³` : `${last.base}^(${last.exp})`;
+      const nextItems = [...items];
+      nextItems.splice(curIdx - 1, 1);
+      return { remainingItems: nextItems, extracted };
+    }
+
+    // Case 2: Preceding item is text
     if (last.type === "text") {
-      const match = last.value.match(/(\d+(\.\d+)?|\w+|\))$/);
+      const text = last.value;
+      // If it ends with a closing parenthesis, find the matching opening parenthesis
+      if (text.endsWith(")")) {
+        let depth = 0;
+        let startIdx = -1;
+        for (let i = text.length - 1; i >= 0; i--) {
+          if (text[i] === ")") depth++;
+          else if (text[i] === "(") {
+            depth--;
+            if (depth === 0) {
+              startIdx = i;
+              break;
+            }
+          }
+        }
+        if (startIdx !== -1) {
+          const beforeParen = text.slice(0, startIdx);
+          const fnMatch = beforeParen.match(/([a-zA-Z0-9⁻¹]+)$/);
+          const fullStart = fnMatch ? startIdx - fnMatch[1].length : startIdx;
+          const extracted = text.slice(fullStart);
+          const remVal = text.slice(0, fullStart);
+          const nextItems = [...items];
+          if (remVal) {
+            nextItems[curIdx - 1] = { ...last, value: remVal };
+          } else {
+            nextItems.splice(curIdx - 1, 1);
+          }
+          return { remainingItems: nextItems, extracted };
+        } else {
+          // Cross-item scan: opening '(' is in an earlier text item!
+          let itemDepth = 0;
+          let openItemIdx = -1;
+          let openCharIdx = -1;
+          for (let i = curIdx - 1; i >= 0; i--) {
+            const it = items[i];
+            if (it.type === "text") {
+              for (let c = it.value.length - 1; c >= 0; c--) {
+                if (it.value[c] === ")") itemDepth++;
+                else if (it.value[c] === "(") {
+                  itemDepth--;
+                  if (itemDepth === 0) {
+                    openItemIdx = i;
+                    openCharIdx = c;
+                    break;
+                  }
+                }
+              }
+              if (itemDepth === 0) break;
+            }
+          }
+          if (openItemIdx !== -1 && itemDepth === 0) {
+            const groupItems = items.slice(openItemIdx, curIdx);
+            const mathContent = serializeToMath(groupItems);
+            const remItems = [...items.slice(0, openItemIdx)];
+            const openItem = items[openItemIdx];
+            if (openItem.type === "text" && openCharIdx > 0) {
+              remItems.push({ ...openItem, value: openItem.value.slice(0, openCharIdx) });
+            }
+            return { remainingItems: remItems, extracted: mathContent };
+          }
+        }
+      }
+
+      // Otherwise match trailing numbers, decimals, powers, or identifiers
+      const match = text.match(/([a-zA-Z0-9²³\.\^]+)$/);
       if (match) {
         const extracted = match[0];
-        const remVal = last.value.slice(0, -extracted.length);
+        const remVal = text.slice(0, -extracted.length);
         const nextItems = [...items];
         if (remVal) {
-          nextItems[nextItems.length - 1] = { ...last, value: remVal };
+          nextItems[curIdx - 1] = { ...last, value: remVal };
         } else {
-          nextItems.pop();
+          nextItems.splice(curIdx - 1, 1);
         }
         return { remainingItems: nextItems, extracted };
       }
     }
+
     return { remainingItems: items, extracted: "" };
   };
 
@@ -178,20 +370,37 @@ export default function CasioCalculatorModal({
         const currentItems = itemsRef.current;
         if (currentItems.length > 0) {
           const first = currentItems[0];
-          if (first.type === "sqrt") {
-            setCursor({ location: "sqrt", itemId: first.id });
-            return;
-          }
-          if (first.type === "frac") {
-            setCursor({ location: "frac-num", itemId: first.id });
-            return;
-          }
+          if (first.type === "sqrt") { setCursor({ location: "sqrt", itemId: first.id }); return; }
+          if (first.type === "frac") { setCursor({ location: "frac-num", itemId: first.id }); return; }
+          if (first.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: first.id }); return; }
+          if (first.type === "pow") { setCursor({ location: "pow-base", itemId: first.id }); return; }
+          if (first.type === "logbase") { setCursor({ location: "log-base", itemId: first.id }); return; }
+          if (first.type === "abs") { setCursor({ location: "abs", itemId: first.id }); return; }
         }
-        setCursor({ location: "main" });
+        setCursor({ location: "main", index: 0 });
         return;
       }
-      if (cursor.location === "sqrt" || cursor.location === "pow" || cursor.location === "abs") {
-        setCursor({ location: "main" });
+      if (cursor.location === "mixed-whole") {
+        setCursor({ location: "mixed-num", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-num") {
+        setCursor({ location: "mixed-den", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-den") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        const nextIdx = idx + 1;
+        if (nextIdx < itemsRef.current.length) {
+          const next = itemsRef.current[nextIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
+        }
+        setCursor({ location: "main", index: nextIdx });
         return;
       }
       if (cursor.location === "frac-num") {
@@ -199,87 +408,245 @@ export default function CasioCalculatorModal({
         return;
       }
       if (cursor.location === "frac-den") {
-        setCursor({ location: "main" });
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        const nextIdx = idx + 1;
+        if (nextIdx < itemsRef.current.length) {
+          const next = itemsRef.current[nextIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
+        }
+        setCursor({ location: "main", index: nextIdx });
         return;
       }
-      // On main: navigate history down if currently viewing older history
-      const currIdx = historyIndexRef.current;
-      if (currIdx > 0) {
-        const nextIdx = currIdx - 1;
-        setHistoryIndex(nextIdx);
-        const entry = historyRef.current[nextIdx];
-        if (entry) {
-          setItems(entry.items.map((it) => ({ ...it, id: uid() })));
-          setResult(entry.res);
-          setLastNumericResult(entry.num);
+      if (cursor.location === "pow-base") {
+        setCursor({ location: "pow", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "pow") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        const nextIdx = idx + 1;
+        if (nextIdx < itemsRef.current.length) {
+          const next = itemsRef.current[nextIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
         }
-        setCursor({ location: "main" });
-        setHasCalculated(false);
+        setCursor({ location: "main", index: nextIdx });
+        return;
+      }
+      if (cursor.location === "log-base") {
+        setCursor({ location: "log-arg", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "log-arg") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        const nextIdx = idx + 1;
+        if (nextIdx < itemsRef.current.length) {
+          const next = itemsRef.current[nextIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
+        }
+        setCursor({ location: "main", index: nextIdx });
+        return;
+      }
+      if (cursor.location === "sqrt" || cursor.location === "abs") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        const nextIdx = idx + 1;
+        if (nextIdx < itemsRef.current.length) {
+          const next = itemsRef.current[nextIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
+        }
+        setCursor({ location: "main", index: nextIdx });
+        return;
+      }
+      if (cursor.location === "main") {
+        const curIdx = cursor.index ?? itemsRef.current.length;
+        if (curIdx < itemsRef.current.length) {
+          const next = itemsRef.current[curIdx];
+          if (next.type === "frac") { setCursor({ location: "frac-num", itemId: next.id }); return; }
+          if (next.type === "mixed_frac") { setCursor({ location: "mixed-whole", itemId: next.id }); return; }
+          if (next.type === "pow") { setCursor({ location: "pow-base", itemId: next.id }); return; }
+          if (next.type === "logbase") { setCursor({ location: "log-base", itemId: next.id }); return; }
+          if (next.type === "sqrt") { setCursor({ location: "sqrt", itemId: next.id }); return; }
+          if (next.type === "abs") { setCursor({ location: "abs", itemId: next.id }); return; }
+          setCursor({ location: "main", index: curIdx + 1 });
+          return;
+        }
+        // At end: navigate history down if currently viewing older history
+        const currIdx = historyIndexRef.current;
+        if (currIdx > 0) {
+          const nextIdx = currIdx - 1;
+          setHistoryIndex(nextIdx);
+          const entry = historyRef.current[nextIdx];
+          if (entry) {
+            setItems(entry.items.map((it) => ({ ...it, id: uid() })));
+            setResult(entry.res);
+            setLastNumericResult(entry.num);
+          }
+          setCursor({ location: "main", index: entry ? entry.items.length : 0 });
+          setHasCalculated(false);
+        }
+        return;
       }
       return;
     }
 
-    // LEFT ARROW: Steps back into last block, steps backward, or edits after =
+    // LEFT ARROW: Steps backwards across blocks, sub-expressions, or text items
     if (dir === "LEFT") {
       if (hasCalculatedRef.current) {
         setHasCalculated(false);
         const currentItems = itemsRef.current;
         if (currentItems.length > 0) {
           const last = currentItems[currentItems.length - 1];
-          if (last.type === "sqrt") {
-            setCursor({ location: "sqrt", itemId: last.id });
-            return;
-          }
-          if (last.type === "pow") {
-            setCursor({ location: "pow", itemId: last.id });
-            return;
-          }
-          if (last.type === "frac") {
-            setCursor({ location: "frac-den", itemId: last.id });
-            return;
-          }
-          if (last.type === "abs") {
-            setCursor({ location: "abs", itemId: last.id });
-            return;
-          }
+          if (last.type === "sqrt") { setCursor({ location: "sqrt", itemId: last.id }); return; }
+          if (last.type === "pow") { setCursor({ location: "pow", itemId: last.id }); return; }
+          if (last.type === "frac") { setCursor({ location: "frac-den", itemId: last.id }); return; }
+          if (last.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: last.id }); return; }
+          if (last.type === "logbase") { setCursor({ location: "log-arg", itemId: last.id }); return; }
+          if (last.type === "abs") { setCursor({ location: "abs", itemId: last.id }); return; }
         }
-        setCursor({ location: "main" });
+        setCursor({ location: "main", index: currentItems.length });
+        return;
+      }
+      if (cursor.location === "mixed-den") {
+        setCursor({ location: "mixed-num", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-num") {
+        setCursor({ location: "mixed-whole", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-whole") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        if (idx > 0) {
+          const prev = itemsRef.current[idx - 1];
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
+        }
+        setCursor({ location: "main", index: Math.max(0, idx) });
         return;
       }
       if (cursor.location === "frac-den") {
         setCursor({ location: "frac-num", itemId: cursor.itemId });
         return;
       }
-      if (cursor.location === "frac-num" || cursor.location === "sqrt" || cursor.location === "pow" || cursor.location === "abs") {
-        setCursor({ location: "main" });
+      if (cursor.location === "frac-num") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        if (idx > 0) {
+          const prev = itemsRef.current[idx - 1];
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
+        }
+        setCursor({ location: "main", index: Math.max(0, idx) });
         return;
       }
-      if (cursor.location === "main" && items.length > 0) {
-        const last = items[items.length - 1];
-        if (last.type === "sqrt") {
-          setCursor({ location: "sqrt", itemId: last.id });
-          return;
+      if (cursor.location === "pow") {
+        setCursor({ location: "pow-base", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "pow-base") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        if (idx > 0) {
+          const prev = itemsRef.current[idx - 1];
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
         }
-        if (last.type === "pow") {
-          setCursor({ location: "pow", itemId: last.id });
-          return;
+        setCursor({ location: "main", index: Math.max(0, idx) });
+        return;
+      }
+      if (cursor.location === "log-arg") {
+        setCursor({ location: "log-base", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "log-base") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        if (idx > 0) {
+          const prev = itemsRef.current[idx - 1];
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
         }
-        if (last.type === "frac") {
-          setCursor({ location: "frac-den", itemId: last.id });
-          return;
+        setCursor({ location: "main", index: Math.max(0, idx) });
+        return;
+      }
+      if (cursor.location === "sqrt" || cursor.location === "abs") {
+        const idx = getItemIndex(cursor.itemId, itemsRef.current);
+        if (idx > 0) {
+          const prev = itemsRef.current[idx - 1];
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
         }
-        if (last.type === "abs") {
-          setCursor({ location: "abs", itemId: last.id });
-          return;
+        setCursor({ location: "main", index: Math.max(0, idx) });
+        return;
+      }
+      if (cursor.location === "main") {
+        const curIdx = cursor.index ?? itemsRef.current.length;
+        if (curIdx > 0 && itemsRef.current.length > 0) {
+          const prev = itemsRef.current[curIdx - 1];
+          if (prev.type === "sqrt") { setCursor({ location: "sqrt", itemId: prev.id }); return; }
+          if (prev.type === "pow") { setCursor({ location: "pow", itemId: prev.id }); return; }
+          if (prev.type === "frac") { setCursor({ location: "frac-den", itemId: prev.id }); return; }
+          if (prev.type === "mixed_frac") { setCursor({ location: "mixed-den", itemId: prev.id }); return; }
+          if (prev.type === "logbase") { setCursor({ location: "log-arg", itemId: prev.id }); return; }
+          if (prev.type === "abs") { setCursor({ location: "abs", itemId: prev.id }); return; }
+          setCursor({ location: "main", index: curIdx - 1 });
         }
+        return;
       }
       return;
     }
 
-    // DOWN ARROW: Moves from Fraction Numerator down to Denominator, or History Down
+    // DOWN ARROW: Moves vertically down (num -> den, pow -> base, arg -> base) or history down
     if (dir === "DOWN") {
       if (cursor.location === "frac-num") {
         setCursor({ location: "frac-den", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-num") {
+        setCursor({ location: "mixed-den", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "pow") {
+        setCursor({ location: "pow-base", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "log-arg") {
+        setCursor({ location: "log-base", itemId: cursor.itemId });
         return;
       }
       const hist = historyRef.current;
@@ -292,23 +659,35 @@ export default function CasioCalculatorModal({
           setItems(entry.items.map((it) => ({ ...it, id: uid() })));
           setResult(entry.res);
           setLastNumericResult(entry.num);
-          setCursor({ location: "main" });
+          setCursor({ location: "main", index: entry.items.length });
           setHasCalculated(false);
         } else {
           setItems([]);
           setResult("0");
           setLastNumericResult(null);
-          setCursor({ location: "main" });
+          setCursor({ location: "main", index: 0 });
           setHasCalculated(false);
         }
       }
       return;
     }
 
-    // UP ARROW: Moves from Fraction Denominator up to Numerator, or History Up
+    // UP ARROW: Moves vertically up (den -> num, base -> pow, base -> arg) or history up
     if (dir === "UP") {
       if (cursor.location === "frac-den") {
         setCursor({ location: "frac-num", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "mixed-den") {
+        setCursor({ location: "mixed-num", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "pow-base") {
+        setCursor({ location: "pow", itemId: cursor.itemId });
+        return;
+      }
+      if (cursor.location === "log-base") {
+        setCursor({ location: "log-arg", itemId: cursor.itemId });
         return;
       }
       const hist = historyRef.current;
@@ -321,7 +700,7 @@ export default function CasioCalculatorModal({
           setItems(entry.items.map((it) => ({ ...it, id: uid() })));
           setResult(entry.res);
           setLastNumericResult(entry.num);
-          setCursor({ location: "main" });
+          setCursor({ location: "main", index: entry.items.length });
           setHasCalculated(false);
         }
       }
@@ -332,23 +711,49 @@ export default function CasioCalculatorModal({
   // Append token based on current active cursor position
   const appendToken = (token: string) => {
     if (cursor.location === "main") {
+      const curIdx = cursor.index ?? items.length;
       setItems((prev) => {
-        if (prev.length > 0) {
-          const last = prev[prev.length - 1];
-          if (last.type === "text") {
-            return [...prev.slice(0, -1), { ...last, value: last.value + token }];
-          }
+        const next = [...prev];
+        const prevItem = curIdx > 0 ? next[curIdx - 1] : undefined;
+        const currItem = curIdx < next.length ? next[curIdx] : undefined;
+        if (prevItem && prevItem.type === "text") {
+          next[curIdx - 1] = { ...prevItem, value: prevItem.value + token };
+          return next;
+        } else if (currItem && currItem.type === "text") {
+          next[curIdx] = { ...currItem, value: token + currItem.value };
+          return next;
+        } else {
+          next.splice(curIdx, 0, { id: uid(), type: "text", value: token });
+          return next;
         }
-        return [...prev, { id: uid(), type: "text", value: token }];
       });
+      if (curIdx > 0 && items[curIdx - 1]?.type === "text") {
+        // stay in existing text item
+      } else {
+        setCursor({ location: "main", index: curIdx + 1 });
+      }
       return;
     }
 
     if (cursor.location === "sqrt") {
       setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === cursor.itemId && item.type === "sqrt") {
+            if (item.content.endsWith("/()")) return { ...item, content: item.content.slice(0, -1) + token + ")" };
+            if (/\/\([^)]+\)$/.test(item.content)) return { ...item, content: item.content.slice(0, -1) + token + ")" };
+            return { ...item, content: item.content + token };
+          }
+          return item;
+        })
+      );
+      return;
+    }
+
+    if (cursor.location === "pow-base") {
+      setItems((prev) =>
         prev.map((item) =>
-          item.id === cursor.itemId && item.type === "sqrt"
-            ? { ...item, content: item.content + token }
+          item.id === cursor.itemId && item.type === "pow"
+            ? { ...item, base: item.base + token }
             : item
         )
       );
@@ -357,19 +762,61 @@ export default function CasioCalculatorModal({
 
     if (cursor.location === "pow") {
       setItems((prev) =>
-        prev.map((item) =>
-          item.id === cursor.itemId && item.type === "pow"
-            ? { ...item, exp: item.exp + token }
-            : item
-        )
+        prev.map((item) => {
+          if (item.id === cursor.itemId && item.type === "pow") {
+            if (item.exp.endsWith("/()")) return { ...item, exp: item.exp.slice(0, -1) + token + ")" };
+            if (/\/\([^)]+\)$/.test(item.exp)) return { ...item, exp: item.exp.slice(0, -1) + token + ")" };
+            return { ...item, exp: item.exp + token };
+          }
+          return item;
+        })
       );
       return;
     }
 
     if (cursor.location === "frac-num") {
       setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === cursor.itemId && item.type === "frac") {
+            if (item.num.endsWith("/()")) return { ...item, num: item.num.slice(0, -1) + token + ")" };
+            if (/\/\([^)]+\)$/.test(item.num)) return { ...item, num: item.num.slice(0, -1) + token + ")" };
+            return { ...item, num: item.num + token };
+          }
+          return item;
+        })
+      );
+      return;
+    }
+
+    if (cursor.location === "frac-den") {
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === cursor.itemId && item.type === "frac") {
+            if (item.den.endsWith("/()")) return { ...item, den: item.den.slice(0, -1) + token + ")" };
+            if (/\/\([^)]+\)$/.test(item.den)) return { ...item, den: item.den.slice(0, -1) + token + ")" };
+            return { ...item, den: item.den + token };
+          }
+          return item;
+        })
+      );
+      return;
+    }
+
+    if (cursor.location === "mixed-whole") {
+      setItems((prev) =>
         prev.map((item) =>
-          item.id === cursor.itemId && item.type === "frac"
+          item.id === cursor.itemId && item.type === "mixed_frac"
+            ? { ...item, whole: item.whole + token }
+            : item
+        )
+      );
+      return;
+    }
+
+    if (cursor.location === "mixed-num") {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === cursor.itemId && item.type === "mixed_frac"
             ? { ...item, num: item.num + token }
             : item
         )
@@ -377,11 +824,33 @@ export default function CasioCalculatorModal({
       return;
     }
 
-    if (cursor.location === "frac-den") {
+    if (cursor.location === "mixed-den") {
       setItems((prev) =>
         prev.map((item) =>
-          item.id === cursor.itemId && item.type === "frac"
+          item.id === cursor.itemId && item.type === "mixed_frac"
             ? { ...item, den: item.den + token }
+            : item
+        )
+      );
+      return;
+    }
+
+    if (cursor.location === "log-base") {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === cursor.itemId && item.type === "logbase"
+            ? { ...item, base: item.base + token }
+            : item
+        )
+      );
+      return;
+    }
+
+    if (cursor.location === "log-arg") {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === cursor.itemId && item.type === "logbase"
+            ? { ...item, arg: item.arg + token }
             : item
         )
       );
@@ -390,11 +859,14 @@ export default function CasioCalculatorModal({
 
     if (cursor.location === "abs") {
       setItems((prev) =>
-        prev.map((item) =>
-          item.id === cursor.itemId && item.type === "abs"
-            ? { ...item, content: item.content + token }
-            : item
-        )
+        prev.map((item) => {
+          if (item.id === cursor.itemId && item.type === "abs") {
+            if (item.content.endsWith("/()")) return { ...item, content: item.content.slice(0, -1) + token + ")" };
+            if (/\/\([^)]+\)$/.test(item.content)) return { ...item, content: item.content.slice(0, -1) + token + ")" };
+            return { ...item, content: item.content + token };
+          }
+          return item;
+        })
       );
       return;
     }
@@ -421,7 +893,7 @@ export default function CasioCalculatorModal({
       return;
     }
 
-    // DEL Key
+    // DEL Key - deletes entire multi-letter function words in one keystroke!
     if (action === "DEL") {
       if (hasCalculated) {
         setHasCalculated(false);
@@ -430,15 +902,39 @@ export default function CasioCalculatorModal({
       if (cursor.location === "sqrt") {
         const item = items.find((i) => i.id === cursor.itemId) as any;
         if (item && item.content.length > 0) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: i.content.slice(0, -1) } : i
-            )
-          );
+          const fracEndMatch = item.content.match(/(.*?)\(([^()]+)\)\/\(([^()]*)\)$/);
+          if (fracEndMatch) {
+            const [, before, num, den] = fracEndMatch;
+            if (den.length > 0) {
+              const newDen = deleteTrailingToken(den);
+              const newContent = `${before}(${num})/(${newDen})`;
+              setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: newContent } : i)));
+              return;
+            } else {
+              const newContent = `${before}${num}`;
+              setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: newContent } : i)));
+              return;
+            }
+          }
+          const newContent = deleteTrailingToken(item.content);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: newContent } : i)));
         } else {
-          // Remove sqrt block
+          const idx = getItemIndex(cursor.itemId, items);
           setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
-          setCursor({ location: "main" });
+          setCursor({ location: "main", index: Math.max(0, idx) });
+        }
+        return;
+      }
+
+      if (cursor.location === "pow-base") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.base.length > 0) {
+          const newBase = deleteTrailingToken(item.base);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "pow" ? { ...i, base: newBase } : i)));
+        } else {
+          const idx = getItemIndex(cursor.itemId, items);
+          setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
+          setCursor({ location: "main", index: Math.max(0, idx) });
         }
         return;
       }
@@ -446,17 +942,10 @@ export default function CasioCalculatorModal({
       if (cursor.location === "pow") {
         const item = items.find((i) => i.id === cursor.itemId) as any;
         if (item && item.exp.length > 0) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === cursor.itemId && i.type === "pow" ? { ...i, exp: i.exp.slice(0, -1) } : i
-            )
-          );
+          const newExp = deleteTrailingToken(item.exp);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "pow" ? { ...i, exp: newExp } : i)));
         } else {
-          // Remove power block, keep base
-          setItems((prev) =>
-            prev.map((i) => (i.id === cursor.itemId && i.type === "pow" ? { id: uid(), type: "text", value: i.base } : i))
-          );
-          setCursor({ location: "main" });
+          setCursor({ location: "pow-base", itemId: cursor.itemId });
         }
         return;
       }
@@ -464,13 +953,9 @@ export default function CasioCalculatorModal({
       if (cursor.location === "frac-den") {
         const item = items.find((i) => i.id === cursor.itemId) as any;
         if (item && item.den.length > 0) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === cursor.itemId && i.type === "frac" ? { ...i, den: i.den.slice(0, -1) } : i
-            )
-          );
+          const newDen = deleteTrailingToken(item.den);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "frac" ? { ...i, den: newDen } : i)));
         } else {
-          // Jump to numerator
           setCursor({ location: "frac-num", itemId: cursor.itemId });
         }
         return;
@@ -479,33 +964,115 @@ export default function CasioCalculatorModal({
       if (cursor.location === "frac-num") {
         const item = items.find((i) => i.id === cursor.itemId) as any;
         if (item && item.num.length > 0) {
-          setItems((prev) =>
-            prev.map((i) =>
-              i.id === cursor.itemId && i.type === "frac" ? { ...i, num: i.num.slice(0, -1) } : i
-            )
-          );
+          const newNum = deleteTrailingToken(item.num);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "frac" ? { ...i, num: newNum } : i)));
         } else {
-          // Remove fraction block
+          const idx = getItemIndex(cursor.itemId, items);
           setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
-          setCursor({ location: "main" });
+          setCursor({ location: "main", index: Math.max(0, idx) });
+        }
+        return;
+      }
+
+      if (cursor.location === "mixed-den") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.den.length > 0) {
+          const newDen = deleteTrailingToken(item.den);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "mixed_frac" ? { ...i, den: newDen } : i)));
+        } else {
+          setCursor({ location: "mixed-num", itemId: cursor.itemId });
+        }
+        return;
+      }
+
+      if (cursor.location === "mixed-num") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.num.length > 0) {
+          const newNum = deleteTrailingToken(item.num);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "mixed_frac" ? { ...i, num: newNum } : i)));
+        } else {
+          setCursor({ location: "mixed-whole", itemId: cursor.itemId });
+        }
+        return;
+      }
+
+      if (cursor.location === "mixed-whole") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.whole.length > 0) {
+          const newWhole = deleteTrailingToken(item.whole);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "mixed_frac" ? { ...i, whole: newWhole } : i)));
+        } else {
+          const idx = getItemIndex(cursor.itemId, items);
+          setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
+          setCursor({ location: "main", index: Math.max(0, idx) });
+        }
+        return;
+      }
+
+      if (cursor.location === "log-arg") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.arg.length > 0) {
+          const newArg = deleteTrailingToken(item.arg);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "logbase" ? { ...i, arg: newArg } : i)));
+        } else {
+          setCursor({ location: "log-base", itemId: cursor.itemId });
+        }
+        return;
+      }
+
+      if (cursor.location === "log-base") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.base.length > 0) {
+          const newBase = deleteTrailingToken(item.base);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "logbase" ? { ...i, base: newBase } : i)));
+        } else {
+          const idx = getItemIndex(cursor.itemId, items);
+          setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
+          setCursor({ location: "main", index: Math.max(0, idx) });
+        }
+        return;
+      }
+
+      if (cursor.location === "abs") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.content.length > 0) {
+          const newContent = deleteTrailingToken(item.content);
+          setItems((prev) => prev.map((i) => (i.id === cursor.itemId && i.type === "abs" ? { ...i, content: newContent } : i)));
+        } else {
+          const idx = getItemIndex(cursor.itemId, items);
+          setItems((prev) => prev.filter((i) => i.id !== cursor.itemId));
+          setCursor({ location: "main", index: Math.max(0, idx) });
         }
         return;
       }
 
       if (cursor.location === "main") {
-        if (items.length === 0) return;
-        const last = items[items.length - 1];
-        if (last.type === "text") {
-          if (last.value.length > 1) {
-            setItems((prev) => [
-              ...prev.slice(0, -1),
-              { ...last, value: last.value.slice(0, -1) },
-            ]);
+        const curIdx = cursor.index ?? items.length;
+        if (curIdx <= 0 || items.length === 0) return;
+        const target = items[curIdx - 1];
+        if (target.type === "text") {
+          const newVal = deleteTrailingToken(target.value);
+          if (newVal.length > 0) {
+            setItems((prev) => {
+              const next = [...prev];
+              next[curIdx - 1] = { ...target, value: newVal };
+              return next;
+            });
           } else {
-            setItems((prev) => prev.slice(0, -1));
+            setItems((prev) => {
+              const next = [...prev];
+              next.splice(curIdx - 1, 1);
+              return next;
+            });
+            setCursor({ location: "main", index: Math.max(0, curIdx - 1) });
           }
         } else {
-          setItems((prev) => prev.slice(0, -1));
+          setItems((prev) => {
+            const next = [...prev];
+            next.splice(curIdx - 1, 1);
+            return next;
+          });
+          setCursor({ location: "main", index: Math.max(0, curIdx - 1) });
         }
         return;
       }
@@ -525,9 +1092,11 @@ export default function CasioCalculatorModal({
     // Fraction <-> Decimal (S <=> D)
     if (action === "S_TO_D") {
       if (lastNumericResult !== null) {
+        const frac = toFraction(lastNumericResult);
+        const hasMixed = frac && frac.den !== 1 && Math.abs(frac.num) > frac.den;
         setDisplayMode((prev) => {
           if (prev === "decimal") return "fraction";
-          if (prev === "fraction") return "mixed";
+          if (prev === "fraction") return hasMixed ? "mixed" : "decimal";
           return "decimal";
         });
       }
@@ -630,23 +1199,99 @@ export default function CasioCalculatorModal({
 
     // If starting a fresh calculation right after equals:
     if (hasCalculated) {
-      if (["+", "−", "×", "÷", "^", "FRAC", "POWER", "SQUARE"].includes(action)) {
+      if (action === "FRAC" || action === "MIXED_FRAC") {
+        const fracId = uid();
+        setItems([{ id: fracId, type: "frac", num: "Ans", den: "" }]);
+        setCursor({ location: "frac-den", itemId: fracId });
+        setHasCalculated(false);
+        return;
+      }
+      if (["+", "−", "×", "÷", "SQUARE", "CUBE", "POWER"].includes(action)) {
         setItems([{ id: uid(), type: "text", value: "Ans" }]);
       } else {
         setItems([]);
       }
-      setCursor({ location: "main" });
+      setCursor({ location: "main", index: items.length });
       setHasCalculated(false);
     }
 
     // ------------------------------------------------------------
-    // 1. VERTICAL FRACTION BUTTON (■/■)
+    // 1. VERTICAL FRACTION (■/■) & MIXED FRACTION (■■/■)
     // ------------------------------------------------------------
+    if (action === "MIXED_FRAC" || (action === "FRAC" && shift)) {
+      if (hasCalculated) setHasCalculated(false);
+      const { remainingItems, extracted } = extractTrailingNumber();
+      const fracId = uid();
+      const newMixedItem: ExprItem = {
+        id: fracId,
+        type: "mixed_frac",
+        whole: extracted || "",
+        num: "",
+        den: "",
+      };
+      setItems([...remainingItems, newMixedItem]);
+      if (extracted) {
+        setCursor({ location: "mixed-num", itemId: fracId });
+      } else {
+        setCursor({ location: "mixed-whole", itemId: fracId });
+      }
+      return;
+    }
+
     if (action === "FRAC") {
+      if (hasCalculated) setHasCalculated(false);
+
+      // Inside sqrt:
+      if (cursor.location === "sqrt") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.type === "sqrt") {
+          const match = item.content.match(/([a-zA-Z0-9²³\.\^]+)$/);
+          if (match) {
+            const ex = match[0];
+            const rem = item.content.slice(0, -ex.length);
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: `${rem}(${ex})/()` } : i));
+          } else {
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "sqrt" ? { ...i, content: `${item.content}()/()` } : i));
+          }
+          return;
+        }
+      }
+
+      if (cursor.location === "pow") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.type === "pow") {
+          const match = item.exp.match(/([a-zA-Z0-9²³\.\^]+)$/);
+          if (match) {
+            const ex = match[0];
+            const rem = item.exp.slice(0, -ex.length);
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "pow" ? { ...i, exp: `${rem}(${ex})/()` } : i));
+          } else {
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "pow" ? { ...i, exp: `${item.exp}()/()` } : i));
+          }
+          return;
+        }
+      }
+
+      if (cursor.location === "abs") {
+        const item = items.find((i) => i.id === cursor.itemId) as any;
+        if (item && item.type === "abs") {
+          const match = item.content.match(/([a-zA-Z0-9²³\.\^]+)$/);
+          if (match) {
+            const ex = match[0];
+            const rem = item.content.slice(0, -ex.length);
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "abs" ? { ...i, content: `${rem}(${ex})/()` } : i));
+          } else {
+            setItems((prev) => prev.map((i) => i.id === cursor.itemId && i.type === "abs" ? { ...i, content: `${item.content}()/()` } : i));
+          }
+          return;
+        }
+      }
+
       if (cursor.location !== "main") {
         appendToken("/");
         return;
       }
+
       const { remainingItems, extracted } = extractTrailingNumber();
       const fracId = uid();
       const newFracItem: ExprItem = {
@@ -657,19 +1302,18 @@ export default function CasioCalculatorModal({
       };
       setItems([...remainingItems, newFracItem]);
       if (extracted) {
-        // Numerator already set from preceding number, jump directly to denominator!
         setCursor({ location: "frac-den", itemId: fracId });
       } else {
-        // Start in numerator
         setCursor({ location: "frac-num", itemId: fracId });
       }
       return;
     }
 
     // ------------------------------------------------------------
-    // 2. ROOT BUTTON (√■ / ³√■) - ENCOMPASSES OVERBAR
+    // 2. ROOT BUTTON (√■ / ³√■)
     // ------------------------------------------------------------
     if (action === "SQRT") {
+      if (hasCalculated) setHasCalculated(false);
       if (cursor.location !== "main") {
         appendToken(shift ? "³√(" : "√(");
         return;
@@ -682,15 +1326,15 @@ export default function CasioCalculatorModal({
         content: "",
       };
       setItems((prev) => [...prev, newSqrtItem]);
-      // Cursor enters inside the root under the overbar!
       setCursor({ location: "sqrt", itemId: sqrtId });
       return;
     }
 
     // ------------------------------------------------------------
-    // 3. POWERS (x^■, x², x³) - ENCOMPASSES SUPERSCRIPT EXPONENT
+    // 3. POWERS (x^■, x², x³) - Blank fill in if no number
     // ------------------------------------------------------------
     if (action === "POWER") {
+      if (hasCalculated) setHasCalculated(false);
       if (cursor.location !== "main") {
         appendToken("^(");
         return;
@@ -700,58 +1344,141 @@ export default function CasioCalculatorModal({
       const newPowItem: ExprItem = {
         id: powId,
         type: "pow",
-        base: extracted || "Ans",
+        base: extracted || "",
         exp: "",
       };
       setItems([...remainingItems, newPowItem]);
-      // Cursor enters into elevated exponent!
-      setCursor({ location: "pow", itemId: powId });
+      if (extracted) {
+        setCursor({ location: "pow", itemId: powId });
+      } else {
+        setCursor({ location: "pow-base", itemId: powId });
+      }
       return;
     }
 
     if (action === "SQUARE") {
+      if (hasCalculated) setHasCalculated(false);
+      const expVal = shift ? "3" : "2";
       if (cursor.location !== "main") {
         appendToken(shift ? "³" : "²");
         return;
       }
       const { remainingItems, extracted } = extractTrailingNumber();
       const powId = uid();
-      const newPowItem: ExprItem = {
-        id: powId,
-        type: "pow",
-        base: extracted || "Ans",
-        exp: shift ? "3" : "2",
-      };
-      // Direct square/cube steps out to main line immediately
-      setItems([...remainingItems, newPowItem]);
-      setCursor({ location: "main" });
+      if (extracted) {
+        const newPowItem: ExprItem = {
+          id: powId,
+          type: "pow",
+          base: extracted,
+          exp: expVal,
+        };
+        setItems([...remainingItems, newPowItem]);
+        setCursor({ location: "main", index: remainingItems.length + 1 });
+      } else {
+        // No preceding number: Blank fill-in base ■² with cursor in base!
+        const newPowItem: ExprItem = {
+          id: powId,
+          type: "pow",
+          base: "",
+          exp: expVal,
+        };
+        setItems([...remainingItems, newPowItem]);
+        setCursor({ location: "pow-base", itemId: powId });
+      }
       return;
     }
 
     if (action === "CUBE") {
+      if (hasCalculated) setHasCalculated(false);
       if (cursor.location !== "main") {
         appendToken("³");
         return;
       }
       const { remainingItems, extracted } = extractTrailingNumber();
       const powId = uid();
-      const newPowItem: ExprItem = {
-        id: powId,
-        type: "pow",
-        base: extracted || "Ans",
-        exp: "3",
-      };
-      setItems([...remainingItems, newPowItem]);
-      setCursor({ location: "main" });
+      if (extracted) {
+        const newPowItem: ExprItem = {
+          id: powId,
+          type: "pow",
+          base: extracted,
+          exp: "3",
+        };
+        setItems([...remainingItems, newPowItem]);
+        setCursor({ location: "main", index: remainingItems.length + 1 });
+      } else {
+        // No preceding number: Blank fill-in base ■³ with cursor in base!
+        const newPowItem: ExprItem = {
+          id: powId,
+          type: "pow",
+          base: "",
+          exp: "3",
+        };
+        setItems([...remainingItems, newPowItem]);
+        setCursor({ location: "pow-base", itemId: powId });
+      }
       return;
     }
 
     // ------------------------------------------------------------
-    // 4. ABS BUTTON (|x|)
+    // 4. LOGARITHMS: 10^■ (POW_10), log_■■ (LOG_BASE), log (LOG)
+    // ------------------------------------------------------------
+    if (action === "POW_10") {
+      if (hasCalculated) setHasCalculated(false);
+      if (cursor.location !== "main") {
+        appendToken("10^(");
+        return;
+      }
+      const powId = uid();
+      const newPowItem: ExprItem = {
+        id: powId,
+        type: "pow",
+        base: "10",
+        exp: "",
+      };
+      setItems((prev) => [...prev, newPowItem]);
+      setCursor({ location: "pow", itemId: powId });
+      return;
+    }
+
+    if (action === "LOG_BASE") {
+      if (hasCalculated) setHasCalculated(false);
+      if (cursor.location !== "main") {
+        appendToken("log_(");
+        return;
+      }
+      const logId = uid();
+      const newLogItem: ExprItem = {
+        id: logId,
+        type: "logbase",
+        base: "",
+        arg: "",
+      };
+      setItems((prev) => [...prev, newLogItem]);
+      setCursor({ location: "log-base", itemId: logId });
+      return;
+    }
+
+    if (action === "LOG") {
+      if (hasCalculated) setHasCalculated(false);
+      if (shift) {
+        handleButton("POW_10");
+        return;
+      }
+      appendToken("log(");
+      return;
+    }
+
+    // ------------------------------------------------------------
+    // 5. ABS BUTTON (|x|)
     // ------------------------------------------------------------
     if (action === "ABS") {
+      if (hasCalculated) setHasCalculated(false);
+      if (cursor.location === "sqrt" || cursor.location === "frac-num" || cursor.location === "frac-den" || cursor.location === "pow") {
+        appendToken("|");
+        return;
+      }
       if (cursor.location !== "main") {
-        appendToken("Abs(");
+        appendToken("|");
         return;
       }
       const absId = uid();
@@ -777,9 +1504,40 @@ export default function CasioCalculatorModal({
       case "7":
       case "8":
       case "9":
-      case "(":
-      case ")":
         appendToken(action);
+        break;
+      case "(":
+        if (cursor.location === "log-arg") {
+          const it = items.find((i) => i.id === (cursor as any).itemId) as any;
+          if (it && !it.arg) {
+            // Already inside argument container
+            return;
+          }
+        }
+        appendToken("(");
+        break;
+      case ")":
+        if (cursor.location === "pow") {
+          const it = items.find((i) => i.id === (cursor as any).itemId) as any;
+          if (it && it.type === "pow") {
+            const depth = (it.exp.match(/\(/g) || []).length - (it.exp.match(/\)/g) || []).length;
+            if (depth <= 0) {
+              const idx = getItemIndex((cursor as any).itemId, items);
+              setCursor({ location: "main", index: idx + 1 });
+              return;
+            }
+          }
+        }
+        if (cursor.location === "log-base") {
+          setCursor({ location: "log-arg", itemId: (cursor as any).itemId });
+          return;
+        }
+        if (cursor.location === "log-arg") {
+          const idx = getItemIndex((cursor as any).itemId, items);
+          setCursor({ location: "main", index: idx + 1 });
+          return;
+        }
+        appendToken(")");
         break;
       case ".":
         if (shift) {
@@ -801,9 +1559,6 @@ export default function CasioCalculatorModal({
         break;
       case "÷":
         appendToken(shift ? " C " : "÷");
-        break;
-      case "LOG_BASE":
-        appendToken("log_(");
         break;
       case "NEG":
         appendToken("−");
@@ -835,9 +1590,6 @@ export default function CasioCalculatorModal({
         appendToken(token);
         break;
       }
-      case "LOG":
-        appendToken(shift ? "10^(" : "log(");
-        break;
       case "LN":
         appendToken(shift ? "e^(" : "ln(");
         break;
@@ -848,67 +1600,119 @@ export default function CasioCalculatorModal({
 
   // Expression Natural-V.P.A.M. Renderer with Radical Overbar & True Vertical Fractions
   const renderedNaturalExpression = useMemo(() => {
+    const curIdx = cursor.location === "main" ? (cursor.index ?? items.length) : -1;
+
     if (items.length === 0) {
       return (
-        <span className="opacity-40 flex items-center font-mono text-base">
+        <span
+          onClick={() => setCursor({ location: "main", index: 0 })}
+          className="opacity-40 flex items-center font-mono text-base cursor-text py-1"
+        >
           0<span className="inline-block w-1.5 h-3.5 bg-[#121d12] animate-pulse ml-0.5" />
         </span>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-0.5 flex-wrap font-mono py-1">
-        {items.map((item) => {
+      <span
+        onClick={() => setCursor({ location: "main", index: items.length })}
+        className="inline-flex items-center gap-0.5 flex-wrap font-mono py-1 cursor-text"
+      >
+        {curIdx === 0 && (
+          <span className="inline-block w-1.5 h-3.5 bg-[#121d12] animate-pulse mr-0.5 align-middle" />
+        )}
+        {items.map((item, itemIdx) => {
+          let node: React.ReactNode = null;
+
           // 1. Text item
           if (item.type === "text") {
-            return (
-              <span key={item.id} className="text-xs sm:text-sm font-bold tracking-tight">
+            node = (
+              <span
+                key={item.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCursor({ location: "main", index: itemIdx + 1 });
+                }}
+                className="text-xs sm:text-sm font-bold tracking-tight cursor-pointer"
+              >
                 {formatSubExpression(item.value)}
               </span>
             );
           }
 
-          // 2. Square Root / Cube Root (Continuous Radical Overbar!)
+          // 2. Square Root / Cube Root (Continuous Radical Overbar, exact digit height at rest!)
           if (item.type === "sqrt") {
             const isCursorInSqrt = cursor.location === "sqrt" && cursor.itemId === item.id;
-            return (
+            node = (
               <span
                 key={item.id}
-                className="inline-flex items-center align-middle mx-1 font-mono transition-all"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCursor({ location: "sqrt", itemId: item.id });
+                }}
+                className="inline-flex items-stretch align-middle mx-0.5 font-mono cursor-pointer"
               >
-                {/* Radical Symbol (√ or ³√) */}
-                <span className="text-sm sm:text-base font-black select-none leading-none -mr-0.5">
-                  {item.root === 3 ? "³√" : "√"}
+                {/* Radical Symbol (√ or ³√) matches digit size at rest, seamlessly connects with overbar */}
+                <span className="flex items-stretch shrink-0 select-none relative self-stretch">
+                  {item.root === 3 && (
+                    <span className="text-[7px] sm:text-[7.5px] font-black absolute -top-1 left-0 text-[#121d12] leading-none z-10 select-none">
+                      3
+                    </span>
+                  )}
+                  <svg
+                    viewBox="0 0 8 16"
+                    fill="none"
+                    preserveAspectRatio="none"
+                    className="w-1.5 sm:w-2 h-full text-[#121d12] shrink-0"
+                    stroke="currentColor"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                    strokeLinejoin="miter"
+                  >
+                    <path d="M 0.5 8.5 L 2.2 14.8 L 7.2 0.65 L 8 0.65" />
+                  </svg>
                 </span>
-                {/* Continuous Overbar encompassing whatever is typed inside */}
-                <span className="border-t-2 border-[#121d12] px-1 pt-0.5 min-w-5 inline-flex items-center text-xs sm:text-sm font-bold bg-[#121d12]/5 rounded-xs">
+                {/* Continuous Overbar with NO grey shaded box and minimal padding */}
+                <span className="border-t-[1.3px] border-[#121d12] -ml-[0.5px] px-0.5 pt-0 pb-0 min-w-3 inline-flex items-center text-xs sm:text-sm font-bold rounded-tr-xs leading-none">
                   {formatSubExpression(item.content) || <span className="text-[#121d12]/40 select-none">■</span>}
                   {isCursorInSqrt && (
-                    <span className="inline-block w-1.5 h-3 bg-[#121d12] animate-pulse ml-0.5" />
+                    <span className="inline-block w-1 h-3 bg-[#121d12] animate-pulse ml-0.5" />
                   )}
                 </span>
               </span>
             );
           }
 
-          // 3. Vertical Fraction (Generous vertical height, fully visible!)
+          // 3. Vertical Fraction
           if (item.type === "frac") {
             const isCursorNum = cursor.location === "frac-num" && cursor.itemId === item.id;
             const isCursorDen = cursor.location === "frac-den" && cursor.itemId === item.id;
-            return (
+            node = (
               <span
                 key={item.id}
                 className="inline-flex flex-col items-center justify-center leading-none align-middle mx-1 font-mono shrink-0 py-0.5"
               >
                 {/* Numerator */}
-                <span className="text-[10px] sm:text-[11px] border-b border-[#121d12] px-1 pb-0.5 text-center font-bold min-w-4 flex items-center justify-center leading-none">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCursor({ location: "frac-num", itemId: item.id });
+                  }}
+                  className="text-[10px] sm:text-[11px] border-b border-[#121d12] px-1 pb-0.5 text-center font-bold min-w-4 flex items-center justify-center leading-none cursor-pointer"
+                >
                   {formatSubExpression(item.num) || <span className="text-[#121d12]/40 select-none">■</span>}
                   {isCursorNum && (
                     <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
                   )}
                 </span>
                 {/* Denominator */}
-                <span className="text-[10px] sm:text-[11px] px-1 pt-0.5 text-center font-bold min-w-4 flex items-center justify-center leading-none">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCursor({ location: "frac-den", itemId: item.id });
+                  }}
+                  className="text-[10px] sm:text-[11px] px-1 pt-0.5 text-center font-bold min-w-4 flex items-center justify-center leading-none cursor-pointer"
+                >
                   {formatSubExpression(item.den) || <span className="text-[#121d12]/40 select-none">■</span>}
                   {isCursorDen && (
                     <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
@@ -918,24 +1722,91 @@ export default function CasioCalculatorModal({
             );
           }
 
-          // 4. Power (Elevated Superscript Box)
+          // 3b. Mixed Fraction (Whole Number + Vertical Fraction)
+          if (item.type === "mixed_frac") {
+            const isCursorWhole = cursor.location === "mixed-whole" && cursor.itemId === item.id;
+            const isCursorNum = cursor.location === "mixed-num" && cursor.itemId === item.id;
+            const isCursorDen = cursor.location === "mixed-den" && cursor.itemId === item.id;
+            node = (
+              <span key={item.id} className="inline-flex items-center align-middle mx-1 font-mono shrink-0">
+                {/* Whole number box */}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCursor({ location: "mixed-whole", itemId: item.id });
+                  }}
+                  className="text-xs sm:text-sm font-bold min-w-3 text-center px-0.5 inline-flex items-center cursor-pointer"
+                >
+                  {item.whole ? formatSubExpression(item.whole) : <span className="text-[#121d12]/40 select-none">■</span>}
+                  {isCursorWhole && (
+                    <span className="inline-block w-1 h-3 bg-[#121d12] animate-pulse ml-0.5" />
+                  )}
+                </span>
+                {/* Fraction part */}
+                <span className="inline-flex flex-col items-center justify-center leading-none align-middle mx-0.5 py-0.5">
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCursor({ location: "mixed-num", itemId: item.id });
+                    }}
+                    className="text-[10px] sm:text-[11px] border-b border-[#121d12] px-1 pb-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none cursor-pointer"
+                  >
+                    {formatSubExpression(item.num) || <span className="text-[#121d12]/40 select-none">■</span>}
+                    {isCursorNum && (
+                      <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCursor({ location: "mixed-den", itemId: item.id });
+                    }}
+                    className="text-[10px] sm:text-[11px] px-1 pt-0.5 text-center font-bold min-w-3 flex items-center justify-center leading-none cursor-pointer"
+                  >
+                    {formatSubExpression(item.den) || <span className="text-[#121d12]/40 select-none">■</span>}
+                    {isCursorDen && (
+                      <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                </span>
+              </span>
+            );
+          }
+
+          // 4. Power (Elevated Superscript Box with Base Editing)
           if (item.type === "pow") {
+            const isCursorBase = cursor.location === "pow-base" && cursor.itemId === item.id;
             const isCursorInPow = cursor.location === "pow" && cursor.itemId === item.id;
-            return (
+            node = (
               <span
                 key={item.id}
                 className="inline-flex items-baseline align-middle font-mono shrink-0"
               >
-                <span className="text-xs sm:text-sm font-bold">{item.base}</span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCursor({ location: "pow-base", itemId: item.id });
+                  }}
+                  className="text-xs sm:text-sm font-bold min-w-3 inline-flex items-center cursor-pointer"
+                >
+                  {item.base ? formatSubExpression(item.base) : <span className="text-[#121d12]/40 select-none">■</span>}
+                  {isCursorBase && (
+                    <span className="inline-block w-1 h-3 bg-[#121d12] animate-pulse ml-0.5" />
+                  )}
+                </span>
                 <sup className="text-[10px] sm:text-[11px] font-black ml-0.5 -top-2 relative">
                   <span
-                    className={`px-1 py-0.2 rounded-xs min-w-3 inline-flex items-center ${
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCursor({ location: "pow", itemId: item.id });
+                    }}
+                    className={`px-0.5 py-0.2 rounded-xs min-w-3 inline-flex items-center cursor-pointer ${
                       isCursorInPow
                         ? "border border-[#121d12] bg-[#121d12]/10"
                         : "border-b border-transparent"
                     }`}
                   >
-                    {formatSubExpression(item.exp) || <span className="text-[#121d12]/40 select-none">■</span>}
+                    {item.exp ? formatSubExpression(item.exp) : <span className="text-[#121d12]/40 select-none">■</span>}
                     {isCursorInPow && (
                       <span className="inline-block w-1 h-2 bg-[#121d12] animate-pulse ml-0.5" />
                     )}
@@ -945,14 +1816,62 @@ export default function CasioCalculatorModal({
             );
           }
 
-          // 5. Absolute value |x|
+          // 5. Custom Base Logarithm (log_■■)
+          if (item.type === "logbase") {
+            const isCursorBase = cursor.location === "log-base" && cursor.itemId === item.id;
+            const isCursorArg = cursor.location === "log-arg" && cursor.itemId === item.id;
+            node = (
+              <span key={item.id} className="inline-flex items-baseline align-middle mx-0.5 font-mono font-bold shrink-0">
+                <span className="text-xs sm:text-sm">log</span>
+                <sub
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCursor({ location: "log-base", itemId: item.id });
+                  }}
+                  className="text-[9px] sm:text-[10px] top-1 relative px-0.5 min-w-2.5 inline-flex items-center cursor-pointer"
+                >
+                  <span className={`${isCursorBase ? "border border-[#121d12] bg-[#121d12]/10 px-0.5" : ""}`}>
+                    {item.base || <span className="text-[#121d12]/40 select-none">■</span>}
+                    {isCursorBase && (
+                      <span className="inline-block w-1 h-2 bg-[#121d12] animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                </sub>
+                <span className="text-xs sm:text-sm inline-flex items-center">
+                  (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCursor({ location: "log-arg", itemId: item.id });
+                    }}
+                    className="px-0.5 min-w-2.5 inline-flex items-center cursor-pointer"
+                  >
+                    {item.arg ? formatSubExpression(item.arg) : <span className="text-[#121d12]/40 select-none">■</span>}
+                    {isCursorArg && (
+                      <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                  )
+                </span>
+              </span>
+            );
+          }
+
+          // 6. Absolute value |x|
           if (item.type === "abs") {
             const isCursorInAbs = cursor.location === "abs" && cursor.itemId === item.id;
-            return (
-              <span key={item.id} className="inline-flex items-center align-middle mx-1 font-mono font-bold text-xs sm:text-sm shrink-0">
+            node = (
+              <span
+                key={item.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCursor({ location: "abs", itemId: item.id });
+                }}
+                className="inline-flex items-center align-middle mx-1 font-mono font-bold text-xs sm:text-sm shrink-0 cursor-pointer"
+              >
                 <span>|</span>
-                <span className="px-0.5">
-                  {formatSubExpression(item.content) || <span className="text-[#121d12]/40 select-none">■</span>}
+                <span className="px-0.5 min-w-3 inline-flex items-center">
+                  {item.content ? formatSubExpression(item.content) : <span className="text-[#121d12]/40 select-none">■</span>}
                   {isCursorInAbs && (
                     <span className="inline-block w-1 h-2.5 bg-[#121d12] animate-pulse ml-0.5" />
                   )}
@@ -962,13 +1881,15 @@ export default function CasioCalculatorModal({
             );
           }
 
-          return null;
+          return (
+            <React.Fragment key={item.id}>
+              {node}
+              {curIdx === itemIdx + 1 && (
+                <span className="inline-block w-1.5 h-3.5 bg-[#121d12] animate-pulse ml-0.5 align-middle" />
+              )}
+            </React.Fragment>
+          );
         })}
-
-        {/* Main line blinking cursor when cursor is on main */}
-        {cursor.location === "main" && (
-          <span className="inline-block w-1.5 h-3.5 bg-[#121d12] animate-pulse ml-0.5 align-middle" />
-        )}
       </span>
     );
   }, [items, cursor]);
@@ -1151,7 +2072,7 @@ export default function CasioCalculatorModal({
         handleButtonRef.current("×");
       } else if (e.key === "/") {
         e.preventDefault();
-        handleButtonRef.current("÷");
+        handleButtonRef.current("FRAC");
       } else if (e.key === "(" || e.key === ")") {
         e.preventDefault();
         handleButtonRef.current(e.key);
@@ -1690,15 +2611,22 @@ export default function CasioCalculatorModal({
             {/* FUNCTION KEYS ROW 2: ■/■, √■, x², x^■, log, ln               */}
             {/* ------------------------------------------------------------ */}
             <div className="grid grid-cols-6 gap-1 mb-1.5 text-[11px] font-bold">
-              {/* ■/■ (Fraction) */}
+              {/* ■/■ (Fraction) & Shift: ■■/■ (Mixed Fraction) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">■■/■</span>
                 <button
-                  onClick={() => handleButton("FRAC")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
-                  title="Vertical Fraction (■/■)"
+                  type="button"
+                  onClick={() => handleButton("MIXED_FRAC")}
+                  className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center hover:underline cursor-pointer"
+                  title="Mixed Fraction (■ ■/■)"
                 >
-                  ■/■
+                  ■■/■
+                </button>
+                <button
+                  onClick={() => handleButton(isShiftActive ? "MIXED_FRAC" : "FRAC")}
+                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  title="Vertical Fraction (■/■, Shift: ■■/■)"
+                >
+                  {isShiftActive ? "■■/■" : "■/■"}
                 </button>
               </div>
 
@@ -1738,15 +2666,22 @@ export default function CasioCalculatorModal({
                 </button>
               </div>
 
-              {/* log */}
+              {/* log & 10^■ */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">10^■</span>
                 <button
-                  onClick={() => handleButton("LOG")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
-                  title="Common Logarithm (log₁₀)"
+                  type="button"
+                  onClick={() => handleButton("POW_10")}
+                  className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center hover:underline cursor-pointer"
+                  title="10 to a power (10^■)"
                 >
-                  {isShiftActive ? "10^" : "log"}
+                  10^■
+                </button>
+                <button
+                  onClick={() => handleButton(isShiftActive ? "POW_10" : "LOG")}
+                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  title="Logarithm (Shift: 10^■)"
+                >
+                  {isShiftActive ? "10^■" : "log"}
                 </button>
               </div>
 

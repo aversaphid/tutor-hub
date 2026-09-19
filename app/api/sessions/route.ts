@@ -74,11 +74,11 @@ export async function GET(request: Request) {
           select: {
             id: true,
             name: true,
-            // Only expose PIN and magicKey to Tutors and Admins for student assistance
+            // Only expose PIN and magicKey to Tutors/Admins, and restrict studentPay strictly to Head Admin
             pin: !isStudent,
             magicKey: !isStudent,
             assignedTutorId: true,
-            studentPay: !isStudent,
+            studentPay: user.role === "HEAD_TUTOR",
             tutorPay: !isStudent,
           },
         },

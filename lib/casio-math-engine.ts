@@ -7,7 +7,9 @@ export type ExprItem =
   | { id: string; type: "text"; value: string }
   | { id: string; type: "sqrt"; root: 2 | 3; content: string }
   | { id: string; type: "frac"; num: string; den: string }
+  | { id: string; type: "mixed_frac"; whole: string; num: string; den: string }
   | { id: string; type: "pow"; base: string; exp: string }
+  | { id: string; type: "logbase"; base: string; arg: string }
   | { id: string; type: "abs"; content: string };
 
 export function factorial(n: number): number {
@@ -106,10 +108,21 @@ export function serializeToMath(itemList: ExprItem[]): string {
         const den = item.den.trim() || "1";
         return `((${balanceParentheses(num)})/(${balanceParentheses(den)}))`;
       }
+      if (item.type === "mixed_frac") {
+        const whole = item.whole.trim() || "0";
+        const num = item.num.trim() || "0";
+        const den = item.den.trim() || "1";
+        return `((${balanceParentheses(whole)}) + (${balanceParentheses(num)})/(${balanceParentheses(den)}))`;
+      }
       if (item.type === "pow") {
         const base = item.base.trim() || "0";
         const exp = item.exp.trim() || "1";
         return `((${balanceParentheses(base)})**(${balanceParentheses(exp)}))`;
+      }
+      if (item.type === "logbase") {
+        const base = item.base.trim() || "10";
+        const arg = item.arg.trim() || "1";
+        return `(log(${balanceParentheses(arg)})/log(${balanceParentheses(base)}))`;
       }
       if (item.type === "abs") {
         const content = item.content.trim() || "0";
@@ -127,7 +140,9 @@ export function serializeToText(itemList: ExprItem[]): string {
       if (item.type === "text") return item.value;
       if (item.type === "sqrt") return `${item.root === 3 ? "³√" : "√"}(${item.content})`;
       if (item.type === "frac") return `(${item.num || "■"})/(${item.den || "■"})`;
-      if (item.type === "pow") return `${item.base}^(${item.exp || "■"})`;
+      if (item.type === "mixed_frac") return `${item.whole || "■"} (${item.num || "■"})/(${item.den || "■"})`;
+      if (item.type === "pow") return `${item.base || "■"}^(${item.exp || "■"})`;
+      if (item.type === "logbase") return `log_${item.base || "■"}(${item.arg || "■"})`;
       if (item.type === "abs") return `|${item.content}|`;
       return "";
     })
