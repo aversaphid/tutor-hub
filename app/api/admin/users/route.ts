@@ -194,6 +194,32 @@ export async function PATCH(request: Request) {
       });
     }
 
+    // 0.2. Direct Cycle Magic Link flow
+    if (body.cycleMagicKey && (body.studentId || body.userId) && body.newPassword === undefined && !body.name && body.studentPay === undefined && body.tutorPay === undefined) {
+      const targetId = body.studentId || body.userId;
+      const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!targetUser || targetUser.role !== "TUTEE") {
+        return NextResponse.json({ error: "Student not found." }, { status: 404 });
+      }
+
+      const cleanName = targetUser.name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
+      const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+      const newMagicKey = `STU-${cleanName}-${randomHex}`;
+
+      const updated = await prisma.user.update({
+        where: { id: targetId },
+        data: { magicKey: newMagicKey },
+      });
+      clearUserCache(targetId);
+
+      return NextResponse.json({
+        success: true,
+        student: updated,
+        magicKey: newMagicKey,
+        message: `New Magic Link generated for ${targetUser.name}. The previous link is now invalid.`,
+      });
+    }
+
     // 1. Password update flow
     if (body.newPassword !== undefined) {
       const parseResult = AdminUpdateUserPasswordSchema.safeParse(body);
@@ -232,7 +258,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active } = parseResult.data;
+    const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active, cycleMagicKey } = parseResult.data;
 
     // Verify student fee cannot be less than tutor pay against current/new rates
     if (studentPay !== undefined || tutorPay !== undefined) {
@@ -277,6 +303,12 @@ export async function PATCH(request: Request) {
     }
     if (pin !== undefined) {
       updateData.pin = pin && pin.trim() ? pin.trim() : null;
+    }
+    if (cycleMagicKey) {
+      const studentTargetName = (name && name.trim()) || (await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } }))?.name || "STU";
+      const cleanName = studentTargetName.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
+      const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+      updateData.magicKey = `STU-${cleanName}-${randomHex}`;
     }
 
     const updatedStudent = await prisma.user.update({

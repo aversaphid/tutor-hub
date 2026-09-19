@@ -92,6 +92,7 @@ export const UpdateStudentSchema = z.object({
   tutorPay: z.number().min(0).nullable().optional(),
   pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().nullable().or(z.literal("")),
   active: z.boolean().optional(),
+  cycleMagicKey: z.boolean().optional(),
 }).refine(
   (data) => {
     if (data.studentPay !== undefined && data.studentPay !== null && data.tutorPay !== undefined && data.tutorPay !== null) {
