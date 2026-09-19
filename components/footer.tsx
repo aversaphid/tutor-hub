@@ -1,18 +1,44 @@
 import React from "react";
-import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Shield } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-slate-200/80 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm py-4 px-4 sm:px-6 transition-colors duration-200 mt-auto">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-        <div className="flex items-center gap-2">
+    <footer className="w-full border-t border-slate-200/80 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm py-5 px-4 sm:px-6 transition-colors duration-200 mt-auto">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-center md:text-left">
           <span className="font-semibold text-slate-700 dark:text-slate-300">
-            LB Maths Tuition
+            LB Maths Tuition Ltd
           </span>
-          <span className="text-slate-300 dark:text-slate-600">•</span>
-          <span>Student &amp; Lesson Hub</span>
+          <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">&bull;</span>
+          <span className="text-[11px] text-slate-400">Co. No. 17119191</span>
+          <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
+            <Shield className="w-3 h-3" />
+            <span>Enhanced DBS Checked</span>
+          </span>
         </div>
 
+        {/* Legal Links */}
+        <div className="flex flex-wrap items-center justify-center gap-3.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <Link href="/terms" className="hover:text-[#48A5EE] transition-colors">
+            Terms of Use
+          </Link>
+          <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+          <Link href="/privacy" className="hover:text-[#48A5EE] transition-colors">
+            Privacy Policy
+          </Link>
+          <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+          <Link href="/safeguarding" className="hover:text-[#48A5EE] transition-colors">
+            Child Safeguarding
+          </Link>
+          <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+          <Link href="/cookies" className="hover:text-[#48A5EE] transition-colors">
+            Cookies
+          </Link>
+        </div>
+
+        {/* External source code link */}
         <div className="flex items-center gap-4">
           <a
             href="https://github.com/aversaphid/tutor-hub"
