@@ -9,16 +9,6 @@
 
 ---
 
-## 📌 ICO Registration Note (What to Do If Not Yet Registered)
-
-Under the UK *Data Protection (Charges and Information) Regulations 2018*, any UK business that processes personal data electronically on servers, computers, or databases (such as managing tutor accounts and student names) is generally required to register with the **Information Commissioner's Office (ICO)** and pay an annual data protection fee.
-
-- **Fee Tier:** For micro-businesses (under 10 staff or turnover under £632,000), this is **Tier 1: £40 per year** (or £35 if paying by direct debit).
-- **How to register:** It takes ~10 minutes to complete online at [ico.org.uk/registration](https://ico.org.uk/registration).
-- **Can you publish this website without it right now?** **Yes.** You do not need to display an ICO number for your Privacy Policy to be valid. You only need to clearly identify LB MATHS TUITION LTD as the Data Controller, provide your contact email (`luke@lbmathstuition.co.uk`), and inform users of their right to contact the ICO. Once you obtain your registration number, you can simply append it to Document 2.
-
----
-
 # Document 1: Platform Terms of Use
 
 **Last Updated:** September 2026  
