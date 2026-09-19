@@ -43,6 +43,7 @@ import {
   ChevronDown,
   X,
   BookOpen,
+  Palmtree,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
@@ -546,7 +547,15 @@ export default function TutorDashboardPage() {
               title="Open My Weekly Timetable"
             >
               <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span className="hidden sm:inline">My Weekly Timetable</span>
+              <span className="hidden sm:inline">My Timetable</span>
+            </button>
+            <button
+              onClick={() => currentUser && handleOpenCalendar(currentUser)}
+              className="py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-amber-300/80 dark:border-amber-700/60"
+              title="Set unavailable hours & book holidays"
+            >
+              <Palmtree className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Availability &amp; Holidays</span>
             </button>
             <button
               onClick={handleExportWeekSchedule}

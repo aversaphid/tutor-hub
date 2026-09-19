@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Sparkles,
   Trash2,
+  Palmtree,
+  Ban,
 } from "lucide-react";
 import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -75,6 +77,25 @@ export default function UserWeeklyCalendarModal({
   const [quickAddError, setQuickAddError] = useState("");
   const [quickAddSuccess, setQuickAddSuccess] = useState("");
 
+  // Tutor Unavailability & Holiday State
+  const [unavailabilities, setUnavailabilities] = useState<any[]>([]);
+  const [isSetUnavailableOpen, setIsSetUnavailableOpen] = useState(false);
+  const [unavailType, setUnavailType] = useState<"BUSY" | "HOLIDAY">("BUSY");
+  const [unavailTutorId, setUnavailTutorId] = useState("");
+  const [unavailDate, setUnavailDate] = useState("");
+  const [unavailStartTime, setUnavailStartTime] = useState("09:00");
+  const [unavailEndTime, setUnavailEndTime] = useState("17:00");
+  const [holidayStartDate, setHolidayStartDate] = useState("");
+  const [holidayEndDate, setHolidayEndDate] = useState("");
+  const [unavailReason, setUnavailReason] = useState("");
+  const [unavailError, setUnavailError] = useState("");
+  const [unavailSuccess, setUnavailSuccess] = useState("");
+  const [isSubmittingUnavail, setIsSubmittingUnavail] = useState(false);
+
+  // Selected Unavailability block for viewing / deleting
+  const [selectedUnavailability, setSelectedUnavailability] = useState<any | null>(null);
+  const [isDeletingUnavail, setIsDeletingUnavail] = useState(false);
+
   // Active-only students and tutors for combo lists
   const activeStudents = useMemo(() => {
     return students.filter((s) => s.active !== false || s.id === targetUser?.id);
@@ -84,14 +105,46 @@ export default function UserWeeklyCalendarModal({
     return tutors.filter((t) => t.active !== false || t.id === targetUser?.id);
   }, [tutors, targetUser]);
 
+  // Fetch tutor unavailabilities & holidays
+  const fetchUnavailabilities = async () => {
+    try {
+      const isTargetStudent =
+        targetUser?.role === "TUTEE" ||
+        !!targetUser?.assignedTutorId ||
+        (targetUser?.role !== "TUTOR" && targetUser?.role !== "HEAD_TUTOR");
+
+      const targetTutorId = !isTargetStudent ? targetUser?.id : targetUser?.assignedTutorId;
+      const url = targetTutorId
+        ? `/api/tutor/unavailability?tutorId=${targetTutorId}`
+        : `/api/tutor/unavailability`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setUnavailabilities(data.unavailabilities || []);
+      }
+    } catch (err) {
+      console.error("Failed to load unavailabilities:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchUnavailabilities();
+    }
+  }, [isOpen, targetUser]);
+
   // Close modal on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (selectedSession) {
           setSelectedSession(null);
+        } else if (selectedUnavailability) {
+          setSelectedUnavailability(null);
         } else if (isQuickAddOpen) {
           setIsQuickAddOpen(false);
+        } else if (isSetUnavailableOpen) {
+          setIsSetUnavailableOpen(false);
         } else {
           onClose();
         }
@@ -101,7 +154,7 @@ export default function UserWeeklyCalendarModal({
       window.addEventListener("keydown", handleKeyDown);
     }
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, selectedSession, isQuickAddOpen, onClose]);
+  }, [isOpen, selectedSession, selectedUnavailability, isQuickAddOpen, isSetUnavailableOpen, onClose]);
 
   // Compute Monday of the active week (Monday–Friday)
   const monday = useMemo(() => {
@@ -299,6 +352,125 @@ export default function UserWeeklyCalendarModal({
     }
   };
 
+  // Open the Set Unavailable / Book Holiday form
+  const openSetUnavailableModal = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    setUnavailDate(todayStr);
+    setHolidayStartDate(todayStr);
+    setHolidayEndDate(todayStr);
+    setUnavailStartTime("09:00");
+    setUnavailEndTime("17:00");
+    setUnavailReason("");
+    setUnavailError("");
+    setUnavailSuccess("");
+    setUnavailType("BUSY");
+
+    const defaultTutorId = !isStudent
+      ? targetUser?.id
+      : targetUser?.assignedTutorId || currentUserId || (activeTutors[0]?.id ?? "");
+
+    setUnavailTutorId(defaultTutorId);
+    setIsSetUnavailableOpen(true);
+  };
+
+  // Submit new Unavailability / Holiday
+  const handleCreateUnavailability = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUnavailError("");
+    setUnavailSuccess("");
+
+    let startIso = "";
+    let endIso = "";
+
+    if (unavailType === "BUSY") {
+      if (!unavailDate || !unavailStartTime || !unavailEndTime) {
+        setUnavailError("Please specify date, start time, and end time.");
+        return;
+      }
+      if (unavailStartTime >= unavailEndTime) {
+        setUnavailError("End time must be after start time.");
+        return;
+      }
+      startIso = new Date(`${unavailDate}T${unavailStartTime}:00`).toISOString();
+      endIso = new Date(`${unavailDate}T${unavailEndTime}:00`).toISOString();
+    } else {
+      if (!holidayStartDate || !holidayEndDate) {
+        setUnavailError("Please select both start and end dates for the holiday.");
+        return;
+      }
+      if (holidayStartDate > holidayEndDate) {
+        setUnavailError("Holiday end date must be on or after start date.");
+        return;
+      }
+      startIso = new Date(`${holidayStartDate}T00:00:00`).toISOString();
+      endIso = new Date(`${holidayEndDate}T23:59:59.999`).toISOString();
+    }
+
+    setIsSubmittingUnavail(true);
+    try {
+      const res = await fetch("/api/tutor/unavailability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tutorId: unavailTutorId,
+          startTime: startIso,
+          endTime: endIso,
+          type: unavailType,
+          reason: unavailReason.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setUnavailError(data.error || "Failed to set unavailability.");
+        return;
+      }
+
+      setUnavailSuccess(
+        unavailType === "HOLIDAY"
+          ? "Holiday booked successfully!"
+          : "Unavailability block saved!"
+      );
+      await fetchUnavailabilities();
+      setTimeout(() => {
+        setIsSetUnavailableOpen(false);
+        setUnavailSuccess("");
+      }, 1000);
+    } catch {
+      setUnavailError("Network error. Please try again.");
+    } finally {
+      setIsSubmittingUnavail(false);
+    }
+  };
+
+  // Delete an Unavailability or Holiday block
+  const handleDeleteUnavailability = async (id: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this unavailability / holiday block?"
+      )
+    ) {
+      return;
+    }
+    setIsDeletingUnavail(true);
+    try {
+      const res = await fetch(`/api/tutor/unavailability?id=${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedUnavailability(null);
+        await fetchUnavailabilities();
+      } else {
+        alert(data.error || "Failed to delete unavailability block.");
+      }
+    } catch {
+      alert("Network error deleting unavailability block.");
+    } finally {
+      setIsDeletingUnavail(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-[#1e293b] w-full max-w-6xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
@@ -458,10 +630,21 @@ export default function UserWeeklyCalendarModal({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <span className="font-bold text-[#48A5EE]">
               {userSessions.length} lesson{userSessions.length === 1 ? "" : "s"} this week
             </span>
+            {(isAdmin || targetUser?.role === "TUTOR" || targetUser?.role === "HEAD_TUTOR" || currentUserId) && (
+              <button
+                type="button"
+                onClick={openSetUnavailableModal}
+                className="py-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                title="Mark unavailable hours or book multi-day holidays"
+              >
+                <Ban className="w-3.5 h-3.5" />
+                <span>+ Set Unavailable / Holiday</span>
+              </button>
+            )}
             {isAdmin && (
               <span className="hidden sm:inline text-slate-400">
                 (Click any 30-min slot to schedule a 1-hour lesson)
@@ -514,6 +697,38 @@ export default function UserWeeklyCalendarModal({
                     >
                       {day.getDate()}
                     </div>
+
+                    {/* Holiday Badges for this Day */}
+                    {(() => {
+                      const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
+                      const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999).getTime();
+                      const holidays = unavailabilities.filter((u) => {
+                        if (u.type !== "HOLIDAY") return false;
+                        const s = new Date(u.startTime).getTime();
+                        const e = new Date(u.endTime).getTime();
+                        return s <= dayEnd && e >= dayStart;
+                      });
+                      if (holidays.length === 0) return null;
+                      return (
+                        <div className="mt-1 flex flex-col gap-1">
+                          {holidays.map((hol) => (
+                            <button
+                              key={hol.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedUnavailability(hol);
+                              }}
+                              className="px-1.5 py-0.5 rounded-md bg-amber-500/20 dark:bg-amber-500/30 border border-amber-500/50 text-amber-800 dark:text-amber-200 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer hover:bg-amber-500/40 transition-colors shadow-2xs truncate w-full"
+                              title={`🌴 Holiday: ${hol.reason || "Out of Office"} (${new Date(hol.startTime).toLocaleDateString([], { month: "short", day: "numeric" })} - ${new Date(hol.endTime).toLocaleDateString([], { month: "short", day: "numeric" })}). Click to view/manage.`}
+                            >
+                              <Palmtree className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span className="truncate">{hol.reason || "Holiday"}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -550,6 +765,24 @@ export default function UserWeeklyCalendarModal({
               {weekDays.map((dayDate, dayIdx) => {
                 const isToday = dayDate.toDateString() === now.toDateString();
 
+                const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0, 0).getTime();
+                const dayEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 23, 59, 59, 999).getTime();
+
+                // Check if this day is marked as a Holiday
+                const isDayHoliday = unavailabilities.some((u) => {
+                  if (u.type !== "HOLIDAY") return false;
+                  const s = new Date(u.startTime).getTime();
+                  const e = new Date(u.endTime).getTime();
+                  return s <= dayEnd && e >= dayStart;
+                });
+
+                // Find busy hourly blackout blocks for this specific day
+                const dayBusySlots = unavailabilities.filter((u) => {
+                  if (u.type === "HOLIDAY") return false;
+                  const s = new Date(u.startTime);
+                  return s.toDateString() === dayDate.toDateString();
+                });
+
                 // Find sessions for this specific day
                 const daySessions = userSessions.filter((s) => {
                   const sDate = new Date(s.scheduledStartTime);
@@ -560,7 +793,11 @@ export default function UserWeeklyCalendarModal({
                   <div
                     key={dayIdx}
                     className={`relative border-l border-slate-200 dark:border-slate-800 ${
-                      isToday ? "bg-[#48A5EE]/[0.02]" : ""
+                      isDayHoliday
+                        ? "bg-amber-50/40 dark:bg-amber-950/20"
+                        : isToday
+                        ? "bg-[#48A5EE]/[0.02]"
+                        : ""
                     }`}
                   >
                     {/* LIVE CURRENT TIME INDICATOR (Shown on today's column) */}
@@ -707,6 +944,65 @@ export default function UserWeeklyCalendarModal({
                         </div>
                       );
                     })}
+
+                    {/* Tutor Hourly Unavailability Blocks */}
+                    {dayBusySlots.map((unavail) => {
+                      const start = new Date(unavail.startTime);
+                      const end = new Date(unavail.endTime);
+                      const startHour = start.getHours() + start.getMinutes() / 60;
+                      const endHour = end.getHours() + end.getMinutes() / 60;
+                      const durationHours = Math.max(0.5, endHour - startHour);
+
+                      const topPx = (startHour - START_HOUR) * HOUR_HEIGHT;
+                      const heightPx = Math.max(40, durationHours * HOUR_HEIGHT - 4);
+
+                      return (
+                        <div
+                          key={unavail.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUnavailability(unavail);
+                          }}
+                          style={{
+                            top: `${topPx}px`,
+                            height: `${heightPx}px`,
+                          }}
+                          className="absolute left-1 right-1 rounded-2xl p-2.5 shadow-md cursor-pointer transition-transform hover:scale-[1.01] z-20 overflow-hidden flex flex-col justify-between border-2 border-dashed border-rose-500/70 bg-rose-50/95 dark:bg-rose-950/80 text-rose-800 dark:text-rose-100 backdrop-blur-xs group"
+                          title="Tutor Unavailable (Click to view or remove)"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="font-extrabold text-xs flex items-center justify-between gap-1 leading-tight text-rose-700 dark:text-rose-300">
+                              <span className="flex items-center gap-1">
+                                <Ban className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                                <span className="truncate">Unavailable</span>
+                              </span>
+                              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-rose-200/80 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200">
+                                Blackout
+                              </span>
+                            </div>
+                            {unavail.reason && (
+                              <div className="text-[11px] font-semibold text-rose-900 dark:text-rose-100 truncate">
+                                {unavail.reason}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300 flex items-center justify-between mt-auto pt-1 border-t border-rose-300/40 dark:border-rose-800/60">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 shrink-0" />
+                              <span>
+                                {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                &ndash;
+                                {end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </span>
+                            <span className="text-[9px] font-semibold underline opacity-75 group-hover:opacity-100">
+                              Manage
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -716,7 +1012,7 @@ export default function UserWeeklyCalendarModal({
 
         {/* MODAL FOOTER */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs bg-white dark:bg-[#1e293b]">
-          <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-3 text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" /> Scheduled
             </span>
@@ -728,6 +1024,12 @@ export default function UserWeeklyCalendarModal({
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block" /> Archived
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> Unavailable
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Holiday
             </span>
           </div>
 
@@ -1010,6 +1312,350 @@ export default function UserWeeklyCalendarModal({
                 Close Details
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* SELECTED UNAVAILABILITY / HOLIDAY DETAILS MODAL */}
+      {selectedUnavailability && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                {selectedUnavailability.type === "HOLIDAY" ? (
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                    <Palmtree className="w-4 h-4" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                    <Ban className="w-4 h-4" />
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                    {selectedUnavailability.type === "HOLIDAY"
+                      ? "Tutor Holiday Details"
+                      : "Unavailability Block"}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Tutor: {formatTutorName(selectedUnavailability.tutor?.name)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUnavailability(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Type</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                      selectedUnavailability.type === "HOLIDAY"
+                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
+                        : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
+                    }`}
+                  >
+                    {selectedUnavailability.type === "HOLIDAY"
+                      ? "🌴 Holiday / Away"
+                      : "⛔ Hourly Blackout"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Date &amp; Time</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-right">
+                    {selectedUnavailability.type === "HOLIDAY" ? (
+                      <>
+                        {new Date(selectedUnavailability.startTime).toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        &ndash;{" "}
+                        {new Date(selectedUnavailability.endTime).toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        {new Date(selectedUnavailability.startTime).toLocaleDateString([], {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}{" "}
+                        &bull;{" "}
+                        {new Date(selectedUnavailability.startTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        &ndash;{" "}
+                        {new Date(selectedUnavailability.endTime).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                {selectedUnavailability.reason && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium block mb-1">
+                      Reason / Notes
+                    </span>
+                    <p className="font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                      {selectedUnavailability.reason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              {(isAdmin || currentUserId === selectedUnavailability.tutorId) ? (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteUnavailability(selectedUnavailability.id)}
+                  disabled={isDeletingUnavail}
+                  className="py-2 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-rose-200 dark:border-rose-800 disabled:opacity-50"
+                  title="Remove this unavailability or holiday block"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeletingUnavail ? "Removing..." : "Remove Block"}</span>
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSelectedUnavailability(null)}
+                className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SET UNAVAILABLE / BOOK HOLIDAY MODAL */}
+      {isSetUnavailableOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Ban className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-base text-slate-800 dark:text-slate-100">
+                    Set Availability / Holiday
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Block out your calendar to prevent admin bookings
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSetUnavailableOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Tab Switcher: Hourly Blackout vs Book Holiday */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setUnavailType("BUSY")}
+                className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  unavailType === "BUSY"
+                    ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-rose-500" />
+                <span>Hourly Blackout</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnavailType("HOLIDAY")}
+                className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  unavailType === "HOLIDAY"
+                    ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                <Palmtree className="w-3.5 h-3.5 text-amber-500" />
+                <span>Book Holiday</span>
+              </button>
+            </div>
+
+            {unavailError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{unavailError}</span>
+              </div>
+            )}
+
+            {unavailSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{unavailSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUnavailability} className="space-y-3.5 text-xs">
+              {/* Tutor Selector */}
+              <div>
+                <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                  Tutor
+                </label>
+                <select
+                  disabled={!isAdmin && activeTutors.length <= 1}
+                  value={unavailTutorId}
+                  onChange={(e) => setUnavailTutorId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE] disabled:opacity-80"
+                >
+                  {activeTutors.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {formatTutorName(t.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* HOURLY BLACKOUT FIELDS */}
+              {unavailType === "BUSY" ? (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={unavailDate}
+                      onChange={(e) => setUnavailDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                        Start Time
+                      </label>
+                      <TimeSelect
+                        value={unavailStartTime}
+                        onChange={(val) => setUnavailStartTime(val)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                        End Time
+                      </label>
+                      <TimeSelect
+                        value={unavailEndTime}
+                        onChange={(val) => setUnavailEndTime(val)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* MULTI-DAY HOLIDAY FIELDS */
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={holidayStartDate}
+                      onChange={(e) => setHolidayStartDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={holidayEndDate}
+                      onChange={(e) => setHolidayEndDate(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Reason / Notes */}
+              <div>
+                <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                  Reason / Notes <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder={
+                    unavailType === "HOLIDAY"
+                      ? "e.g., Summer Vacation, Family holiday"
+                      : "e.g., Doctor appointment, University lecture, Errands"
+                  }
+                  value={unavailReason}
+                  onChange={(e) => setUnavailReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-medium text-xs focus:outline-none focus:border-[#48A5EE]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsSetUnavailableOpen(false)}
+                  className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingUnavail}
+                  className={`py-2 px-5 rounded-xl text-white font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                    unavailType === "HOLIDAY"
+                      ? "bg-amber-600 hover:bg-amber-500"
+                      : "bg-rose-600 hover:bg-rose-500"
+                  }`}
+                >
+                  {isSubmittingUnavail ? (
+                    <span>Saving...</span>
+                  ) : unavailType === "HOLIDAY" ? (
+                    <>
+                      <Palmtree className="w-3.5 h-3.5" />
+                      <span>Book Holiday</span>
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>Block Out Time</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

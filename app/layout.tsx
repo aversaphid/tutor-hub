@@ -9,8 +9,16 @@ export const metadata: Metadata = {
     "Join your online maths tuition session with your tutor. Simple, reliable, and account-conflict free Microsoft Teams lessons.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/logo.png",
+    apple: [
+      { url: "/apple-icon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
+    ],
   },
   appleWebApp: {
     capable: true,

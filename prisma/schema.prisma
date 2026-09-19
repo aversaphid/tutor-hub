@@ -45,6 +45,7 @@ model User {
 
   tutorSessions Session[] @relation("TutorSessions")
   tuteeSessions Session[] @relation("TuteeSessions")
+  unavailabilities TutorUnavailability[] @relation("TutorUnavailability")
   auditLogs     AuditLog[]
   resources     Resource[]
 
@@ -135,3 +136,16 @@ model Resource {
   @@index([createdById])
 }
 
+model TutorUnavailability {
+  id        String   @id @default(cuid())
+  tutorId   String
+  tutor     User     @relation("TutorUnavailability", fields: [tutorId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  type      String   @default("BUSY") // "BUSY" (hourly) or "HOLIDAY" (multi-day)
+  reason    String?  // e.g. "Doctor's Appointment", "Summer Holiday"
+  createdAt DateTime @default(now())
+
+  @@index([tutorId, startTime, endTime])
+  @@index([startTime, endTime])
+}

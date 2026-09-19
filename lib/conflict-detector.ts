@@ -97,5 +97,49 @@ export async function detectSessionConflict(
     };
   }
 
+  // 3. Check Tutor's Unavailability / Holiday blocks
+  const unavailabilityOverlap = await (prisma as any).tutorUnavailability.findFirst({
+    where: {
+      tutorId,
+      startTime: { lt: endTime },
+      endTime: { gt: startTime },
+    },
+    include: {
+      tutor: { select: { name: true } },
+    },
+  });
+
+  if (unavailabilityOverlap) {
+    const isHoliday = unavailabilityOverlap.type === "HOLIDAY";
+    const startStr = isHoliday
+      ? unavailabilityOverlap.startTime.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        })
+      : unavailabilityOverlap.startTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+    const endStr = isHoliday
+      ? unavailabilityOverlap.endTime.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        })
+      : unavailabilityOverlap.endTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+    const label = isHoliday ? "Holiday / Out of Office" : "Unavailable";
+    const reasonText = unavailabilityOverlap.reason
+      ? ` ("${unavailabilityOverlap.reason}")`
+      : "";
+
+    return {
+      hasConflict: true,
+      reason: `Schedule Conflict: Tutor ${unavailabilityOverlap.tutor.name} has marked this time as ${label}${reasonText} (${startStr} – ${endStr}).`,
+    };
+  }
+
   return { hasConflict: false };
 }
+
