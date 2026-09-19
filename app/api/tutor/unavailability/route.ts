@@ -73,10 +73,88 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { tutorId, startTime, endTime, type = "BUSY", reason } = body;
+    const { tutorId, startTime, endTime, type = "BUSY", reason, repeatWeeks } = body;
 
     const targetTutorId =
       user.role === "HEAD_TUTOR" && tutorId ? tutorId : user.id;
+
+    // Action: Copy all hourly unavailabilities from one week to target week
+    if (body.action === "copy-week") {
+      const { sourceMonday, targetMonday } = body;
+      if (!sourceMonday || !targetMonday) {
+        return NextResponse.json(
+          { error: "sourceMonday and targetMonday are required." },
+          { status: 400 }
+        );
+      }
+      const srcStart = new Date(sourceMonday);
+      const srcEnd = new Date(srcStart.getTime() + 7 * 24 * 3600 * 1000);
+      const tgtStart = new Date(targetMonday);
+      const diffMs = tgtStart.getTime() - srcStart.getTime();
+
+      const sourceBlocks = await (prisma as any).tutorUnavailability.findMany({
+        where: {
+          tutorId: targetTutorId,
+          type: "BUSY",
+          startTime: { gte: srcStart, lt: srcEnd },
+        },
+      });
+
+      if (sourceBlocks.length === 0) {
+        return NextResponse.json(
+          { error: "No hourly unavailability blocks found in this week to copy." },
+          { status: 400 }
+        );
+      }
+
+      let createdCount = 0;
+      let skippedCount = 0;
+
+      for (const block of sourceBlocks) {
+        const newStart = new Date(new Date(block.startTime).getTime() + diffMs);
+        const newEnd = new Date(new Date(block.endTime).getTime() + diffMs);
+
+        const conflictSession = await prisma.session.findFirst({
+          where: {
+            tutorId: targetTutorId,
+            status: { in: ["SCHEDULED", "DELAYED", "IN_PROGRESS"] },
+            scheduledStartTime: { lt: newEnd },
+            scheduledEndTime: { gt: newStart },
+          },
+        });
+
+        const existingBlock = await (prisma as any).tutorUnavailability.findFirst({
+          where: {
+            tutorId: targetTutorId,
+            startTime: newStart,
+            endTime: newEnd,
+          },
+        });
+
+        if (conflictSession || existingBlock) {
+          skippedCount++;
+          continue;
+        }
+
+        await (prisma as any).tutorUnavailability.create({
+          data: {
+            tutorId: targetTutorId,
+            startTime: newStart,
+            endTime: newEnd,
+            type: "BUSY",
+            reason: block.reason,
+          },
+        });
+        createdCount++;
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Copied ${createdCount} blackout block(s) to target week.${skippedCount > 0 ? ` (${skippedCount} skipped due to clashes or duplicates).` : ""}`,
+        createdCount,
+        skippedCount,
+      });
+    }
 
     if (!startTime || !endTime) {
       return NextResponse.json(
@@ -102,54 +180,82 @@ export async function POST(request: Request) {
       );
     }
 
-    // Safety check: Are there any scheduled active lessons during this requested period?
-    const overlappingSessions = await prisma.session.findMany({
-      where: {
-        tutorId: targetTutorId,
-        status: { in: ["SCHEDULED", "DELAYED", "IN_PROGRESS"] },
-        scheduledStartTime: { lt: endDate },
-        scheduledEndTime: { gt: startDate },
-      },
-      include: {
-        tutee: { select: { name: true } },
-      },
-    });
+    const repeatCount =
+      type === "BUSY" && repeatWeeks
+        ? Math.min(12, Math.max(0, parseInt(String(repeatWeeks), 10)))
+        : 0;
 
-    if (overlappingSessions.length > 0) {
-      const details = overlappingSessions
-        .map(
-          (s) =>
-            `${s.tutee.name} (${new Date(s.scheduledStartTime).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })})`
-        )
-        .join(", ");
+    const createdRecords = [];
+    const skippedWeeks = [];
 
-      return NextResponse.json(
-        {
-          error: `Cannot set unavailable: there are ${overlappingSessions.length} active lesson(s) booked during this period (${details}). Please reschedule or cancel them first.`,
+    for (let w = 0; w <= repeatCount; w++) {
+      const wStartDate = new Date(startDate.getTime() + w * 7 * 24 * 3600 * 1000);
+      const wEndDate = new Date(endDate.getTime() + w * 7 * 24 * 3600 * 1000);
+
+      // Safety check: Are there any scheduled active lessons during this requested period?
+      const overlappingSessions = await prisma.session.findMany({
+        where: {
+          tutorId: targetTutorId,
+          status: { in: ["SCHEDULED", "DELAYED", "IN_PROGRESS"] },
+          scheduledStartTime: { lt: wEndDate },
+          scheduledEndTime: { gt: wStartDate },
         },
-        { status: 400 }
-      );
+        include: {
+          tutee: { select: { name: true } },
+        },
+      });
+
+      if (overlappingSessions.length > 0) {
+        if (w === 0) {
+          const details = overlappingSessions
+            .map(
+              (s) =>
+                `${s.tutee.name} (${new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })})`
+            )
+            .join(", ");
+
+          return NextResponse.json(
+            {
+              error: `Cannot set unavailable: there are ${overlappingSessions.length} active lesson(s) booked during this period (${details}). Please reschedule or cancel them first.`,
+            },
+            { status: 400 }
+          );
+        }
+        skippedWeeks.push(w);
+        continue;
+      }
+
+      const record = await (prisma as any).tutorUnavailability.create({
+        data: {
+          tutorId: targetTutorId,
+          startTime: wStartDate,
+          endTime: wEndDate,
+          type: type === "HOLIDAY" ? "HOLIDAY" : "BUSY",
+          reason: reason?.trim() || null,
+        },
+        include: {
+          tutor: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+      createdRecords.push(record);
     }
 
-    const record = await (prisma as any).tutorUnavailability.create({
-      data: {
-        tutorId: targetTutorId,
-        startTime: startDate,
-        endTime: endDate,
-        type: type === "HOLIDAY" ? "HOLIDAY" : "BUSY",
-        reason: reason?.trim() || null,
+    return NextResponse.json(
+      {
+        unavailability: createdRecords[0],
+        createdCount: createdRecords.length,
+        message:
+          repeatCount > 0
+            ? `Created ${createdRecords.length} recurring blackout blocks across ${repeatCount + 1} weeks!${skippedWeeks.length > 0 ? ` (${skippedWeeks.length} weeks skipped due to existing lessons).` : ""}`
+            : undefined,
       },
-      include: {
-        tutor: {
-          select: { id: true, name: true },
-        },
-      },
-    });
-
-    return NextResponse.json({ unavailability: record }, { status: 201 });
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating tutor unavailability:", error);
     return NextResponse.json(

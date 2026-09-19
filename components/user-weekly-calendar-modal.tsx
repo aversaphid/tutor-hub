@@ -17,6 +17,7 @@ import {
   Trash2,
   Palmtree,
   Ban,
+  Copy,
 } from "lucide-react";
 import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -91,6 +92,8 @@ export default function UserWeeklyCalendarModal({
   const [unavailError, setUnavailError] = useState("");
   const [unavailSuccess, setUnavailSuccess] = useState("");
   const [isSubmittingUnavail, setIsSubmittingUnavail] = useState(false);
+  const [unavailRepeatWeeks, setUnavailRepeatWeeks] = useState(0);
+  const [isCopyingWeek, setIsCopyingWeek] = useState(false);
 
   // Selected Unavailability block for viewing / deleting
   const [selectedUnavailability, setSelectedUnavailability] = useState<any | null>(null);
@@ -166,6 +169,15 @@ export default function UserWeeklyCalendarModal({
     mon.setDate(now.getDate() + diffToMonday + weekOffset * 7);
     mon.setHours(0, 0, 0, 0);
     return mon;
+  }, [weekOffset]);
+
+  // Human-readable week offset label (e.g. "This Week", "Next Week", "+2 Weeks Ahead")
+  const weekLabel = useMemo(() => {
+    if (weekOffset === 0) return "This Week";
+    if (weekOffset === 1) return "Next Week";
+    if (weekOffset === -1) return "Last Week";
+    if (weekOffset > 1) return `+${weekOffset} Wks`;
+    return `${weekOffset} Wks`;
   }, [weekOffset]);
 
   // 7 days: Monday through Sunday
@@ -364,6 +376,7 @@ export default function UserWeeklyCalendarModal({
     setUnavailError("");
     setUnavailSuccess("");
     setUnavailType("BUSY");
+    setUnavailRepeatWeeks(0);
 
     const defaultTutorId = !isStudent
       ? targetUser?.id
@@ -417,6 +430,7 @@ export default function UserWeeklyCalendarModal({
           endTime: endIso,
           type: unavailType,
           reason: unavailReason.trim() || undefined,
+          repeatWeeks: unavailType === "BUSY" && unavailRepeatWeeks > 0 ? unavailRepeatWeeks : undefined,
         }),
       });
 
@@ -427,9 +441,10 @@ export default function UserWeeklyCalendarModal({
       }
 
       setUnavailSuccess(
-        unavailType === "HOLIDAY"
-          ? "Holiday booked successfully!"
-          : "Unavailability block saved!"
+        data.message ||
+          (unavailType === "HOLIDAY"
+            ? "Holiday booked successfully!"
+            : "Unavailability block saved!")
       );
       await fetchUnavailabilities();
       setTimeout(() => {
@@ -468,6 +483,76 @@ export default function UserWeeklyCalendarModal({
       alert("Network error deleting unavailability block.");
     } finally {
       setIsDeletingUnavail(false);
+    }
+  };
+
+  // Copy all hourly blackouts from this active week into the following week
+  const handleCopyWeekUnavailability = async () => {
+    const isTargetStudent =
+      targetUser?.role === "TUTEE" ||
+      !!targetUser?.assignedTutorId ||
+      (targetUser?.role !== "TUTOR" && targetUser?.role !== "HEAD_TUTOR");
+    const targetTutorId = !isTargetStudent ? targetUser?.id : targetUser?.assignedTutorId || currentUserId;
+
+    if (!targetTutorId) return;
+
+    const nextMonday = new Date(monday.getTime() + 7 * 24 * 3600 * 1000);
+    const confirmMsg = `Copy all hourly blackout blocks from this week (${monday.toLocaleDateString([], { month: "short", day: "numeric" })}) into next week (${nextMonday.toLocaleDateString([], { month: "short", day: "numeric" })})?`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsCopyingWeek(true);
+    try {
+      const res = await fetch("/api/tutor/unavailability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "copy-week",
+          tutorId: targetTutorId,
+          sourceMonday: monday.toISOString(),
+          targetMonday: nextMonday.toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to copy unavailabilities.");
+        return;
+      }
+      alert(data.message || "Copied unavailabilities successfully!");
+      fetchUnavailabilities();
+    } catch {
+      alert("Network error copying unavailabilities.");
+    } finally {
+      setIsCopyingWeek(false);
+    }
+  };
+
+  // Copy a single selected blackout block into subsequent weeks
+  const handleCopySingleBlackout = async (weeksAhead: number) => {
+    if (!selectedUnavailability) return;
+    const start = new Date(new Date(selectedUnavailability.startTime).getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
+    const end = new Date(new Date(selectedUnavailability.endTime).getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
+
+    try {
+      const res = await fetch("/api/tutor/unavailability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tutorId: selectedUnavailability.tutorId,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          type: "BUSY",
+          reason: selectedUnavailability.reason || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to copy blackout block.");
+        return;
+      }
+      alert(`Blackout block copied to ${start.toLocaleDateString([], { month: "short", day: "numeric" })}!`);
+      fetchUnavailabilities();
+    } catch {
+      alert("Network error copying blackout block.");
     }
   };
 
@@ -571,31 +656,41 @@ export default function UserWeeklyCalendarModal({
               <button
                 type="button"
                 onClick={() => setWeekOffset((prev) => prev - 1)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                 title="Previous Week"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setWeekOffset(0)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-colors ${
+              <div
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors select-none ${
                   weekOffset === 0
-                    ? "bg-[#48A5EE] text-white"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    ? "bg-[#48A5EE] text-white shadow-xs"
+                    : "bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold"
                 }`}
               >
-                This Week
-              </button>
+                {weekLabel}
+              </div>
               <button
                 type="button"
                 onClick={() => setWeekOffset((prev) => prev + 1)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                 title="Next Week"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Jump to Current Week button if navigating other weeks */}
+            {weekOffset !== 0 && (
+              <button
+                type="button"
+                onClick={() => setWeekOffset(0)}
+                className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                title="Return to current week"
+              >
+                Current Week
+              </button>
+            )}
 
             <button
               type="button"
@@ -632,18 +727,37 @@ export default function UserWeeklyCalendarModal({
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="font-bold text-[#48A5EE]">
-              {userSessions.length} lesson{userSessions.length === 1 ? "" : "s"} this week
+              {userSessions.length} lesson{userSessions.length === 1 ? "" : "s"}{" "}
+              {weekOffset === 0
+                ? "this week"
+                : weekOffset === 1
+                ? "next week"
+                : weekOffset === -1
+                ? "last week"
+                : `for this week (${weekLabel})`}
             </span>
             {(isAdmin || targetUser?.role === "TUTOR" || targetUser?.role === "HEAD_TUTOR" || currentUserId) && (
-              <button
-                type="button"
-                onClick={openSetUnavailableModal}
-                className="py-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                title="Mark unavailable hours or book multi-day holidays"
-              >
-                <Ban className="w-3.5 h-3.5" />
-                <span>+ Set Unavailable / Holiday</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={openSetUnavailableModal}
+                  className="py-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  title="Mark unavailable hours or book multi-day holidays"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                  <span>+ Set Unavailable / Holiday</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyWeekUnavailability}
+                  disabled={isCopyingWeek}
+                  className="py-1 px-2.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-slate-300/80 dark:border-slate-700 disabled:opacity-50"
+                  title="Copy all hourly blackout slots from this week to next week"
+                >
+                  <Copy className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span>{isCopyingWeek ? "Copying..." : "Copy Week → Next"}</span>
+                </button>
+              </>
             )}
             {isAdmin && (
               <span className="hidden sm:inline text-slate-400">
@@ -1417,6 +1531,46 @@ export default function UserWeeklyCalendarModal({
                   </div>
                 )}
               </div>
+
+              {/* Quick Copy to Future Weeks (Hourly Blackout Only) */}
+              {selectedUnavailability.type === "BUSY" && (isAdmin || currentUserId === selectedUnavailability.tutorId) && (
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                    <Copy className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    <span>Copy Blackout to Future Weeks</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingleBlackout(1)}
+                      className="py-1 px-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      +1 Week Ahead
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingleBlackout(2)}
+                      className="py-1 px-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      +2 Weeks Ahead
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingleBlackout(3)}
+                      className="py-1 px-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      +3 Weeks Ahead
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySingleBlackout(4)}
+                      className="py-1 px-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      +4 Weeks Ahead
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -1602,6 +1756,28 @@ export default function UserWeeklyCalendarModal({
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* Repeat across weeks (Hourly Blackout Only) */}
+              {unavailType === "BUSY" && (
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
+                    Repeat across weeks
+                  </label>
+                  <select
+                    value={unavailRepeatWeeks}
+                    onChange={(e) => setUnavailRepeatWeeks(parseInt(e.target.value, 10))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
+                  >
+                    <option value={0}>One-off (This week only)</option>
+                    <option value={1}>Repeat for Next 1 Week (+7 days)</option>
+                    <option value={2}>Repeat for Next 2 Weeks</option>
+                    <option value={3}>Repeat for Next 3 Weeks</option>
+                    <option value={4}>Repeat for Next 4 Weeks (1 month)</option>
+                    <option value={8}>Repeat for Next 8 Weeks (2 months)</option>
+                    <option value={12}>Repeat for Next 12 Weeks (Whole term)</option>
+                  </select>
                 </div>
               )}
 

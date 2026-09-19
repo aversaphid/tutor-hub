@@ -46,12 +46,18 @@ import {
   ChevronDown,
   GraduationCap,
   Edit3,
+  Database,
+  UploadCloud,
+  TrendingUp,
+  FileJson,
 } from "lucide-react";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
 import SharedResourcesHub from "@/components/shared-resources-hub";
 import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
+import FindOpenSlotModal from "@/components/find-open-slot-modal";
+import RevenueAnalyticsHub from "@/components/revenue-analytics-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -60,7 +66,7 @@ import { useRouter } from "next/navigation";
 export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "resources" | "audit" | "settings">("lessons");
+  const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "resources" | "audit" | "settings" | "analytics">("lessons");
 
   const [sessions, setSessions] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -239,6 +245,135 @@ export default function AdminPage() {
   const [isCompletedOpen, setIsCompletedOpen] = useState(false);
   const [isCancelledOpen, setIsCancelledOpen] = useState(false);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
+
+  // Find Open Slot Modal state
+  const [isFindSlotOpen, setIsFindSlotOpen] = useState(false);
+  const [findSlotInitialStudentId, setFindSlotInitialStudentId] = useState("");
+
+  const handleSelectFoundSlot = ({
+    studentId,
+    tutorId,
+    date,
+    startTime,
+    endTime,
+  }: {
+    studentId: string;
+    tutorId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }) => {
+    setSelectedStudentId(studentId);
+    setSelectedTutorId(tutorId);
+    setLessonDate(date);
+    setLessonStartTime(startTime);
+    setLessonEndTime(endTime);
+    setIsRepeating(false);
+    setRepeatWeeks(1);
+    setConflictError("");
+    setIsNewLessonOpen(true);
+  };
+
+  // System Backup & Restore State
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [backupPayloadToRestore, setBackupPayloadToRestore] = useState<any>(null);
+  const [backupValidationSummary, setBackupValidationSummary] = useState<any>(null);
+  const [backupStatusMessage, setBackupStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleExportBackup = async () => {
+    setIsExportingBackup(true);
+    setBackupStatusMessage(null);
+    try {
+      const res = await fetch("/api/admin/backup");
+      if (!res.ok) throw new Error("Failed to generate backup");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `lbmaths-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      if (disposition && disposition.includes("filename=")) {
+        filename = disposition.split("filename=")[1].replace(/["']/g, "");
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setBackupStatusMessage({ type: "success", text: `Backup successfully downloaded as ${filename}` });
+    } catch (err: any) {
+      setBackupStatusMessage({ type: "error", text: err.message || "Failed to download system backup" });
+    } finally {
+      setIsExportingBackup(false);
+    }
+  };
+
+  const handleBackupFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBackupStatusMessage(null);
+    setBackupPayloadToRestore(null);
+    setBackupValidationSummary(null);
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      // Validate with API
+      const res = await fetch("/api/admin/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "validate", backup: json }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid backup file structure");
+      }
+
+      setBackupPayloadToRestore(json);
+      setBackupValidationSummary(data.summary);
+    } catch (err: any) {
+      setBackupStatusMessage({ type: "error", text: err.message || "Could not read backup file. Make sure it is valid JSON." });
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!backupPayloadToRestore) return;
+    setIsRestoringBackup(true);
+    setBackupStatusMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore", backup: backupPayloadToRestore }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to restore backup");
+      }
+
+      setBackupStatusMessage({
+        type: "success",
+        text: `Restoration complete! Restored ${data.restored.users} users, ${data.restored.sessions} sessions, ${data.restored.unavailabilities} unavailabilities, and ${data.restored.resources} resources.`,
+      });
+      setBackupPayloadToRestore(null);
+      setBackupValidationSummary(null);
+
+      // Refresh all admin data
+      await refreshAllData();
+    } catch (err: any) {
+      setBackupStatusMessage({ type: "error", text: err.message || "Failed to restore database from backup." });
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
 
   useEffect(() => {
     initAdminData();
@@ -1444,6 +1579,17 @@ export default function AdminPage() {
               <span>Export CSV</span>
             </button>
             <button
+              onClick={() => {
+                setFindSlotInitialStudentId("");
+                setIsFindSlotOpen(true);
+              }}
+              className="py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Find available open slots matching tutor and student calendars"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Find Open Slot</span>
+            </button>
+            <button
               onClick={() => setIsNewLessonOpen(true)}
               className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
@@ -1767,6 +1913,17 @@ export default function AdminPage() {
             }`}
           >
             Activity Logs ({auditLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "analytics"
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Business Analytics</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
@@ -3178,6 +3335,16 @@ export default function AdminPage() {
                         <td className="px-3 py-2.5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
                             <button
+                              onClick={() => {
+                                setFindSlotInitialStudentId(st.id);
+                                setIsFindSlotOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:hover:bg-indigo-900 dark:text-indigo-400 transition-colors cursor-pointer"
+                              title="Find Open Slot for this Student"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => handleOpenCalendar(st)}
                               className="p-1.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] transition-colors cursor-pointer"
                               title="Open Weekly Timetable"
@@ -3850,8 +4017,165 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+
+              {/* System Database Backup & Disaster Recovery Section */}
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-[#48A5EE]" />
+                    <span>System Backup &amp; Disaster Recovery</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Export a full JSON snapshot of all platform data (students, tutors, sessions, hourly blackouts, holidays, and settings) or safely restore from a previously exported backup file.
+                  </p>
+                </div>
+
+                {backupStatusMessage && (
+                  <div
+                    className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between animate-in fade-in ${
+                      backupStatusMessage.type === "success"
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                        : "bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {backupStatusMessage.type === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                      )}
+                      <span>{backupStatusMessage.text}</span>
+                    </span>
+                    <button
+                      onClick={() => setBackupStatusMessage(null)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold px-2 py-0.5 cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  {/* Subsection A: Export Backup */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col justify-between space-y-4">
+                    <div className="space-y-1.5">
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Download className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>1. Download Full System Backup</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Generates a comprehensive, timestamped <code>.json</code> database snapshot containing all users, lessons, calendar blackouts, and shared resources.
+                      </p>
+                      <div className="text-[10px] text-slate-400 pt-1">
+                        Current records: {students.length + tutors.length} users, {sessions.length} sessions
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={handleExportBackup}
+                        disabled={isExportingBackup}
+                        className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Database className="w-3.5 h-3.5" />
+                        <span>{isExportingBackup ? "Generating Backup..." : "Download JSON Backup"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Subsection B: Upload & Restore Backup */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
+                    <div className="space-y-1.5">
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>2. Upload &amp; Restore Backup</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Select an existing <code>.json</code> backup snapshot to inspect and restore into the platform. Missing items will be inserted and existing records will be updated.
+                      </p>
+                    </div>
+
+                    {!backupValidationSummary ? (
+                      <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-[#48A5EE] rounded-2xl p-4 text-center transition-colors bg-white dark:bg-slate-900">
+                        <input
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={handleBackupFileSelect}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          title="Choose backup JSON file"
+                        />
+                        <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
+                          <FileJson className="w-6 h-6 text-[#48A5EE]" />
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            Choose or drag &amp; drop JSON backup file
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            .json files exported from LB Maths Tuition
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Valid Backup File Verified</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Version {backupValidationSummary.version}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-300 bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+                          <div>Users: <strong>{backupValidationSummary.counts.users}</strong></div>
+                          <div>Sessions: <strong>{backupValidationSummary.counts.sessions}</strong></div>
+                          <div>Blackouts: <strong>{backupValidationSummary.counts.unavailabilities}</strong></div>
+                          <div>Resources: <strong>{backupValidationSummary.counts.resources}</strong></div>
+                        </div>
+
+                        <div className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200 dark:border-amber-900/40">
+                          ⚠️ Restoring will merge these records into the current database.
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBackupPayloadToRestore(null);
+                              setBackupValidationSummary(null);
+                            }}
+                            disabled={isRestoringBackup}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleExecuteRestore}
+                            disabled={isRestoringBackup}
+                            className="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            <span>{isRestoringBackup ? "Restoring System..." : "Confirm & Restore"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        )}
+
+        {/* TAB 6: BUSINESS & REVENUE ANALYTICS */}
+        {activeTab === "analytics" && (
+          <RevenueAnalyticsHub
+            sessions={sessions}
+            tutors={tutors}
+            students={students}
+          />
         )}
       </main>
 
@@ -4900,6 +5224,16 @@ export default function AdminPage() {
         onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDelay}
         isSubmitting={isSubmittingDelay}
+      />
+
+      {/* Find Open Slot Modal */}
+      <FindOpenSlotModal
+        isOpen={isFindSlotOpen}
+        onClose={() => setIsFindSlotOpen(false)}
+        students={students}
+        tutors={tutors}
+        preselectedStudentId={findSlotInitialStudentId}
+        onSelectSlot={handleSelectFoundSlot}
       />
 
       <Footer />
