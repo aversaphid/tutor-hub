@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!user || !user.passwordHash || !user.active) {
+    if (!user || !user.passwordHash || (!user.active && user.role !== "HEAD_TUTOR")) {
       return NextResponse.json(
         { error: "Invalid email or password." },
         { status: 401 }

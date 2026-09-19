@@ -3339,28 +3339,38 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleUserActive(t.id, t.active !== false)}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                              t.active !== false
-                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
-                                : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
-                            }`}
-                            title={`Click to set as ${t.active !== false ? "Inactive" : "Active"}`}
-                          >
-                            {t.active !== false ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                <span>Active</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-3 h-3 text-slate-400" />
-                                <span>Inactive</span>
-                              </>
-                            )}
-                          </button>
+                          {t.role === "HEAD_TUTOR" || t.email === "luke@lbmathstuition.co.uk" ? (
+                            <span
+                              className="px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default"
+                              title="Primary Administrator is always active"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              <span>Active (Admin)</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleUserActive(t.id, t.active !== false)}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                t.active !== false
+                                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
+                                  : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
+                              }`}
+                              title={`Click to set as ${t.active !== false ? "Inactive" : "Active"}`}
+                            >
+                              {t.active !== false ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Active</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-3 h-3 text-slate-400" />
+                                  <span>Inactive</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">

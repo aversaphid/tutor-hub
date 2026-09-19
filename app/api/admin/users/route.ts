@@ -176,6 +176,12 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "User not found." }, { status: 404 });
       }
       const newActive = Boolean(body.active);
+      if (!newActive && (targetUser.role === "HEAD_TUTOR" || targetUser.email === "luke@lbmathstuition.co.uk")) {
+        return NextResponse.json(
+          { error: "The primary administrator account cannot be deactivated." },
+          { status: 400 }
+        );
+      }
       const updated = await prisma.user.update({
         where: { id: targetId },
         data: { active: newActive },
