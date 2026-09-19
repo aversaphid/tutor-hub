@@ -66,16 +66,13 @@ export default function TermsPage() {
             <span>3. Lesson Cancellations &amp; Rescheduling</span>
           </h2>
           <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
-            <strong>24-Hour Cancellation Policy:</strong> Any cancellation or request to reschedule a scheduled lesson must be made with at least <strong>24 hours&apos; notice</strong> prior to the scheduled start time.
+            <strong>3-Hour Cancellation Policy:</strong> Any cancellation or request to reschedule a scheduled lesson must be made with at least <strong>3 hours&apos; notice</strong> prior to the scheduled start time.
           </div>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-            3.1 In accordance with your external tuition agreement, any cancellation or reschedule request provided with less than 24 hours&apos; notice remains chargeable in full.
+            3.1 In accordance with your external tuition agreement, any cancellation or reschedule request provided with less than 3 hours&apos; notice remains chargeable in full.
           </p>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-            3.2 <strong>Student No-Show:</strong> If a student fails to join the Microsoft Teams meeting within 15 minutes of the scheduled start time, the session will be marked as paid and completed under your external agreement.
-          </p>
-          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-            3.3 <strong>Tutor Delays:</strong> If a tutor encounters an unavoidable delay, they will update the lesson status with a delay notification (e.g., +5m or +10m). Lost time will be made up or credited accordingly.
+            3.2 <strong>Tutor Delays:</strong> If a tutor encounters an unavoidable delay, they will update the lesson status with a delay notification (e.g., +5m or +10m). Lost time will be made up or credited accordingly.
           </p>
         </section>
 

@@ -1,6 +1,6 @@
 import React from "react";
 import LegalPageLayout from "@/components/legal-page-layout";
-import { ShieldCheck, VideoOff, Home, PhoneCall, AlertTriangle } from "lucide-react";
+import { ShieldCheck, VideoOff, PhoneCall } from "lucide-react";
 
 export const metadata = {
   title: "Child Safeguarding & Online Safety | LB Maths Tuition",
@@ -41,7 +41,7 @@ export default function SafeguardingPage() {
         <section className="space-y-3">
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <VideoOff className="w-4 h-4 text-rose-500" />
-            <span>3. Online Tuition Rules (Microsoft Teams)</span>
+            <span>3. No-Recording Policy (Microsoft Teams)</span>
           </h2>
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 space-y-1">
             <strong className="text-sm block">Strict No-Recording Policy:</strong>
@@ -49,27 +49,6 @@ export default function SafeguardingPage() {
               Lessons conducted via Microsoft Teams are <strong>NOT recorded</strong> by LB MATHS TUITION LTD or its tutors.
               Neither tutors, students, nor parents may record, screen-capture, or distribute video or audio of tutoring sessions without explicit, prior written consent from all parties.
             </p>
-          </div>
-
-          <div className="space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-            <div className="flex items-start gap-2">
-              <Home className="w-4 h-4 text-[#48A5EE] shrink-0 mt-0.5" />
-              <div>
-                <strong>Learning Environment &amp; Dress Code:</strong> Lessons must be held in an open, family-accessible room (e.g. study, dining room, living room) and never in a private bedroom. Both tutor and student must be dressed appropriately.
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#48A5EE] shrink-0 mt-0.5" />
-              <div>
-                <strong>Parental Presence:</strong> Parents and guardians are encouraged to be in the home during sessions and retain the full right to observe any portion of an online lesson.
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <strong>No Private Messaging:</strong> Tutors do not have access to student personal email addresses or phone numbers on this platform. Tutors are strictly prohibited from contacting students via personal social media or private messaging apps.
-              </div>
-            </div>
           </div>
         </section>
 

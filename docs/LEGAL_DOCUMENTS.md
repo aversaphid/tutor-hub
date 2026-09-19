@@ -29,8 +29,8 @@
 2.3 Parents and students are responsible for maintaining the confidentiality of their PIN and Magic Link. You must notify us immediately at `luke@lbmathstuition.co.uk` if you suspect unauthorized access.
 
 ### 3. Lesson Cancellations & Rescheduling
-3.1 **24-Hour Notice Rule:** In accordance with your external tuition agreement, any cancellation or request to reschedule a scheduled lesson must be made with at least **24 hours' notice** prior to the scheduled start time.  
-3.2 **Late Notice & Missed Sessions:** Cancellations made with less than 24 hours' notice, or instances where a student fails to join the Microsoft Teams meeting within 15 minutes of the start time, remain chargeable in full under your external tuition arrangement.  
+3.1 **3-Hour Notice Rule:** In accordance with your external tuition agreement, any cancellation or request to reschedule a scheduled lesson must be made with at least **3 hours' notice** prior to the scheduled start time.  
+3.2 **Late Notice:** Cancellations made with less than 3 hours' notice remain chargeable in full under your external tuition arrangement.  
 3.3 **Tutor Delay Notifications:** In the event of an unavoidable delay, tutors will update the lesson status in the portal (e.g. +5m or +10m). Any time lost will be added to the session or credited accordingly.
 
 ### 4. Online Delivery (Microsoft Teams) & Appropriate Use
@@ -106,17 +106,8 @@ LB MATHS TUITION LTD provides 1-to-1 mathematics tutoring to children and young 
 ### 2. Vetting and Enhanced DBS Checks
 All tutors engaged by LB MATHS TUITION LTD hold a valid, clean **Enhanced Disclosure and Barring Service (DBS) check**. Qualifications, professional references, and identity are thoroughly verified before any tutor is assigned to a student.
 
-### 3. Online Tuition Safeguards (Microsoft Teams)
-3.1 **Strict No-Recording Policy:**  
-   - **Lessons conducted via Microsoft Teams are NOT recorded by LB MATHS TUITION LTD or its tutors.**  
-   - Neither tutors, students, nor parents may record, screen-capture, or distribute lesson video or audio without explicit, prior written consent from all parties.
-3.2 **Environment & Dress Code:**  
-   - Lessons must be conducted in an open, family-accessible room (e.g. living room, dining room, study) and never in a bedroom.  
-   - Both tutor and student must be dressed appropriately at all times.
-3.3 **Parental Presence:**  
-   - Parents or guardians are strongly encouraged to be present in the home during sessions and maintain full right of access to observe online lessons at any time.
-3.4 **Privacy Protection on the Platform:**  
-   - Tutors do not have access to student personal email addresses or phone numbers. All contact and timetable access are coordinated centrally through the portal. Tutors are prohibited from contacting students via personal social media or unapproved messaging services.
+### 3. No-Recording Policy (Microsoft Teams)
+Lessons conducted via Microsoft Teams are **NOT recorded** by LB MATHS TUITION LTD or its tutors. Neither tutors, students, nor parents may record, screen-capture, or distribute lesson video or audio without explicit, prior written consent from all parties.
 
 ### 4. Reporting Child Protection Concerns
 Any concerns regarding child welfare, inappropriate conduct, or safety must be reported immediately to our **Designated Safeguarding Lead (DSL)**:
