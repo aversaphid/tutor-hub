@@ -1395,21 +1395,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Action toast */}
-        {actionMessage && (
-          <div className="p-3.5 rounded-2xl bg-[#48A5EE]/10 border border-[#48A5EE]/30 text-slate-800 dark:text-slate-100 text-xs font-semibold flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#48A5EE]" />
-              <span>{actionMessage}</span>
-            </div>
-            <button
-              onClick={() => setActionMessage("")}
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
 
         {/* NEXT / ACTIVE SCHEDULED MEETING DECK (With visible PIN and Magic Link) */}
         {activeLesson && (
