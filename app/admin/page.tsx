@@ -1415,7 +1415,7 @@ export default function AdminPage() {
         {activeLesson && (
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border-2 border-[#48A5EE]/40 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -1495,7 +1495,7 @@ export default function AdminPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                   {/* Reminder Badge/Button */}
                   {activeLesson.adminReminder ? (
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shrink-0">
                       <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                       <span className="font-semibold">Reminder: {activeLesson.adminReminder}</span>
                       <button
@@ -1514,60 +1514,63 @@ export default function AdminPage() {
                         setReminderModalSession(activeLesson);
                         setEditReminderText("");
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
                     >
                       <Bell className="w-3.5 h-3.5 text-[#48A5EE]" />
                       <span>+ Add Reminder</span>
                     </button>
                   )}
 
-                  {/* Tutor Confirmation Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleConfirmation(activeLesson.id, "tutor", Boolean(activeLesson.tutorConfirmed))}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                      activeLesson.tutorConfirmed
-                        ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
-                    title="Click to toggle Tutor Confirmation"
-                  >
-                    {activeLesson.tutorConfirmed ? (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Tutor: Confirmed ✓</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Tutor: Pending</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Attendance Confirmation Group (kept together on one line) */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Tutor Confirmation Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleConfirmation(activeLesson.id, "tutor", Boolean(activeLesson.tutorConfirmed))}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
+                        activeLesson.tutorConfirmed
+                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                      title="Click to toggle Tutor Confirmation"
+                    >
+                      {activeLesson.tutorConfirmed ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>Tutor: Confirmed ✓</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>Tutor: Pending</span>
+                        </>
+                      )}
+                    </button>
 
-                  {/* Student Confirmation Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleConfirmation(activeLesson.id, "tutee", Boolean(activeLesson.tuteeConfirmed))}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                      activeLesson.tuteeConfirmed
-                        ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
-                    title="Click to toggle Student Confirmation"
-                  >
-                    {activeLesson.tuteeConfirmed ? (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Student: Confirmed ✓</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Student: Pending</span>
-                      </>
-                    )}
-                  </button>
+                    {/* Student Confirmation Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleConfirmation(activeLesson.id, "tutee", Boolean(activeLesson.tuteeConfirmed))}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
+                        activeLesson.tuteeConfirmed
+                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                      title="Click to toggle Student Confirmation"
+                    >
+                      {activeLesson.tuteeConfirmed ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>Student: Confirmed ✓</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>Student: Pending</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
