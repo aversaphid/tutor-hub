@@ -107,6 +107,13 @@ export async function PATCH(
 
     // Check if times or tutor changed
     if (updates.scheduledStartTime || updates.scheduledEndTime || (updates.tutorId && updates.tutorId !== existing.tutorId)) {
+      if ((updates.scheduledStartTime || updates.scheduledEndTime) && user.role !== "HEAD_TUTOR") {
+        return NextResponse.json(
+          { error: "Forbidden. Tutors are not permitted to reschedule lessons. Please contact the Head Tutor." },
+          { status: 403 }
+        );
+      }
+
       const newStart = updates.scheduledStartTime
         ? new Date(updates.scheduledStartTime)
         : existing.scheduledStartTime;

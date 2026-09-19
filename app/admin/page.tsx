@@ -1563,22 +1563,6 @@ export default function AdminPage() {
               <span>Formula Sheet</span>
             </button>
             <button
-              onClick={handleExportWeekSchedule}
-              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
-              title="Export all lessons for the current week to an .ics calendar file"
-            >
-              <Calendar className="w-4 h-4 text-[#48A5EE]" />
-              <span>Export Week (.ics)</span>
-            </button>
-            <button
-              onClick={() => exportSessionsToCSV(sessions, "lb-maths-all-lessons")}
-              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
-              title="Download all lesson records as CSV for Excel / Spreadsheets"
-            >
-              <Download className="w-4 h-4 text-[#48A5EE]" />
-              <span>Export CSV</span>
-            </button>
-            <button
               onClick={() => {
                 setFindSlotInitialStudentId("");
                 setIsFindSlotOpen(true);
@@ -4014,6 +3998,71 @@ export default function AdminPage() {
                         <span>{isSubmittingSettingsTutorPassword ? "Updating..." : "Set Tutor Password"}</span>
                       </button>
                     </form>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Export & Calendar Feeds Section */}
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Download className="w-4 h-4 text-[#48A5EE]" />
+                    <span>Data Export &amp; External Calendar Feeds</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Download spreadsheet records and calendar sync files for external lesson tracking and offline records.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  {/* Export All Lessons to CSV */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Export All Lessons (CSV)
+                        </h5>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Download all {sessions.length} lesson records with dates, times, students, tutors, statuses, notes, and attendance confirmations for Excel or Google Sheets.
+                      </p>
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => exportSessionsToCSV(sessions, "lb-maths-all-lessons")}
+                        className="py-2 px-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Download className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Download Lessons CSV</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Export Week Schedule (.ics) */}
+                  <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-[#48A5EE]" />
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                          Export Current Week (.ics)
+                        </h5>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Export all lessons for the current week into an iCalendar <code>.ics</code> file for Apple Calendar, Microsoft Outlook, or Google Calendar.
+                      </p>
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={handleExportWeekSchedule}
+                        className="py-2 px-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Download Week (.ics)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
