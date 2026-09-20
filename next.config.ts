@@ -20,27 +20,33 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { webpack, isServer }) => {
-    // Ignore node:v8 and v8 built-in imports so Webpack never fails with UnhandledSchemeError
-    config.plugins.push(
-      new webpack.IgnorePlugin({
-        resourceRegExp: /^(node:)?v8$/,
-      })
-    );
-
-    // Safely rewrite any other node: prefixed imports to standard module names
-    config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: any) => {
-        try {
-          if (resource && typeof resource.request === "string") {
-            resource.request = resource.request.replace(/^node:/, "");
+    if (isServer) {
+      // Mark node: protocol modules (including node:v8 for Deno incremental cache) as externals
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)),
+        "node:v8",
+        "v8",
+        ({ request }: any, callback: any) => {
+          if (request && /^node:/.test(request)) {
+            return callback(null, request);
           }
-        } catch {
-          // Ignore safely
-        }
-      })
-    );
+          callback();
+        },
+      ];
+    } else {
+      // For browser/client bundle, replace node: imports and fall back to false (empty module)
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: any) => {
+          try {
+            if (resource && typeof resource.request === "string") {
+              resource.request = resource.request.replace(/^node:/, "");
+            }
+          } catch {
+            // Ignore safely
+          }
+        })
+      );
 
-    if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         v8: false,
