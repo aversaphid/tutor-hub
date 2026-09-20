@@ -1141,6 +1141,20 @@ export default function AdminPage() {
     setIsCalendarModalOpen(true);
   };
 
+  // Open Timetable from top-level admin header action
+  const handleOpenTimetable = () => {
+    const target =
+      (currentUser && tutors.find((t) => t.id === currentUser.id)) ||
+      currentUser ||
+      tutors[0] ||
+      students[0] || {
+        id: "admin",
+        name: "Admin Timetable",
+        role: "HEAD_TUTOR",
+      };
+    handleOpenCalendar(target);
+  };
+
   // Batch Archive by Date Range Handler
   const handleBatchArchive = async () => {
     if (!batchArchiveStartDate || !batchArchiveEndDate) {
@@ -1596,6 +1610,14 @@ export default function AdminPage() {
             >
               <Calculator className="w-4 h-4 text-[#48A5EE]" />
               <span>Formula Sheet</span>
+            </button>
+            <button
+              onClick={handleOpenTimetable}
+              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open Interactive Weekly Timetable & Schedule Grid"
+            >
+              <Calendar className="w-4 h-4 text-[#48A5EE]" />
+              <span>Timetable</span>
             </button>
             <button
               onClick={() => {
