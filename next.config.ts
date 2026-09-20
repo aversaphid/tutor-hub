@@ -12,19 +12,6 @@ const nextConfig: NextConfig = {
   async headers() {
     const headersList: any[] = [];
 
-    // Only apply immutable static caching in production so localhost development reloads instantly
-    if (process.env.NODE_ENV === "production") {
-      headersList.push({
-        source: "/_next/static/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      });
-    }
-
     headersList.push({
       source: "/:path*",
       headers: [
