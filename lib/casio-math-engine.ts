@@ -81,6 +81,42 @@ export function toFraction(val: number): { num: number; den: number } | null {
   return null;
 }
 
+// Convert decimal to exact rational multiple of π (n/d * π)
+export function toPiFraction(val: number): { num: number; den: number } | null {
+  if (!isFinite(val) || isNaN(val) || Math.abs(val) < 1e-12 || Math.abs(val) > 1000000) {
+    return null;
+  }
+  // A non-zero integer is never a rational multiple of π since π is transcendental
+  if (Math.abs(val - Math.round(val)) < 1e-9) {
+    return null;
+  }
+  const ratio = val / Math.PI;
+  const frac = toFraction(ratio);
+  if (!frac) return null;
+
+  // Verify numerical fidelity (genuine rational multiples of π have reconstruction error < 1e-10)
+  const reconstructed = (frac.num / frac.den) * Math.PI;
+  if (Math.abs(val - reconstructed) > 1e-9) return null;
+  if (frac.den > 180) return null;
+
+  return frac;
+}
+
+// Format a rational pi multiple as human/Casio readable string (e.g. "2π", "−π", "π/2", "3π/4")
+export function formatPiResult(frac: { num: number; den: number }): string {
+  const isNeg = frac.num < 0;
+  const absNum = Math.abs(frac.num);
+  const sign = isNeg ? "−" : "";
+
+  if (frac.den === 1) {
+    if (absNum === 1) return `${sign}π`;
+    return `${sign}${absNum}π`;
+  }
+
+  const numStr = absNum === 1 ? "π" : `${absNum}π`;
+  return `${sign}${numStr}/${frac.den}`;
+}
+
 // Automatically balance unclosed parentheses (e.g. "log(100" -> "log(100)")
 export function balanceParentheses(expr: string): string {
   let depth = 0;
@@ -152,19 +188,21 @@ export function serializeToText(itemList: ExprItem[]): string {
 export interface EvaluateOptions {
   angleMode?: "DEG" | "RAD";
   ans?: number;
+  hasPi?: boolean;
 }
 
 // Core Math Evaluator
 export function evaluateExpression(
   mathStr: string,
   options: EvaluateOptions = {}
-): { num: number; text: string } {
+): { num: number; text: string; piFrac?: { num: number; den: number } | null } {
   try {
     if (!mathStr || !mathStr.trim()) return { num: 0, text: "0" };
 
     const angleMode = options.angleMode || "DEG";
     const ans = options.ans ?? 0;
     const isDeg = angleMode === "DEG";
+    const hasPi = options.hasPi ?? (mathStr.includes("π") || mathStr.includes("Math.PI"));
 
     let sanitized = mathStr
       .replace(/×/g, "*")
@@ -317,6 +355,8 @@ export function evaluateExpression(
       return { num: Infinity, text: computed > 0 ? "Infinity" : "-Infinity" };
     }
 
+    const piFrac = hasPi ? toPiFraction(computed) : null;
+
     let cleaned = Math.abs(computed) < 1e-12 ? 0 : computed;
     if (Math.abs(cleaned - Math.round(cleaned)) < 1e-11) {
       cleaned = Math.round(cleaned);
@@ -324,7 +364,9 @@ export function evaluateExpression(
       cleaned = Number(cleaned.toPrecision(10));
     }
 
-    return { num: cleaned, text: String(cleaned) };
+    const text = piFrac ? formatPiResult(piFrac) : String(cleaned);
+
+    return { num: cleaned, text, piFrac };
   } catch {
     return { num: NaN, text: "Syntax ERROR" };
   }

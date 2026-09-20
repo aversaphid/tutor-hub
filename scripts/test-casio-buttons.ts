@@ -15,7 +15,7 @@ interface ButtonTestCase {
   actions: string[];
   expectedNumeric?: number;
   expectedText?: string;
-  expectedDisplayMode?: "decimal" | "fraction" | "mixed";
+  expectedDisplayMode?: "decimal" | "fraction" | "mixed" | "pi";
   expectedCustomCheck?: (session: CasioCalculatorSession) => boolean;
   tolerance?: number;
 }
@@ -830,6 +830,56 @@ const tests: ButtonTestCase[] = [
     name: "Fraction after squared number inside root: SQRT 5² + 3² FRAC 5 =",
     actions: ["SQRT", "5", "SQUARE", "+", "3", "SQUARE", "FRAC", "5", "="],
     expectedNumeric: 5.17687164,
+    tolerance: 0.0001,
+  },
+  {
+    id: 109,
+    category: "Pi-Calculations",
+    name: "Pi constant evaluated shows π first: SHIFT EXP =",
+    actions: ["SHIFT", "EXP", "="],
+    expectedText: "π",
+    expectedDisplayMode: "pi",
+    expectedNumeric: Math.PI,
+    tolerance: 0.0001,
+  },
+  {
+    id: 110,
+    category: "Pi-Calculations",
+    name: "Pi with S<=>D toggles between π and decimal: SHIFT EXP = S_TO_D",
+    actions: ["SHIFT", "EXP", "=", "S_TO_D"],
+    expectedText: "3.141592654",
+    expectedDisplayMode: "decimal",
+    expectedNumeric: Math.PI,
+    tolerance: 0.0001,
+  },
+  {
+    id: 111,
+    category: "Pi-Calculations",
+    name: "Pi with S<=>D toggles back to π: SHIFT EXP = S_TO_D S_TO_D",
+    actions: ["SHIFT", "EXP", "=", "S_TO_D", "S_TO_D"],
+    expectedText: "π",
+    expectedDisplayMode: "pi",
+    expectedNumeric: Math.PI,
+    tolerance: 0.0001,
+  },
+  {
+    id: 112,
+    category: "Pi-Calculations",
+    name: "2 × π shows 2π first and toggles with S<=>D",
+    actions: ["2", "×", "SHIFT", "EXP", "="],
+    expectedText: "2π",
+    expectedDisplayMode: "pi",
+    expectedNumeric: 2 * Math.PI,
+    tolerance: 0.0001,
+  },
+  {
+    id: 113,
+    category: "Pi-Calculations",
+    name: "π / 2 vertical fraction shows π/2 in terms of π",
+    actions: ["FRAC", "SHIFT", "EXP", "DOWN", "2", "="],
+    expectedText: "π/2",
+    expectedDisplayMode: "pi",
+    expectedNumeric: Math.PI / 2,
     tolerance: 0.0001,
   },
 ];

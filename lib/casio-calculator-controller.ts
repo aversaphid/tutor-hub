@@ -11,7 +11,10 @@
 import {
   evaluateExpression,
   toFraction,
+  toPiFraction,
+  formatPiResult,
   serializeToMath,
+  serializeToText,
   ExprItem,
 } from "./casio-math-engine";
 
@@ -80,7 +83,8 @@ export class CasioCalculatorSession {
   angleMode: "DEG" | "RAD" = "DEG";
   isShiftActive: boolean = false;
   isAlphaActive: boolean = false;
-  displayMode: "decimal" | "fraction" | "mixed" = "decimal";
+  displayMode: "decimal" | "fraction" | "mixed" | "pi" = "decimal";
+  lastResultHadPi: boolean = false;
   history: HistoryEntry[] = [];
   historyIndex: number = -1;
   hasCalculated: boolean = false;
@@ -101,6 +105,7 @@ export class CasioCalculatorSession {
     this.isShiftActive = false;
     this.isAlphaActive = false;
     this.displayMode = "decimal";
+    this.lastResultHadPi = false;
     this.history = [];
     this.historyIndex = -1;
     this.hasCalculated = false;
@@ -919,6 +924,18 @@ export class CasioCalculatorSession {
     // Fraction <-> Decimal (S <=> D)
     if (action === "S_TO_D") {
       if (this.lastNumericResult !== null) {
+        const piFrac = toPiFraction(this.lastNumericResult);
+        if (this.lastResultHadPi && piFrac) {
+          if (this.displayMode === "pi") {
+            this.displayMode = "decimal";
+            this.result = String(this.lastNumericResult);
+          } else {
+            this.displayMode = "pi";
+            this.result = formatPiResult(piFrac);
+          }
+          return this;
+        }
+
         const frac = toFraction(this.lastNumericResult);
         const hasMixed = frac && frac.den !== 1 && Math.abs(frac.num) > frac.den;
         if (this.displayMode === "decimal") {
@@ -954,18 +971,23 @@ export class CasioCalculatorSession {
       const val = this.lastNumericResult ?? this.ans;
       if (shift) {
         this.memory -= val;
-        this.optnMessage = `M- (${this.memory})`;
+        this.optnMessage = `M- = ${this.memory}`;
       } else {
         this.memory += val;
-        this.optnMessage = `M+ (${this.memory})`;
+        this.optnMessage = `M+ = ${this.memory}`;
       }
       return this;
     }
 
-    // ENG
+    // ENG (Engineering exponent toggle)
     if (action === "ENG") {
-      if (this.lastNumericResult !== null && this.lastNumericResult !== 0) {
-        const exp = Math.floor(Math.log10(Math.abs(this.lastNumericResult)));
+      if (this.lastNumericResult !== null) {
+        const val = this.lastNumericResult;
+        if (val === 0) {
+          this.result = "0×10^0";
+          return this;
+        }
+        const exp = Math.floor(Math.log10(Math.abs(val)));
         const engExp = Math.floor(exp / 3) * 3;
         const mantissa = this.lastNumericResult / Math.pow(10, engExp);
         this.result = `${Number(mantissa.toFixed(4))}×10^${engExp}`;
@@ -992,7 +1014,16 @@ export class CasioCalculatorSession {
     if (action === "=") {
       const mathStr = serializeToMath(this.items);
       if (!mathStr.trim()) return this;
-      const { num, text } = evaluateExpression(mathStr, { angleMode: this.angleMode, ans: this.ans });
+      const textRepr = serializeToText(this.items);
+      const hasPiInput =
+        mathStr.includes("π") ||
+        textRepr.includes("π") ||
+        (this.lastResultHadPi && (mathStr.includes("Ans") || textRepr.includes("Ans")));
+      const { num, text, piFrac } = evaluateExpression(mathStr, {
+        angleMode: this.angleMode,
+        ans: this.ans,
+        hasPi: hasPiInput,
+      });
       this.result = text;
       if (!isNaN(num) && isFinite(num)) {
         this.lastNumericResult = num;
@@ -1004,11 +1035,17 @@ export class CasioCalculatorSession {
         ];
         this.historyIndex = -1;
 
-        const frac = toFraction(num);
-        if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
-          this.displayMode = "fraction";
+        if (hasPiInput && piFrac) {
+          this.displayMode = "pi";
+          this.lastResultHadPi = true;
         } else {
-          this.displayMode = "decimal";
+          this.lastResultHadPi = false;
+          const frac = toFraction(num);
+          if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
+            this.displayMode = "fraction";
+          } else {
+            this.displayMode = "decimal";
+          }
         }
       }
       this.hasCalculated = true;
@@ -1463,7 +1500,12 @@ export class CasioCalculatorSession {
   // Natural Display string or result formatter for verification
   getDisplayResult(): string {
     if (this.lastNumericResult !== null) {
-      if (this.displayMode === "fraction") {
+      if (this.displayMode === "pi") {
+        const piFrac = toPiFraction(this.lastNumericResult);
+        if (piFrac) {
+          return formatPiResult(piFrac);
+        }
+      } else if (this.displayMode === "fraction") {
         const frac = toFraction(this.lastNumericResult);
         if (frac && frac.den !== 1) {
           return `${frac.num}/${frac.den}`;
@@ -1493,6 +1535,7 @@ export class CasioCalculatorSession {
     s.isShiftActive = this.isShiftActive;
     s.isAlphaActive = this.isAlphaActive;
     s.displayMode = this.displayMode;
+    s.lastResultHadPi = this.lastResultHadPi;
     s.history = this.history.map((h) => ({
       items: h.items.map((i) => ({ ...i })),
       res: h.res,

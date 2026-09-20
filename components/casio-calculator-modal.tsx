@@ -5,6 +5,8 @@ import { X, Volume2, VolumeX } from "lucide-react";
 import {
   evaluateExpression,
   toFraction,
+  toPiFraction,
+  formatPiResult,
   serializeToMath,
   serializeToText,
   ExprItem,
@@ -208,7 +210,8 @@ export default function CasioCalculatorModal({
   const [angleMode, setAngleMode] = useState<"DEG" | "RAD">("DEG");
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [isAlphaActive, setIsAlphaActive] = useState(false);
-  const [displayMode, setDisplayMode] = useState<"decimal" | "fraction" | "mixed">("decimal");
+  const [displayMode, setDisplayMode] = useState<"decimal" | "fraction" | "mixed" | "pi">("decimal");
+  const [lastResultHadPi, setLastResultHadPi] = useState<boolean>(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -889,6 +892,7 @@ export default function CasioCalculatorModal({
       setLastNumericResult(null);
       setHasCalculated(false);
       setDisplayMode("decimal");
+      setLastResultHadPi(false);
       setOptnMessage(null);
       return;
     }
@@ -1092,6 +1096,20 @@ export default function CasioCalculatorModal({
     // Fraction <-> Decimal (S <=> D)
     if (action === "S_TO_D") {
       if (lastNumericResult !== null) {
+        const piFrac = toPiFraction(lastNumericResult);
+        if (lastResultHadPi && piFrac) {
+          setDisplayMode((prev) => {
+            if (prev === "pi") {
+              setResult(String(lastNumericResult));
+              return "decimal";
+            } else {
+              setResult(formatPiResult(piFrac));
+              return "pi";
+            }
+          });
+          return;
+        }
+
         const frac = toFraction(lastNumericResult);
         const hasMixed = frac && frac.den !== 1 && Math.abs(frac.num) > frac.den;
         setDisplayMode((prev) => {
@@ -1168,7 +1186,16 @@ export default function CasioCalculatorModal({
     if (action === "=") {
       const mathStr = serializeToMath(items);
       if (!mathStr.trim()) return;
-      const { num, text } = evaluateExpression(mathStr, { angleMode, ans });
+      const textRepr = serializeToText(items);
+      const hasPiInput =
+        mathStr.includes("π") ||
+        textRepr.includes("π") ||
+        (lastResultHadPi && (mathStr.includes("Ans") || textRepr.includes("Ans")));
+      const { num, text, piFrac } = evaluateExpression(mathStr, {
+        angleMode,
+        ans,
+        hasPi: hasPiInput,
+      });
       setResult(text);
       if (!isNaN(num) && isFinite(num)) {
         setLastNumericResult(num);
@@ -1180,11 +1207,17 @@ export default function CasioCalculatorModal({
         ]);
         setHistoryIndex(-1);
 
-        const frac = toFraction(num);
-        if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
-          setDisplayMode("fraction");
+        if (hasPiInput && piFrac) {
+          setDisplayMode("pi");
+          setLastResultHadPi(true);
         } else {
-          setDisplayMode("decimal");
+          setLastResultHadPi(false);
+          const frac = toFraction(num);
+          if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
+            setDisplayMode("fraction");
+          } else {
+            setDisplayMode("decimal");
+          }
         }
       }
       setHasCalculated(true);
@@ -1900,6 +1933,37 @@ export default function CasioCalculatorModal({
       return <span className="leading-none">{result}</span>;
     }
 
+    if (displayMode === "pi") {
+      const piFrac = toPiFraction(lastNumericResult);
+      if (piFrac) {
+        const isNeg = piFrac.num < 0;
+        const absNum = Math.abs(piFrac.num);
+        const den = piFrac.den;
+
+        if (den === 1) {
+          return (
+            <span className="font-mono font-black text-[#121e12] leading-none py-0.5 text-lg sm:text-xl">
+              {isNeg && "−"}{absNum === 1 ? "" : absNum}π
+            </span>
+          );
+        }
+
+        return (
+          <div className="inline-flex items-center gap-1 font-mono font-black text-[#121e12] leading-none py-0.5">
+            {isNeg && <span className="text-lg sm:text-xl mr-0.5 leading-none">−</span>}
+            <div className="inline-flex flex-col items-center justify-center leading-none text-center">
+              <span className="text-xs sm:text-sm border-b border-[#121e12] px-1.5 pb-0.5 font-black text-center w-full leading-none">
+                {absNum === 1 ? "π" : `${absNum}π`}
+              </span>
+              <span className="text-xs sm:text-sm px-1.5 pt-0.5 font-black text-center w-full leading-none">
+                {den}
+              </span>
+            </div>
+          </div>
+        );
+      }
+    }
+
     if (displayMode === "fraction" || displayMode === "mixed") {
       const frac = toFraction(lastNumericResult);
       if (frac && frac.den !== 1) {
@@ -2228,7 +2292,7 @@ export default function CasioCalculatorModal({
                   <span className={`px-0.5 rounded-xs ${memory !== 0 ? "opacity-100 font-black" : "opacity-20"}`}>
                     M
                   </span>
-                  <span className={`px-0.5 rounded-xs ${displayMode === "fraction" || displayMode === "mixed" ? "opacity-100 font-black" : "opacity-20"}`}>
+                  <span className={`px-0.5 rounded-xs ${displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi" ? "opacity-100 font-black" : "opacity-20"}`}>
                     ■/■
                   </span>
                 </div>
@@ -2833,7 +2897,7 @@ export default function CasioCalculatorModal({
                 <button
                   onClick={() => handleButton("S_TO_D")}
                   className={`w-full py-1 rounded-md border font-black text-[10px] transition-all shadow-xs active:translate-y-[1px] cursor-pointer ${
-                    displayMode === "fraction" || displayMode === "mixed"
+                    displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi"
                       ? "bg-[#38bdf8] text-slate-950 border-sky-300 font-extrabold"
                       : "bg-[#242a35] hover:bg-[#2e3644] text-[#38bdf8] border-slate-600/80"
                   }`}

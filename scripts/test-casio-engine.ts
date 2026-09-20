@@ -487,6 +487,20 @@ const tests: TestCase[] = [
   { id: 138, category: "EdgeCases", name: "Invalid combinations n < r returns Math ERROR", expression: "3 C 5", expected: "Math ERROR" },
   { id: 139, category: "EdgeCases", name: "Negative factorial returns Math ERROR", expression: "(−3)!", expected: "Math ERROR" },
   { id: 140, category: "EdgeCases", name: "tan(90°) undefined in DEG returns Math ERROR", expression: "tan(90)", expected: "Math ERROR", angleMode: "DEG" },
+
+  // =========================================================================
+  // 12. PI IN TERMS OF PI (10 tests)
+  // =========================================================================
+  { id: 141, category: "Pi-Format", name: "Standalone π yields π", expression: "π", expected: "π" },
+  { id: 142, category: "Pi-Format", name: "Multiplication 2 × π yields 2π", expression: "2 × π", expected: "2π" },
+  { id: 143, category: "Pi-Format", name: "Sum π + π yields 2π", expression: "π + π", expected: "2π" },
+  { id: 144, category: "Pi-Format", name: "Half pi π ÷ 2 yields π/2", expression: "π ÷ 2", expected: "π/2" },
+  { id: 145, category: "Pi-Format", name: "Fractional pi 3 × π ÷ 4 yields 3π/4", expression: "3 × π ÷ 4", expected: "3π/4" },
+  { id: 146, category: "Pi-Format", name: "Circumference 2 × π × 5 yields 10π", expression: "2 × π × 5", expected: "10π" },
+  { id: 147, category: "Pi-Format", name: "Circle area π × 5² yields 25π", expression: "π × 5²", expected: "25π" },
+  { id: 148, category: "Pi-Format", name: "Negative pi −3 × π yields −3π", expression: "−3 × π", expected: "−3π" },
+  { id: 149, category: "Pi-Format", name: "Division 12 × π ÷ 4 yields 3π", expression: "12 × π ÷ 4", expected: "3π" },
+  { id: 150, category: "Pi-Format", name: "Mixed calculation (1 ÷ 3) × π × 6 yields 2π", expression: "(1 ÷ 3) × π × 6", expected: "2π" },
 ];
 
 // Fraction Simplifier (S <=> D) Tests
