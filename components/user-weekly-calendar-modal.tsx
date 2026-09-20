@@ -108,18 +108,25 @@ export default function UserWeeklyCalendarModal({
     return tutors.filter((t) => t.active !== false || t.id === targetUser?.id);
   }, [tutors, targetUser]);
 
-  // Fetch tutor unavailabilities & holidays
-  const fetchUnavailabilities = async () => {
-    try {
-      const isTargetStudent =
-        targetUser?.role === "TUTEE" ||
-        !!targetUser?.assignedTutorId ||
-        (targetUser?.role !== "TUTOR" && targetUser?.role !== "HEAD_TUTOR");
+  // Determine if active calendar target is a student
+  const isStudent = useMemo(() => {
+    if (!targetUser) return false;
+    return (
+      targetUser.role === "TUTEE" ||
+      (targetUser.role !== "TUTOR" && targetUser.role !== "HEAD_TUTOR")
+    );
+  }, [targetUser]);
 
-      const targetTutorId = !isTargetStudent ? targetUser?.id : targetUser?.assignedTutorId;
-      const url = targetTutorId
-        ? `/api/tutor/unavailability?tutorId=${targetTutorId}`
-        : `/api/tutor/unavailability`;
+  // Fetch tutor unavailabilities & holidays (tutors only - never for students)
+  const fetchUnavailabilities = async () => {
+    // A student calendar must never show tutor unavailabilities or holidays
+    if (isStudent || !targetUser) {
+      setUnavailabilities([]);
+      return;
+    }
+
+    try {
+      const url = `/api/tutor/unavailability?tutorId=${targetUser.id}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -134,7 +141,7 @@ export default function UserWeeklyCalendarModal({
     if (isOpen) {
       fetchUnavailabilities();
     }
-  }, [isOpen, targetUser]);
+  }, [isOpen, targetUser, isStudent]);
 
   // Close modal on Escape
   useEffect(() => {
@@ -200,16 +207,6 @@ export default function UserWeeklyCalendarModal({
     return list;
   }, []);
 
-  // Determine if active calendar target is a student
-  const isStudent = useMemo(() => {
-    if (!targetUser) return false;
-    return (
-      targetUser.role === "TUTEE" ||
-      !!targetUser.assignedTutorId ||
-      (targetUser.role !== "TUTOR" && targetUser.role !== "HEAD_TUTOR")
-    );
-  }, [targetUser]);
-
   // Filter lessons for the active target user on this active week
   const userSessions = useMemo(() => {
     if (!targetUser) return [];
@@ -265,7 +262,11 @@ export default function UserWeeklyCalendarModal({
     const endStr = addMinutesToTime(startStr, 60);
 
     if (!isAdmin) {
-      // Tutor clicking directly on their calendar -> immediately open Set Unavailability for this slot
+      if (isStudent) {
+        // Regular tutors cannot set unavailability on a student's timetable or schedule lessons directly
+        return;
+      }
+      // Tutor clicking directly on their own calendar -> immediately open Set Unavailability for this slot
       const tutorId = targetUser?.id || currentUserId || (activeTutors[0]?.id ?? "");
       openSetUnavailableModal({
         date: dateStr,
@@ -755,7 +756,7 @@ export default function UserWeeklyCalendarModal({
                 ? "last week"
                 : `for this week (${weekLabel})`}
             </span>
-            {(isAdmin || targetUser?.role === "TUTOR" || targetUser?.role === "HEAD_TUTOR" || currentUserId) && (
+            {!isStudent && (isAdmin || targetUser?.role === "TUTOR" || targetUser?.role === "HEAD_TUTOR" || currentUserId) && (
               <>
                 <button
                   type="button"
@@ -780,13 +781,15 @@ export default function UserWeeklyCalendarModal({
             )}
             {isAdmin ? (
               <span className="hidden sm:inline text-slate-400">
-                (Click any slot to schedule a lesson or set unavailability for all)
+                {isStudent
+                  ? "(Click any slot to schedule a lesson for this student)"
+                  : "(Click any slot to schedule a lesson or set unavailability for all)"}
               </span>
-            ) : (
+            ) : !isStudent ? (
               <span className="hidden sm:inline text-slate-400">
                 (Click any slot on the calendar to mark your unavailable hours)
               </span>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -835,8 +838,9 @@ export default function UserWeeklyCalendarModal({
                       {day.getDate()}
                     </div>
 
-                    {/* Holiday Badges for this Day */}
+                    {/* Holiday Badges for this Day (Tutors only) */}
                     {(() => {
+                      if (isStudent) return null;
                       const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
                       const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59, 999).getTime();
                       const holidays = unavailabilities.filter((u) => {
@@ -905,20 +909,22 @@ export default function UserWeeklyCalendarModal({
                 const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0, 0).getTime();
                 const dayEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 23, 59, 59, 999).getTime();
 
-                // Check if this day is marked as a Holiday
-                const isDayHoliday = unavailabilities.some((u) => {
+                // Check if this day is marked as a Holiday (tutors only)
+                const isDayHoliday = !isStudent && unavailabilities.some((u) => {
                   if (u.type !== "HOLIDAY") return false;
                   const s = new Date(u.startTime).getTime();
                   const e = new Date(u.endTime).getTime();
                   return s <= dayEnd && e >= dayStart;
                 });
 
-                // Find busy hourly blackout blocks for this specific day
-                const dayBusySlots = unavailabilities.filter((u) => {
-                  if (u.type === "HOLIDAY") return false;
-                  const s = new Date(u.startTime);
-                  return s.toDateString() === dayDate.toDateString();
-                });
+                // Find busy hourly blackout blocks for this specific day (tutors only)
+                const dayBusySlots = isStudent
+                  ? []
+                  : unavailabilities.filter((u) => {
+                      if (u.type === "HOLIDAY") return false;
+                      const s = new Date(u.startTime);
+                      return s.toDateString() === dayDate.toDateString();
+                    });
 
                 // Find sessions for this specific day
                 const daySessions = userSessions.filter((s) => {
@@ -971,52 +977,86 @@ export default function UserWeeklyCalendarModal({
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
                             onClick={() => handleSlotClick(dayDate, hour, 0)}
-                            className="border-b border-dashed border-slate-100 dark:border-slate-800/50 transition-colors relative cursor-pointer group hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                            className={`border-b border-dashed border-slate-100 dark:border-slate-800/50 transition-colors relative group ${
+                              isAdmin || !isStudent
+                                ? "cursor-pointer hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                                : "cursor-default"
+                            }`}
                             title={
                               isAdmin
-                                ? `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:00`
-                                : `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:00`
+                                ? isStudent
+                                  ? `Click to schedule lesson for this student at ${String(hour).padStart(2, "0")}:00`
+                                  : `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:00`
+                                : !isStudent
+                                ? `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:00`
+                                : undefined
                             }
                           >
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
-                              {isAdmin ? (
-                                <>
-                                  <Plus className="w-3 h-3" />
-                                  <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:00)</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="w-3 h-3 text-amber-500" />
-                                  <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:00)</span>
-                                </>
-                              )}
-                            </div>
+                            {(isAdmin || !isStudent) && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
+                                {isAdmin ? (
+                                  isStudent ? (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      <span>+ Schedule Lesson ({String(hour).padStart(2, "0")}:00)</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:00)</span>
+                                    </>
+                                  )
+                                ) : (
+                                  <>
+                                    <Ban className="w-3 h-3 text-amber-500" />
+                                    <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:00)</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* 30 - 00 min slot */}
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
                             onClick={() => handleSlotClick(dayDate, hour, 30)}
-                            className="transition-colors relative cursor-pointer group hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                            className={`transition-colors relative group ${
+                              isAdmin || !isStudent
+                                ? "cursor-pointer hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
+                                : "cursor-default"
+                            }`}
                             title={
                               isAdmin
-                                ? `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:30`
-                                : `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:30`
+                                ? isStudent
+                                  ? `Click to schedule lesson for this student at ${String(hour).padStart(2, "0")}:30`
+                                  : `Click to schedule lesson or set unavailability starting at ${String(hour).padStart(2, "0")}:30`
+                                : !isStudent
+                                ? `Click to mark unavailable starting at ${String(hour).padStart(2, "0")}:30`
+                                : undefined
                             }
                           >
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
-                              {isAdmin ? (
-                                <>
-                                  <Plus className="w-3 h-3" />
-                                  <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:30)</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="w-3 h-3 text-amber-500" />
-                                  <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:30)</span>
-                                </>
-                              )}
-                            </div>
+                            {(isAdmin || !isStudent) && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0.5 rounded-lg border border-dashed border-[#48A5EE]/60 flex items-center justify-center text-[10px] font-bold text-[#48A5EE] gap-1 pointer-events-none">
+                                {isAdmin ? (
+                                  isStudent ? (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      <span>+ Schedule Lesson ({String(hour).padStart(2, "0")}:30)</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      <span>+ Lesson / Unavailable ({String(hour).padStart(2, "0")}:30)</span>
+                                    </>
+                                  )
+                                ) : (
+                                  <>
+                                    <Ban className="w-3 h-3 text-amber-500" />
+                                    <span className="text-amber-600 dark:text-amber-400">+ Mark Unavailable ({String(hour).padStart(2, "0")}:30)</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
