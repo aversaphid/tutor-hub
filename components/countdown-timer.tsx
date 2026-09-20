@@ -9,7 +9,6 @@ import {
   Calendar,
   Volume2,
   VolumeX,
-  Eye,
 } from "lucide-react";
 import {
   playSessionStartChime,
@@ -42,7 +41,7 @@ export default function CountdownTimer({
   initialSession,
   onStatusChange,
 }: CountdownTimerProps) {
-  const { preferences, updatePreferences, setIsModalOpen } = useAccessibility();
+  const { preferences, updatePreferences } = useAccessibility();
   const [session, setSession] = useState<SessionData>(initialSession);
   const [timeLeft, setTimeLeft] = useState<{
     hours: number;
@@ -231,7 +230,7 @@ export default function CountdownTimer({
                 {startFormatted} – {endFormatted}
               </span>
 
-              {/* Quick in-card accessibility toggles */}
+              {/* Quick in-card chime toggle */}
               <div className="flex items-center gap-1 ml-auto sm:ml-2">
                 <button
                   type="button"
@@ -245,15 +244,6 @@ export default function CountdownTimer({
                   ) : (
                     <Volume2 className="w-3.5 h-3.5" />
                   )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(true)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-[#48A5EE] hover:bg-[#48A5EE]/10 transition-colors cursor-pointer"
-                  title="Accessibility Options (Text size, Dyslexia font, Contrast)"
-                  aria-label="Open accessibility options"
-                >
-                  <Eye className="w-3.5 h-3.5 text-[#48A5EE]" />
                 </button>
               </div>
             </div>
