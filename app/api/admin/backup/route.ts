@@ -19,6 +19,9 @@ export async function GET() {
       prisma.resource.findMany(),
     ]);
 
+    // Sanitize users: strip sensitive password hashes from export
+    const sanitizedUsers = users.map(({ passwordHash, ...safeUser }) => safeUser);
+
     const backupPayload = {
       version: "1.0",
       exportDate: new Date().toISOString(),
@@ -29,14 +32,14 @@ export async function GET() {
         email: user.email,
       },
       counts: {
-        users: users.length,
+        users: sanitizedUsers.length,
         sessions: sessions.length,
         unavailabilities: unavailabilities.length,
         systemSettings: systemSettings.length,
         resources: resources.length,
       },
       data: {
-        users,
+        users: sanitizedUsers,
         sessions,
         unavailabilities,
         systemSettings,
@@ -257,6 +260,7 @@ export async function POST(request: Request) {
             delayMinutes: Number(ses.delayMinutes || 0),
             delayReason: ses.delayReason || null,
             teamsMeetingUrl: ses.teamsMeetingUrl || null,
+            unlockEarlyMinutes: Number(ses.unlockEarlyMinutes || 5),
             notes: ses.notes || null,
             adminReminder: ses.adminReminder || null,
             tutorConfirmed: Boolean(ses.tutorConfirmed),
@@ -282,6 +286,7 @@ export async function POST(request: Request) {
             delayMinutes: Number(ses.delayMinutes || 0),
             delayReason: ses.delayReason || null,
             teamsMeetingUrl: ses.teamsMeetingUrl || null,
+            unlockEarlyMinutes: Number(ses.unlockEarlyMinutes || 5),
             notes: ses.notes || null,
             adminReminder: ses.adminReminder || null,
             tutorConfirmed: Boolean(ses.tutorConfirmed),

@@ -290,6 +290,15 @@ export function evaluateExpression(
       },
     };
 
+    // Strict security whitelist check: ensure expression strictly contains authorized math tokens
+    const stripped = sanitized
+      .replace(/Math\.(PI|E)/g, "")
+      .replace(/\b(factorial|nPr|nCr|sqrt|cbrt|abs|Abs|log_b|log|ln|sin|cos|tan|asin|acos|atan|Pol|Rec|Infinity|NaN)\b/g, "");
+
+    if (!/^[0-9\s+\-*/%(),.^*]+$/.test(stripped)) {
+      return { num: NaN, text: "Syntax ERROR" };
+    }
+
     const fnKeys = Object.keys(evalScope);
     const fnVals = Object.values(evalScope);
 

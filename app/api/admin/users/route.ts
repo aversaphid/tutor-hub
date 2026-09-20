@@ -116,8 +116,30 @@ export async function POST(request: Request) {
         finalEmail = `${name.trim().toLowerCase().replace(/\s+/g, "")}@lbmathstuition.co.uk`;
       }
       passwordHash = await hashPassword(password);
-    } else if (role === "TUTEE") {
-      finalPin = pin && /^\d{4}$/.test(pin) ? pin : Math.floor(1000 + Math.random() * 9000).toString();
+      if (pin && /^\d{4}$/.test(pin.trim())) {
+        const trimmedPin = pin.trim();
+        const existingPin = await prisma.user.findFirst({
+          where: { pin: trimmedPin, role: "TUTEE" },
+        });
+        if (existingPin) {
+          return NextResponse.json(
+            { error: `This 4-digit PIN (${trimmedPin}) is already assigned to another student (${existingPin.name}). Please use a unique PIN.` },
+            { status: 409 }
+          );
+        }
+        finalPin = trimmedPin;
+      } else {
+        // Auto-generate a unique 4-digit PIN
+        let candidatePin = "";
+        let attempts = 0;
+        while (attempts < 50) {
+          candidatePin = Math.floor(1000 + Math.random() * 9000).toString();
+          const exists = await prisma.user.findFirst({ where: { pin: candidatePin, role: "TUTEE" } });
+          if (!exists) break;
+          attempts++;
+        }
+        finalPin = candidatePin;
+      }
       const cleanName = name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
       const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
       magicKey = `STU-${cleanName}-${randomHex}`;
@@ -302,7 +324,19 @@ export async function PATCH(request: Request) {
       updateData.active = active;
     }
     if (pin !== undefined) {
-      updateData.pin = pin && pin.trim() ? pin.trim() : null;
+      const trimmedPin = pin && pin.trim() ? pin.trim() : null;
+      if (trimmedPin) {
+        const existingWithPin = await prisma.user.findFirst({
+          where: { pin: trimmedPin, role: "TUTEE", id: { not: studentId } },
+        });
+        if (existingWithPin) {
+          return NextResponse.json(
+            { error: `This 4-digit PIN (${trimmedPin}) is already assigned to another student (${existingWithPin.name}). PINs must be unique.` },
+            { status: 409 }
+          );
+        }
+      }
+      updateData.pin = trimmedPin;
     }
     if (cycleMagicKey) {
       const studentTargetName = (name && name.trim()) || (await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } }))?.name || "STU";

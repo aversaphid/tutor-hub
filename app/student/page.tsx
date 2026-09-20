@@ -233,13 +233,14 @@ function StudentLobbyContent() {
     );
   }
 
-  const fiveMinutesBefore = activeSession
-    ? new Date(activeSession.scheduledStartTime).getTime() - 5 * 60 * 1000
+  const unlockEarlyMinutes = activeSession?.unlockEarlyMinutes ?? 5;
+  const unlockThresholdTime = activeSession
+    ? new Date(activeSession.scheduledStartTime).getTime() - unlockEarlyMinutes * 60 * 1000
     : 0;
 
   const isMeetingUnlocked =
     activeSession?.status === "IN_PROGRESS" ||
-    (activeSession && Date.now() >= fiveMinutesBefore && activeSession.status !== "COMPLETED");
+    (activeSession && Date.now() >= unlockThresholdTime && activeSession.status !== "COMPLETED");
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
@@ -406,6 +407,7 @@ function StudentLobbyContent() {
               isUnlocked={isMeetingUnlocked}
               sessionTitle={activeSession.title}
               tutorName={formatTutorName(activeSession.tutor?.name || "Tutor")}
+              unlockEarlyMinutes={unlockEarlyMinutes}
             />
 
             {/* Tutor Contact Info & Email */}

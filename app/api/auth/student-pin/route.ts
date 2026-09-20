@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { StudentPinLoginSchema } from "@/lib/validations";
 import {
+  getClientIp,
   checkPinRateLimit,
   recordFailedPinAttempt,
   resetPinRateLimit,
 } from "@/lib/rate-limiter";
 import { createAuthToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import crypto from "crypto";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
     const body = await request.json();
     const parseResult = StudentPinLoginSchema.safeParse(body);
 
@@ -21,9 +24,10 @@ export async function POST(request: Request) {
     }
 
     const { tuteeId, pin } = parseResult.data;
+    const rateLimitKey = `${ip}:${tuteeId || "direct"}`;
 
     // Rate limiting check
-    const rateLimitCheck = checkPinRateLimit(tuteeId);
+    const rateLimitCheck = checkPinRateLimit(rateLimitKey);
     if (!rateLimitCheck.allowed) {
       return NextResponse.json(
         {
@@ -34,25 +38,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Query student from DB (Parameterized query via Prisma prevents SQL injection)
-    const student = await prisma.user.findFirst({
-      where: {
-        id: tuteeId,
-        role: "TUTEE",
-        active: true,
-      },
-    });
+    // Query student from DB by tuteeId (if provided) or directly by unique PIN
+    const student = tuteeId
+      ? await prisma.user.findFirst({
+          where: {
+            id: tuteeId,
+            role: "TUTEE",
+            active: true,
+          },
+        })
+      : await prisma.user.findFirst({
+          where: {
+            pin,
+            role: "TUTEE",
+            active: true,
+          },
+        });
 
-    if (!student) {
-      return NextResponse.json({ error: "Student not found." }, { status: 404 });
-    }
+    const isPinValid = Boolean(
+      student &&
+      student.pin &&
+      student.pin.length === pin.length &&
+      crypto.timingSafeEqual(Buffer.from(student.pin), Buffer.from(pin))
+    );
 
-    // Verify PIN
-    if (student.pin !== pin) {
-      const failResult = recordFailedPinAttempt(tuteeId);
+    if (!student || !isPinValid) {
+      const failResult = recordFailedPinAttempt(rateLimitKey);
       return NextResponse.json(
         {
-          error: failResult.error,
+          error: failResult.error || "Incorrect PIN.",
           remainingAttempts: failResult.remainingAttempts,
           lockedMinutesRemaining: failResult.lockedMinutesRemaining,
         },
@@ -61,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // PIN is correct, reset rate limit
-    resetPinRateLimit(tuteeId);
+    resetPinRateLimit(rateLimitKey);
 
     const token = createAuthToken({ id: student.id, role: student.role });
     const response = NextResponse.json({

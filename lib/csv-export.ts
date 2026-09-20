@@ -17,9 +17,13 @@ export interface SessionExportData {
   tutee?: { name?: string | null } | null;
 }
 
-function escapeCSV(val: any): string {
+function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return '""';
-  const stringVal = String(val).replace(/"/g, '""');
+  let stringVal = String(val).replace(/"/g, '""');
+  // Mitigate CSV Formula Injection: prepend single quote if cell begins with =, +, -, @, \t, or \r
+  if (/^[=+\-@\t\r]/.test(stringVal)) {
+    stringVal = "'" + stringVal;
+  }
   return `"${stringVal}"`;
 }
 

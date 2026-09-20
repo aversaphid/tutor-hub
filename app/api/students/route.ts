@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
-// Returns list of active students for the student landing picker
-// Excludes sensitive fields (PIN, passwords)
+// Returns list of active students for authenticated staff
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== "HEAD_TUTOR" && user.role !== "TUTOR")) {
+      return NextResponse.json({ error: "Unauthorized. Staff access required." }, { status: 401 });
+    }
+
     const students = await prisma.user.findMany({
       where: {
         role: "TUTEE",

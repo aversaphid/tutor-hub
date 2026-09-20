@@ -9,10 +9,7 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  Target,
   Flame,
-  Award,
-  Edit2,
   Check,
   Zap,
   Download,
@@ -177,10 +174,8 @@ export default function ExamCountdownWidget({
 }: ExamCountdownWidgetProps) {
   const { preferences } = useAccessibility();
   const [tier, setTier] = useState<ExamTier>("GCSE");
-  const [targetGrade, setTargetGrade] = useState<string>("Grade 8");
   // Default is collapsed as requested by user
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Live ticking clock state
@@ -200,7 +195,6 @@ export default function ExamCountdownWidget({
         if (parsed.tier === "GCSE" || parsed.tier === "ALEVEL") {
           setTier(parsed.tier);
         }
-        if (parsed.targetGrade) setTargetGrade(parsed.targetGrade);
         if (typeof parsed.isCollapsed === "boolean") {
           setIsCollapsed(parsed.isCollapsed);
         }
@@ -217,12 +211,11 @@ export default function ExamCountdownWidget({
         STORAGE_KEY,
         JSON.stringify({
           tier,
-          targetGrade,
           isCollapsed,
         })
       );
     } catch {}
-  }, [tier, targetGrade, isCollapsed, mounted]);
+  }, [tier, isCollapsed, mounted]);
 
   // Real-time ticking every second
   useEffect(() => {
@@ -404,51 +397,6 @@ export default function ExamCountdownWidget({
             >
               A-Level
             </button>
-          </div>
-
-          {/* Target Grade Badge / Selector */}
-          <div className="relative">
-            {isEditingTarget ? (
-              <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 rounded-xl px-2 py-1 text-xs">
-                <Target className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <select
-                  value={targetGrade}
-                  onChange={(e) => {
-                    setTargetGrade(e.target.value);
-                    setIsEditingTarget(false);
-                  }}
-                  onBlur={() => setIsEditingTarget(false)}
-                  autoFocus
-                  className="bg-transparent font-bold text-amber-900 dark:text-amber-200 text-xs focus:outline-hidden cursor-pointer"
-                >
-                  <optgroup label="GCSE Grades">
-                    <option value="Grade 9">Grade 9 (Top 3%)</option>
-                    <option value="Grade 8">Grade 8 (A* Equiv)</option>
-                    <option value="Grade 7">Grade 7 (A Equiv)</option>
-                    <option value="Grade 6">Grade 6 (Strong Pass)</option>
-                    <option value="Grade 5">Grade 5 (Standard Pass)</option>
-                    <option value="Grade 4">Grade 4 (Pass)</option>
-                  </optgroup>
-                  <optgroup label="A-Level Grades">
-                    <option value="Grade A*">Grade A*</option>
-                    <option value="Grade A">Grade A</option>
-                    <option value="Grade B">Grade B</option>
-                    <option value="Grade C">Grade C</option>
-                  </optgroup>
-                </select>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditingTarget(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200/80 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-xs font-bold transition-colors cursor-pointer"
-                title="Click to change your target grade"
-              >
-                <Award className="w-3.5 h-3.5 text-amber-500" />
-                <span>Target: {targetGrade}</span>
-                <Edit2 className="w-3 h-3 opacity-60 ml-0.5" />
-              </button>
-            )}
           </div>
 
           {/* Collapse/Expand toggle button */}

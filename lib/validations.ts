@@ -36,9 +36,9 @@ export const TeamsUrlSchema = z
     }
   );
 
-// Student PIN login payload
+// Student PIN login payload (supports direct PIN entry or tuteeId + PIN)
 export const StudentPinLoginSchema = z.object({
-  tuteeId: z.string().min(1, "Please select a student"),
+  tuteeId: z.string().optional(),
   pin: PinSchema,
 });
 
@@ -140,6 +140,7 @@ export const CreateSessionSchema = z.object({
   scheduledStartTime: z.string().datetime({ message: "Invalid ISO start time" }),
   scheduledEndTime: z.string().datetime({ message: "Invalid ISO end time" }),
   teamsMeetingUrl: TeamsUrlSchema.optional().or(z.literal("")),
+  unlockEarlyMinutes: z.number().int().min(1).max(60).optional().default(5),
   notes: z.string().max(1000).optional(),
   adminReminder: z.string().max(1000).optional().or(z.literal("")),
   tutorConfirmed: z.boolean().optional(),
@@ -155,6 +156,7 @@ export const UpdateSessionSchema = z.object({
   scheduledStartTime: z.string().datetime().optional(),
   scheduledEndTime: z.string().datetime().optional(),
   teamsMeetingUrl: TeamsUrlSchema.optional().nullable().or(z.literal("")),
+  unlockEarlyMinutes: z.number().int().min(1).max(60).optional().nullable(),
   status: z.enum(["SCHEDULED", "DELAYED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
   tutorPaid: z.boolean().optional(),
   notes: z.string().max(1000).optional().nullable(),

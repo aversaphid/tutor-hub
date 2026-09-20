@@ -82,13 +82,6 @@ export async function GET(request: Request) {
             tutorPay: !isStudent,
           },
         },
-        auditLogs: isStudent
-          ? false
-          : {
-              take: 5,
-              orderBy: { timestamp: "desc" },
-              include: { actor: { select: { name: true, role: true } } },
-            },
       },
       orderBy: { scheduledStartTime: "asc" },
     });
@@ -155,6 +148,7 @@ export async function POST(request: Request) {
       scheduledStartTime,
       scheduledEndTime,
       teamsMeetingUrl,
+      unlockEarlyMinutes = 5,
       notes,
       adminReminder,
       tutorConfirmed,
@@ -212,6 +206,7 @@ export async function POST(request: Request) {
           scheduledStartTime: sessionStart,
           scheduledEndTime: sessionEnd,
           teamsMeetingUrl: teamsMeetingUrl || null,
+          unlockEarlyMinutes,
           notes: notes || null,
           adminReminder: adminReminder ? adminReminder.trim() : null,
           tutorConfirmed: tutorConfirmed ?? false,

@@ -19,6 +19,7 @@ interface TeamsLauncherProps {
   sessionTitle: string;
   tutorName: string;
   isLive?: boolean;
+  unlockEarlyMinutes?: number;
 }
 
 export default function TeamsLauncher({
@@ -27,6 +28,7 @@ export default function TeamsLauncher({
   sessionTitle,
   tutorName,
   isLive = false,
+  unlockEarlyMinutes = 5,
 }: TeamsLauncherProps) {
   const [copied, setCopied] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -117,10 +119,10 @@ export default function TeamsLauncher({
         {!isUnlocked ? (
           <div className="text-center py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Teams Meeting Opens 5 Minutes Before Start
+              Teams Meeting Opens {unlockEarlyMinutes} Minutes Before Start
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
-              The button activates automatically 5 minutes before your scheduled start time or when{" "}
+              The button activates automatically {unlockEarlyMinutes} minutes before your scheduled start time or when{" "}
               <strong className="text-slate-700 dark:text-slate-200">{tutorName}</strong> starts the lesson early.
             </p>
           </div>

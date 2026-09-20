@@ -69,6 +69,7 @@ model Session {
   delayMinutes       Int           @default(0)
   delayReason        String?
   teamsMeetingUrl    String?
+  unlockEarlyMinutes Int           @default(5)
   notes              String?
 
   // Admin Personal Reminder & Attendance Confirmations

@@ -51,13 +51,16 @@ import {
   TrendingUp,
   FileJson,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
-import SharedResourcesHub from "@/components/shared-resources-hub";
-import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
-import FindOpenSlotModal from "@/components/find-open-slot-modal";
-import RevenueAnalyticsHub from "@/components/revenue-analytics-hub";
+
+// Dynamic imports for secondary heavy modals & tabs to keep initial page bundle lean
+const SharedResourcesHub = dynamic(() => import("@/components/shared-resources-hub"), { ssr: false });
+const UserWeeklyCalendarModal = dynamic(() => import("@/components/user-weekly-calendar-modal"), { ssr: false });
+const FindOpenSlotModal = dynamic(() => import("@/components/find-open-slot-modal"), { ssr: false });
+const RevenueAnalyticsHub = dynamic(() => import("@/components/revenue-analytics-hub"), { ssr: false });
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -72,6 +75,8 @@ export default function AdminPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [tutors, setTutors] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLogsLoaded, setAuditLogsLoaded] = useState(false);
+  const [isFetchingAuditLogs, setIsFetchingAuditLogs] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Active-only users for selection combo lists
@@ -87,6 +92,7 @@ export default function AdminPage() {
   const [lessonSearchTerm, setLessonSearchTerm] = useState("");
   const [lessonTutorFilter, setLessonTutorFilter] = useState("ALL");
   const [lessonStudentFilter, setLessonStudentFilter] = useState("ALL");
+  const [lessonDateRange, setLessonDateRange] = useState<"ALL" | "TODAY" | "THIS_WEEK" | "THIS_MONTH">("ALL");
   const [lessonSortBy, setLessonSortBy] = useState<"soonest" | "newest" | "oldest" | "student" | "tutor" | "rating">("soonest");
 
   // Search, filter, and sort state for Students directory
@@ -116,6 +122,7 @@ export default function AdminPage() {
   const [lessonStartTime, setLessonStartTime] = useState("10:00");
   const [lessonEndTime, setLessonEndTime] = useState("11:00");
   const [teamsUrl, setTeamsUrl] = useState("");
+  const [newLessonUnlockMinutes, setNewLessonUnlockMinutes] = useState<number>(5);
   const [notes, setNotes] = useState("");
   const [newLessonAdminReminder, setNewLessonAdminReminder] = useState("");
   const [conflictError, setConflictError] = useState("");
@@ -426,12 +433,27 @@ export default function AdminPage() {
     }
   };
 
+  const loadAuditLogs = async (force = false) => {
+    if ((auditLogsLoaded && !force) || isFetchingAuditLogs) return;
+    setIsFetchingAuditLogs(true);
+    try {
+      const res = await fetch("/api/admin/audit-logs");
+      if (res.ok) {
+        const d = await res.json();
+        setAuditLogs(d.auditLogs || []);
+        setAuditLogsLoaded(true);
+      }
+    } catch {
+    } finally {
+      setIsFetchingAuditLogs(false);
+    }
+  };
+
   const refreshAllData = async () => {
     try {
-      const [sessRes, usersRes, auditRes, settingsRes] = await Promise.all([
+      const [sessRes, usersRes, settingsRes] = await Promise.all([
         fetch("/api/sessions"),
         fetch("/api/admin/users"),
-        fetch("/api/admin/audit-logs"),
         fetch("/api/admin/settings"),
       ]);
 
@@ -466,15 +488,15 @@ export default function AdminPage() {
         setStudents(allUsers.filter((u) => u.role === "TUTEE"));
         setTutors(allUsers.filter((u) => u.role === "TUTOR" || u.role === "HEAD_TUTOR"));
       }
-      if (auditRes.ok) {
-        const d = await auditRes.json();
-        setAuditLogs(d.auditLogs || []);
-      }
       if (settingsRes.ok) {
         const d = await settingsRes.json();
         if (typeof d.subwaySurfersEnabled === "boolean") {
           setSubwaySurfersEnabled(d.subwaySurfersEnabled);
         }
+      }
+      // If the admin is actively viewing the audit logs tab, refresh them too
+      if (auditLogsLoaded) {
+        await loadAuditLogs(true);
       }
     } catch {}
   };
@@ -835,6 +857,7 @@ export default function AdminPage() {
     setLessonStartTime(startStr);
     setLessonEndTime(endStr);
     setTeamsUrl(session.teamsMeetingUrl || "");
+    setNewLessonUnlockMinutes(session.unlockEarlyMinutes || 5);
     setNotes(session.notes || "");
     setNewLessonAdminReminder(session.adminReminder || "");
     setIsRepeating(false);
@@ -873,6 +896,7 @@ export default function AdminPage() {
           scheduledStartTime: startIso,
           scheduledEndTime: endIso,
           teamsMeetingUrl: teamsUrl || undefined,
+          unlockEarlyMinutes: newLessonUnlockMinutes,
           notes: notes || undefined,
           adminReminder: newLessonAdminReminder.trim() || undefined,
           repeatWeeks: isRepeating ? repeatWeeks : 1,
@@ -893,6 +917,7 @@ export default function AdminPage() {
       setLessonStartTime("10:00");
       setLessonEndTime("11:00");
       setTeamsUrl("");
+      setNewLessonUnlockMinutes(5);
       setNotes("");
       setNewLessonAdminReminder("");
       setIsRepeating(false);
@@ -1311,6 +1336,16 @@ export default function AdminPage() {
   // Submit Lesson Completion & Feedback
   const handleSubmitComplete = async (skipFeedback = false) => {
     if (!completeTargetLesson) return;
+
+    // Warning if completing before scheduled start time
+    const startTime = new Date(completeTargetLesson.scheduledStartTime).getTime();
+    if (Date.now() < startTime) {
+      const isConfirmed = window.confirm(
+        "Are you sure? This lesson hasn't started yet according to the schedule."
+      );
+      if (!isConfirmed) return;
+    }
+
     setIsSubmittingComplete(true);
     try {
       const payload = skipFeedback
@@ -1817,7 +1852,9 @@ export default function AdminPage() {
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Video className="w-4 h-4 text-[#48A5EE]" />
-                  <span>Teams Meeting Link (Enter ~10 mins before start):</span>
+                  <span>
+                    Teams Meeting Link (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before start):
+                  </span>
                 </span>
                 {teamsSuccess && (
                   <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{teamsSuccess}</span>
@@ -1844,6 +1881,51 @@ export default function AdminPage() {
             </form>
           </div>
         )}
+
+        {/* Subtle Admin Quick Stats Strip */}
+        {(() => {
+          const now = new Date();
+          const todayLessons = sessions.filter((s) => {
+            const d = new Date(s.scheduledStartTime);
+            return (
+              d.getFullYear() === now.getFullYear() &&
+              d.getMonth() === now.getMonth() &&
+              d.getDate() === now.getDate() &&
+              s.status !== "CANCELLED"
+            );
+          });
+          const completedUnpaid = sessions.filter(
+            (s) => !s.tutorPaid && s.status !== "CANCELLED" && (s.status === "COMPLETED" || new Date(s.scheduledEndTime).getTime() <= now.getTime())
+          );
+          const totalUnpaid = completedUnpaid.reduce((sum, s) => sum + (s.tutee?.tutorPay || 0), 0);
+          const pendingConfirmations = sessions.filter(
+            (s) => (s.status === "SCHEDULED" || s.status === "DELAYED") && new Date(s.scheduledEndTime).getTime() > now.getTime() && (!s.tuteeConfirmed || !s.tutorConfirmed)
+          );
+
+          return (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200/80 dark:border-slate-800 text-xs shadow-xs">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-slate-600 dark:text-slate-300 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#48A5EE]" />
+                  <span>Today&apos;s Lessons:</span>
+                  <strong className="text-slate-800 dark:text-slate-100">{todayLessons.length}</strong>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Pending Tutor Payout:</span>
+                  <strong className="text-amber-700 dark:text-amber-400">
+                    {formatCurrency(totalUnpaid)} ({completedUnpaid.length} {completedUnpaid.length === 1 ? "lesson" : "lessons"})
+                  </strong>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-purple-500" />
+                  <span>Pending Attendance:</span>
+                  <strong className="text-purple-700 dark:text-purple-300">{pendingConfirmations.length}</strong>
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Tab Switcher */}
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
@@ -1889,14 +1971,17 @@ export default function AdminPage() {
             <span>Shared Resources</span>
           </button>
           <button
-            onClick={() => setActiveTab("audit")}
+            onClick={() => {
+              setActiveTab("audit");
+              loadAuditLogs();
+            }}
             className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "audit"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             }`}
           >
-            Activity Logs ({auditLogs.length})
+            Activity Logs {auditLogsLoaded ? `(${auditLogs.length})` : ""}
           </button>
           <button
             onClick={() => setActiveTab("analytics")}
@@ -1926,10 +2011,43 @@ export default function AdminPage() {
         {activeTab === "lessons" && (() => {
           const nowMs = currentTime;
 
-          // Filter by search term, tutor, and student
+          // Filter by search term, tutor, student, and date range
           const filtered = sessions.filter((s) => {
             if (lessonTutorFilter !== "ALL" && s.tutorId !== lessonTutorFilter) return false;
             if (lessonStudentFilter !== "ALL" && s.tuteeId !== lessonStudentFilter) return false;
+
+            // Date Range / Month Filter
+            if (lessonDateRange !== "ALL") {
+              const sDate = new Date(s.scheduledStartTime);
+              const nowDate = new Date(nowMs);
+
+              if (lessonDateRange === "TODAY") {
+                const isToday =
+                  sDate.getFullYear() === nowDate.getFullYear() &&
+                  sDate.getMonth() === nowDate.getMonth() &&
+                  sDate.getDate() === nowDate.getDate();
+                if (!isToday) return false;
+              } else if (lessonDateRange === "THIS_WEEK") {
+                const day = nowDate.getDay();
+                const diffToMonday = (day === 0 ? -6 : 1) - day;
+                const monday = new Date(nowDate);
+                monday.setDate(nowDate.getDate() + diffToMonday);
+                monday.setHours(0, 0, 0, 0);
+
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                sunday.setHours(23, 59, 59, 999);
+
+                const sTime = sDate.getTime();
+                if (sTime < monday.getTime() || sTime > sunday.getTime()) return false;
+              } else if (lessonDateRange === "THIS_MONTH") {
+                const isThisMonth =
+                  sDate.getFullYear() === nowDate.getFullYear() &&
+                  sDate.getMonth() === nowDate.getMonth();
+                if (!isThisMonth) return false;
+              }
+            }
+
             if (lessonSearchTerm.trim()) {
               const q = lessonSearchTerm.toLowerCase();
               const stName = (s.tutee?.name || "").toLowerCase();
@@ -2065,6 +2183,21 @@ export default function AdminPage() {
                             {st.name}
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    {/* Date Range / Month Filter */}
+                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                      <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                      <select
+                        value={lessonDateRange}
+                        onChange={(e) => setLessonDateRange(e.target.value as any)}
+                        className="bg-transparent text-slate-700 dark:text-slate-200 font-semibold focus:outline-none cursor-pointer"
+                      >
+                        <option value="ALL">All Dates</option>
+                        <option value="TODAY">Today</option>
+                        <option value="THIS_WEEK">This Week</option>
+                        <option value="THIS_MONTH">This Month</option>
                       </select>
                     </div>
 
@@ -3688,7 +3821,11 @@ export default function AdminPage() {
               )}
             </div>
 
-            {auditLogs.length === 0 ? (
+            {isFetchingAuditLogs && !auditLogsLoaded ? (
+              <div className="text-center py-10 text-xs text-slate-500">
+                Loading activity audit logs...
+              </div>
+            ) : auditLogs.length === 0 ? (
               <div className="text-center py-10 text-xs text-slate-400">
                 No activity logs recorded yet.
               </div>
@@ -4337,6 +4474,38 @@ export default function AdminPage() {
                   onChange={(e) => setTeamsUrl(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
+              </div>
+
+              {/* Show Teams Link Early Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    <span>Show Teams Link Early</span>
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    {newLessonUnlockMinutes} mins before start
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[5, 10, 15].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setNewLessonUnlockMinutes(mins)}
+                      className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        newLessonUnlockMinutes === mins
+                          ? "bg-[#48A5EE] text-white border-[#48A5EE] shadow-xs shadow-[#48A5EE]/30"
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                      }`}
+                    >
+                      <span>{mins} mins</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  How early the Teams button unlocks for the student before the scheduled start.
+                </p>
               </div>
 
               <div>
@@ -5139,6 +5308,15 @@ export default function AdminPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {new Date(completeTargetLesson.scheduledStartTime).getTime() > Date.now() && (
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                <span>
+                  <strong>Early Completion Notice:</strong> This lesson has not started yet according to the schedule.
+                </span>
+              </div>
+            )}
 
             <div className="space-y-3.5 text-xs">
               {/* Star Rating */}

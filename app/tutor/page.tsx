@@ -710,7 +710,7 @@ export default function TutorDashboardPage() {
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                       <Video className="w-4 h-4 text-[#48A5EE]" />
-                      <span>Teams Meeting Link (Enter ~10m before lesson)</span>
+                      <span>Teams Meeting Link (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson)</span>
                     </label>
                     {activeLesson.teamsMeetingUrl && (
                       <a

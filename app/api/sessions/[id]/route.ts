@@ -163,6 +163,7 @@ export async function PATCH(
       // Note: Attendance confirmations can only be updated by the Admin as personal reminders
     } else {
       if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.unlockEarlyMinutes !== undefined) updateData.unlockEarlyMinutes = updates.unlockEarlyMinutes;
       if (updates.notes !== undefined) updateData.notes = updates.notes;
       if (updates.status !== undefined) {
         updateData.status = updates.status;

@@ -22,41 +22,54 @@ export interface SessionUser {
   magicKey: string | null;
 }
 
-const FALLBACK_SECRET = crypto.randomBytes(32).toString("hex");
-const SECRET = process.env.SESSION_SECRET || process.env.TURSO_AUTH_TOKEN || FALLBACK_SECRET;
+const SECRET =
+  process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? (() => {
+        throw new Error("[Auth] Critical: SESSION_SECRET is not defined in production environment.");
+      })()
+    : "dev_fallback_session_secret_lb_maths_tuition_hub_32_chars");
 
-// Encode cryptographically signed secure token
-export function createAuthToken(user: { id: string; role: string }): string {
+// Encode cryptographically signed secure token with expiration
+export function createAuthToken(user: { id: string; role: string }, expiresInSeconds?: number): string {
+  const now = Date.now();
+  const defaultTtlSeconds = user.role === "TUTEE" ? 24 * 3600 : 7 * 24 * 3600;
+  const ttlMs = (expiresInSeconds || defaultTtlSeconds) * 1000;
+
   const payload = {
     sub: user.id,
     role: user.role,
-    iat: Date.now(),
+    iat: now,
+    exp: now + ttlMs,
   };
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
   return `${data}.${signature}`;
 }
 
-export function parseAuthToken(token: string): { sub: string; role: string } | null {
+export function parseAuthToken(token: string): { sub: string; role: string; exp?: number } | null {
   try {
+    if (!token || typeof token !== "string") return null;
     const parts = token.split(".");
-    if (parts.length === 2) {
-      const [data, signature] = parts;
-      const expected = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
-      if (signature.length !== expected.length) return null;
-      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-        return null;
-      }
-      const json = Buffer.from(data, "base64url").toString("utf-8");
-      const parsed = JSON.parse(json);
-      if (!parsed.sub || !parsed.role) return null;
-      return parsed;
+    // Strictly require payload.signature format
+    if (parts.length !== 2) return null;
+
+    const [data, signature] = parts;
+    const expected = crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
+    if (signature.length !== expected.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return null;
     }
 
-    // Fallback for transition from legacy unsigned tokens
-    const json = Buffer.from(token, "base64").toString("utf-8");
+    const json = Buffer.from(data, "base64url").toString("utf-8");
     const parsed = JSON.parse(json);
     if (!parsed.sub || !parsed.role) return null;
+
+    // Verify token expiration
+    if (parsed.exp && typeof parsed.exp === "number" && Date.now() > parsed.exp) {
+      return null;
+    }
+
     return parsed;
   } catch {
     return null;

@@ -73,6 +73,7 @@ export default function UserWeeklyCalendarModal({
   const [quickAddTutorId, setQuickAddTutorId] = useState("");
   const [quickAddNotes, setQuickAddNotes] = useState("");
   const [quickAddTeamsUrl, setQuickAddTeamsUrl] = useState("");
+  const [quickAddUnlockMinutes, setQuickAddUnlockMinutes] = useState<number>(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingSession, setIsDeletingSession] = useState(false);
   const [quickAddError, setQuickAddError] = useState("");
@@ -283,6 +284,7 @@ export default function UserWeeklyCalendarModal({
     setQuickAddEndTime(endStr);
     setQuickAddNotes("");
     setQuickAddTeamsUrl("");
+    setQuickAddUnlockMinutes(5);
     setQuickAddError("");
     setQuickAddSuccess("");
 
@@ -331,6 +333,7 @@ export default function UserWeeklyCalendarModal({
           scheduledEndTime: endIso,
           notes: quickAddNotes || undefined,
           teamsMeetingUrl: quickAddTeamsUrl || undefined,
+          unlockEarlyMinutes: quickAddUnlockMinutes,
         }),
       });
 
@@ -1384,6 +1387,37 @@ export default function UserWeeklyCalendarModal({
                   onChange={(e) => setQuickAddTeamsUrl(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:border-[#48A5EE]"
                 />
+              </div>
+
+              {/* Show Teams Link Early Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-600 dark:text-slate-300 font-bold">
+                    Show Teams Link Early
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    {quickAddUnlockMinutes} mins before start
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[5, 10, 15].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setQuickAddUnlockMinutes(mins)}
+                      className={`py-1.5 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        quickAddUnlockMinutes === mins
+                          ? "bg-[#48A5EE] text-white border-[#48A5EE] shadow-xs shadow-[#48A5EE]/30"
+                          : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                      }`}
+                    >
+                      <span>{mins} mins</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  Controls how early the &quot;Join Lesson&quot; button unlocks for the student.
+                </p>
               </div>
 
               {/* Optional Notes */}

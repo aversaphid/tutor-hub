@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Calendar, Download, ExternalLink, ChevronDown } from "lucide-react";
 import { downloadICS, getGoogleCalendarUrl, CalendarEvent } from "@/lib/calendar";
+import { formatTutorName } from "@/lib/format";
 
 interface AddToCalendarProps {
   session: {
@@ -31,8 +32,8 @@ export default function AddToCalendar({ session, compact = false }: AddToCalenda
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const tutorName = session.tutor?.name || "Tutor";
-  const studentName = session.tutee?.name || "Student";
+  const tutorName = formatTutorName(session.tutor?.name) || "Tutor";
+  const studentName = formatTutorName(session.tutee?.name) || "Student";
   const portalUrl = typeof window !== "undefined" ? window.location.origin : "https://lbmathstuition.co.uk";
 
   const calendarEvent: CalendarEvent = {

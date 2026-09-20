@@ -17,6 +17,7 @@ import {
   playCountdownCompleteChime,
 } from "@/lib/audio-cues";
 import { useAccessibility } from "@/lib/accessibility";
+import { formatTutorName } from "@/lib/format";
 import confetti from "canvas-confetti";
 
 interface SessionData {
@@ -71,7 +72,7 @@ export default function CountdownTimer({
       const reasonSuffix = newSession.delayReason ? ` (${newSession.delayReason})` : "";
       setNotification({
         type: "delay",
-        message: `${newSession.tutor?.name || "Your tutor"} added +${addedMinutes} mins to the lesson start time${reasonSuffix}.`,
+        message: `${formatTutorName(newSession.tutor?.name) || "Your tutor"} added +${addedMinutes} mins to the lesson start time${reasonSuffix}.`,
       });
       prevDelayRef.current = newSession.delayMinutes;
     }
@@ -88,7 +89,7 @@ export default function CountdownTimer({
       }
       setNotification({
         type: "started",
-        message: `${newSession.tutor?.name || "Your tutor"} has started the lesson early! Click below to join.`,
+        message: `${formatTutorName(newSession.tutor?.name) || "Your tutor"} has started the lesson early! Click below to join.`,
       });
     }
 
@@ -261,8 +262,8 @@ export default function CountdownTimer({
               {session.title}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              Tutor: <strong className="text-slate-700 dark:text-slate-200">{session.tutor?.name || "Tutor"}</strong> • Student:{" "}
-              <strong className="text-slate-700 dark:text-slate-200">{session.tutee.name}</strong>
+              Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(session.tutor?.name) || "Tutor"}</strong> • Student:{" "}
+              <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(session.tutee?.name) || "Student"}</strong>
             </p>
 
             {session.status === "DELAYED" && session.delayReason && (

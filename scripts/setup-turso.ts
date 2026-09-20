@@ -61,6 +61,7 @@ async function setup() {
       "delayMinutes" INTEGER NOT NULL DEFAULT 0,
       "delayReason" TEXT,
       "teamsMeetingUrl" TEXT,
+      "unlockEarlyMinutes" INTEGER NOT NULL DEFAULT 5,
       "notes" TEXT,
       "adminReminder" TEXT,
       "tutorConfirmed" BOOLEAN NOT NULL DEFAULT false,
@@ -77,6 +78,11 @@ async function setup() {
       CONSTRAINT "Session_tuteeId_fkey" FOREIGN KEY ("tuteeId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
     );
   `);
+
+  // Migrate existing Session table if columns missing
+  try {
+    await client.execute(`ALTER TABLE "Session" ADD COLUMN "unlockEarlyMinutes" INTEGER NOT NULL DEFAULT 5;`);
+  } catch {}
 
   // 3. Create AuditLog table
   await client.execute(`

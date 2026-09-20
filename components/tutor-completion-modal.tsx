@@ -40,6 +40,15 @@ export default function TutorCompletionModal({
     e.preventDefault();
     setError("");
 
+    // Warning if completing before scheduled start time
+    const startTime = new Date(session.scheduledStartTime).getTime();
+    if (Date.now() < startTime) {
+      const isConfirmed = window.confirm(
+        "Are you sure? This lesson hasn't started yet according to the schedule."
+      );
+      if (!isConfirmed) return;
+    }
+
     if (!feedbackCovered.trim()) {
       setError("Please describe what was covered in the lesson.");
       return;
@@ -102,6 +111,15 @@ export default function TutorCompletionModal({
             <span>{session.title}</span>
           </p>
         </div>
+
+        {new Date(session.scheduledStartTime).getTime() > Date.now() && (
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+            <span>
+              <strong>Early Completion Notice:</strong> This lesson has not started yet according to the schedule.
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="p-3 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
