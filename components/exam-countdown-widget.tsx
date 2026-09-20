@@ -10,22 +10,18 @@ import {
   ChevronDown,
   ChevronUp,
   Target,
-  GraduationCap,
   Flame,
   Award,
-  Plus,
-  Trash2,
   Edit2,
   Check,
   Zap,
   Download,
   ExternalLink,
-  BookOpen,
 } from "lucide-react";
 import { downloadICS, getGoogleCalendarUrl, CalendarEvent } from "@/lib/calendar";
 import { useAccessibility } from "@/lib/accessibility";
 
-export type ExamTier = "GCSE" | "ALEVEL" | "CUSTOM";
+export type ExamTier = "GCSE" | "ALEVEL";
 
 export interface ExamPaper {
   id: string;
@@ -110,7 +106,7 @@ const DEFAULT_ALEVEL_PAPERS: ExamPaper[] = [
   },
 ];
 
-const STORAGE_KEY = "lb_maths_student_exam_countdown_v2";
+const STORAGE_KEY = "lb_maths_student_exam_countdown_v3";
 
 export default function ExamCountdownWidget({
   onOpenCalculator,
@@ -120,17 +116,10 @@ export default function ExamCountdownWidget({
   const { preferences } = useAccessibility();
   const [tier, setTier] = useState<ExamTier>("GCSE");
   const [targetGrade, setTargetGrade] = useState<string>("Grade 8");
-  const [customPapers, setCustomPapers] = useState<ExamPaper[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Default is collapsed as requested by user
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isEditingTarget, setIsEditingTarget] = useState(false);
-  const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  // Form state for adding custom mock
-  const [newMockTitle, setNewMockTitle] = useState("");
-  const [newMockDate, setNewMockDate] = useState("2026-11-20");
-  const [newMockTime, setNewMockTime] = useState("09:00");
-  const [newMockCalc, setNewMockCalc] = useState(true);
 
   // Live ticking clock state
   const [now, setNow] = useState<number>(Date.now());
@@ -141,11 +130,10 @@ export default function ExamCountdownWidget({
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.tier) setTier(parsed.tier);
-        if (parsed.targetGrade) setTargetGrade(parsed.targetGrade);
-        if (parsed.customPapers && Array.isArray(parsed.customPapers)) {
-          setCustomPapers(parsed.customPapers);
+        if (parsed.tier === "GCSE" || parsed.tier === "ALEVEL") {
+          setTier(parsed.tier);
         }
+        if (parsed.targetGrade) setTargetGrade(parsed.targetGrade);
         if (typeof parsed.isCollapsed === "boolean") {
           setIsCollapsed(parsed.isCollapsed);
         }
@@ -163,12 +151,11 @@ export default function ExamCountdownWidget({
         JSON.stringify({
           tier,
           targetGrade,
-          customPapers,
           isCollapsed,
         })
       );
     } catch {}
-  }, [tier, targetGrade, customPapers, isCollapsed, mounted]);
+  }, [tier, targetGrade, isCollapsed, mounted]);
 
   // Real-time ticking every second
   useEffect(() => {
@@ -178,25 +165,11 @@ export default function ExamCountdownWidget({
     return () => clearInterval(timer);
   }, []);
 
-  // Determine active papers based on tier
+  // Active papers (strictly GCSE or A-Level, no mocks)
   const activePapers = useMemo(() => {
-    if (tier === "GCSE") return DEFAULT_GCSE_PAPERS;
     if (tier === "ALEVEL") return DEFAULT_ALEVEL_PAPERS;
-    return customPapers.length > 0
-      ? customPapers
-      : [
-          {
-            id: "custom-mock-default",
-            title: "Autumn School Mock",
-            subtitle: "GCSE / A-Level Trial Exam",
-            targetDate: "2026-11-20T09:00:00",
-            durationMinutes: 90,
-            totalMarks: 80,
-            calculatorAllowed: true,
-            color: "blue" as const,
-          },
-        ];
-  }, [tier, customPapers]);
+    return DEFAULT_GCSE_PAPERS;
+  }, [tier]);
 
   // Compute countdown metrics for each paper
   const paperMetrics = useMemo(() => {
@@ -277,34 +250,12 @@ export default function ExamCountdownWidget({
         title: `Final Polish & Confidence • ${nextUpcoming.days} Days Left!`,
         desc: "Memorize remaining formula sheets, practice mental arithmetic, and rest well before exam day.",
         badge: "Final Stretch",
-        badgeColor: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse",
+        badgeColor: preferences?.reducedMotion
+          ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+          : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse",
       };
     }
-  }, [nextUpcoming]);
-
-  const handleAddCustomMock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMockTitle.trim() || !newMockDate) return;
-
-    const newPaper: ExamPaper = {
-      id: `custom-${Date.now()}`,
-      title: newMockTitle.trim(),
-      subtitle: `School Mock Exam (${newMockCalc ? "Calculator" : "Non-Calculator"})`,
-      targetDate: `${newMockDate}T${newMockTime || "09:00"}:00`,
-      durationMinutes: 90,
-      totalMarks: 80,
-      calculatorAllowed: newMockCalc,
-      color: newMockCalc ? "emerald" : "blue",
-    };
-
-    setCustomPapers((prev) => [...prev, newPaper]);
-    setNewMockTitle("");
-    setIsAddingCustom(false);
-  };
-
-  const handleDeleteCustomPaper = (id: string) => {
-    setCustomPapers((prev) => prev.filter((p) => p.id !== id));
-  };
+  }, [nextUpcoming, preferences?.reducedMotion]);
 
   const handleExportPaperToCalendar = (paper: typeof paperMetrics[0]) => {
     const event: CalendarEvent = {
@@ -332,9 +283,13 @@ export default function ExamCountdownWidget({
   };
 
   return (
-    <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm transition-all duration-200 space-y-5">
+    <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm transition-all duration-200 space-y-4">
       {/* Header & Controls Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+      <div
+        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          !isCollapsed ? "border-b border-slate-100 dark:border-slate-800/80 pb-4" : ""
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#48A5EE] to-[#2563eb] text-white flex items-center justify-center shadow-sm shrink-0">
             <Clock className={`w-5 h-5 ${preferences?.reducedMotion ? "" : "animate-spin-slow"}`} />
@@ -349,14 +304,14 @@ export default function ExamCountdownWidget({
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Official summer exam dates and school mock milestones ticking in real time
+              Official summer exam dates ticking in real time
             </p>
           </div>
         </div>
 
-        {/* Action controls: Tier Picker + Collapse Toggle */}
+        {/* Action controls: Tier Picker (GCSE / A-Level) + Target Grade + Collapse Toggle */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Tier buttons */}
+          {/* Tier buttons: GCSE & A-Level only */}
           <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold">
             <button
               type="button"
@@ -379,17 +334,6 @@ export default function ExamCountdownWidget({
               }`}
             >
               A-Level
-            </button>
-            <button
-              type="button"
-              onClick={() => setTier("CUSTOM")}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                tier === "CUSTOM"
-                  ? "bg-white dark:bg-slate-700 text-[#48A5EE] dark:text-sky-300 shadow-xs font-bold"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              Mocks
             </button>
           </div>
 
@@ -438,7 +382,7 @@ export default function ExamCountdownWidget({
             )}
           </div>
 
-          {/* Collapse/Expand button */}
+          {/* Collapse/Expand toggle button */}
           <button
             type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
@@ -466,9 +410,10 @@ export default function ExamCountdownWidget({
           <button
             type="button"
             onClick={() => setIsCollapsed(false)}
-            className="text-[#48A5EE] hover:underline font-bold text-xs self-start sm:self-auto cursor-pointer"
+            className="text-[#48A5EE] hover:underline font-bold text-xs self-start sm:self-auto cursor-pointer flex items-center gap-1"
           >
-            View All Clocks &amp; Study Milestones &rarr;
+            <span>View 3 Exam Clocks &amp; Milestones</span>
+            <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (
@@ -477,7 +422,11 @@ export default function ExamCountdownWidget({
           <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 to-sky-50/50 dark:from-blue-950/30 dark:to-sky-950/20 border border-blue-100 dark:border-blue-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 dark:text-blue-200">
-                <Flame className={`w-4 h-4 text-orange-500 ${preferences?.reducedMotion ? "" : "animate-bounce"}`} />
+                <Flame
+                  className={`w-4 h-4 text-orange-500 ${
+                    preferences?.reducedMotion ? "" : "animate-bounce"
+                  }`}
+                />
                 <span>{revisionAdvice.title}</span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -511,7 +460,7 @@ export default function ExamCountdownWidget({
             </div>
           </div>
 
-          {/* Cards Grid: 3 Countdown Clocks */}
+          {/* Cards Grid: 3 Countdown Clocks (Paper 1, Paper 2, Paper 3) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {paperMetrics.map((paper) => {
               const isNext = nextUpcoming?.id === paper.id;
@@ -545,26 +494,13 @@ export default function ExamCountdownWidget({
 
                   {/* Top: Title & Calculator Badge */}
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 leading-snug">
-                          {paper.title}
-                        </h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                          {paper.subtitle}
-                        </p>
-                      </div>
-
-                      {tier === "CUSTOM" && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCustomPaper(paper.id)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                          title="Delete custom exam"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 leading-snug">
+                        {paper.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                        {paper.subtitle}
+                      </p>
                     </div>
 
                     {/* Meta pills: Date & Calculator allowance */}
@@ -628,7 +564,11 @@ export default function ExamCountdownWidget({
                         </div>
                         {/* Seconds */}
                         <div className="flex flex-col items-center">
-                          <span className={`text-lg sm:text-xl font-black tracking-tight text-[#48A5EE] font-mono ${preferences?.reducedMotion ? "" : "animate-pulse"}`}>
+                          <span
+                            className={`text-lg sm:text-xl font-black tracking-tight text-[#48A5EE] font-mono ${
+                              preferences?.reducedMotion ? "" : "animate-pulse"
+                            }`}
+                          >
                             {String(paper.seconds).padStart(2, "0")}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
@@ -691,102 +631,6 @@ export default function ExamCountdownWidget({
               );
             })}
           </div>
-
-          {/* If Custom/Mock tier is active, provide an "Add Custom Mock" button and form */}
-          {tier === "CUSTOM" && (
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
-              {isAddingCustom ? (
-                <form
-                  onSubmit={handleAddCustomMock}
-                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-3"
-                >
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Add School Mock Exam or Test Milestone
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        Exam Title
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Year 11 November Mock Paper 1"
-                        value={newMockTitle}
-                        onChange={(e) => setNewMockTitle(e.target.value)}
-                        required
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-[#48A5EE] focus:outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        Date
-                      </label>
-                      <input
-                        type="date"
-                        value={newMockDate}
-                        onChange={(e) => setNewMockDate(e.target.value)}
-                        required
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-[#48A5EE] focus:outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        Time
-                      </label>
-                      <input
-                        type="time"
-                        value={newMockTime}
-                        onChange={(e) => setNewMockTime(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-[#48A5EE] focus:outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newMockCalc}
-                        onChange={(e) => setNewMockCalc(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#48A5EE] focus:ring-[#48A5EE] border-slate-300"
-                      />
-                      <span>Calculator Allowed for this paper</span>
-                    </label>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingCustom(false)}
-                        className="px-3 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 text-xs font-semibold"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold transition-colors"
-                      >
-                        Save Mock
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              ) : (
-                <div className="flex items-center justify-between text-xs">
-                  <p className="text-slate-500 dark:text-slate-400">
-                    Add upcoming school assessments, mock weeks, or end-of-term maths tests.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingCustom(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add School Mock</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
     </section>
