@@ -1,13 +1,42 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   output: "standalone",
   compress: true,
+  serverExternalPackages: [
+    "@libsql/client",
+    "@prisma/adapter-libsql",
+    "@prisma/client",
+    "bcryptjs",
+  ],
   outputFileTracingIncludes: {
     "/**": [
       "./node_modules/@libsql/**/*",
       "./node_modules/@prisma/**/*",
     ],
+  },
+  webpack: (config, { webpack, isServer }) => {
+    // Strip "node:" scheme prefix so Webpack 5 can handle built-in Node modules without UnhandledSchemeError
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      })
+    );
+
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        v8: false,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        child_process: false,
+      };
+    }
+
+    return config;
   },
   async headers() {
     const headersList: any[] = [];
