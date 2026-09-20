@@ -26,6 +26,7 @@ import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
+import ExamCountdownWidget from "@/components/exam-countdown-widget";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -521,6 +522,13 @@ function StudentLobbyContent() {
             </div>
           </div>
         )}
+
+        {/* Official Maths Exam Countdown Clocks & Revision Milestones */}
+        <ExamCountdownWidget
+          onOpenCalculator={() => setIsCalculatorOpen(true)}
+          onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
+          studentName={currentUser?.name}
+        />
 
         {/* Other Upcoming Lessons */}
         {upcomingSessions.length > 0 && (
