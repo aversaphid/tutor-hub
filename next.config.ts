@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   turbopack: {},
   output: "standalone",
   compress: true,
+  typescript: {
+    ignoreBuildErrors: false,
+  },
   serverExternalPackages: [
     "@libsql/client",
     "@prisma/adapter-libsql",
@@ -17,10 +20,23 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { webpack, isServer }) => {
-    // Strip "node:" scheme prefix so Webpack 5 can handle built-in Node modules without UnhandledSchemeError
+    // Ignore node:v8 and v8 built-in imports so Webpack never fails with UnhandledSchemeError
     config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
-        resource.request = resource.request.replace(/^node:/, "");
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^(node:)?v8$/,
+      })
+    );
+
+    // Safely rewrite any other node: prefixed imports to standard module names
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: any) => {
+        try {
+          if (resource && typeof resource.request === "string") {
+            resource.request = resource.request.replace(/^node:/, "");
+          }
+        } catch {
+          // Ignore safely
+        }
       })
     );
 
