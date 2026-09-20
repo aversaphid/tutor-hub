@@ -40,71 +40,133 @@ interface ExamCountdownWidgetProps {
   studentName?: string;
 }
 
-const DEFAULT_GCSE_PAPERS: ExamPaper[] = [
-  {
-    id: "gcse-p1",
-    title: "Paper 1 (Non-Calculator)",
-    subtitle: "Edexcel / AQA / OCR Higher & Foundation",
-    targetDate: "2027-05-14T09:00:00",
-    durationMinutes: 90,
-    totalMarks: 80,
-    calculatorAllowed: false,
-    color: "blue",
-  },
-  {
-    id: "gcse-p2",
-    title: "Paper 2 (Calculator)",
-    subtitle: "Edexcel / AQA / OCR Higher & Foundation",
-    targetDate: "2027-06-03T09:00:00",
-    durationMinutes: 90,
-    totalMarks: 80,
-    calculatorAllowed: true,
-    color: "emerald",
-  },
-  {
-    id: "gcse-p3",
-    title: "Paper 3 (Calculator)",
-    subtitle: "Edexcel / AQA / OCR Higher & Foundation",
-    targetDate: "2027-06-09T09:00:00",
-    durationMinutes: 90,
-    totalMarks: 80,
-    calculatorAllowed: true,
-    color: "amber",
-  },
-];
+/**
+ * Automatically computes the target examination year.
+ * UK summer exam season finishes around June 22.
+ * After June 22 (or from July onwards), the upcoming summer exam series automatically
+ * rolls over to the NEXT academic year so the countdown is perpetual every single year.
+ */
+export function getExamYear(date: Date = new Date()): number {
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0 = Jan, 5 = June, 6 = July
+  const day = date.getDate();
+  if (month > 5 || (month === 5 && day > 22)) {
+    return year + 1;
+  }
+  return year;
+}
 
-const DEFAULT_ALEVEL_PAPERS: ExamPaper[] = [
-  {
-    id: "alevel-p1",
-    title: "Paper 1: Pure Mathematics 1",
-    subtitle: "Proof, Algebra, Calculus, Trigonometry",
-    targetDate: "2027-06-02T13:30:00",
-    durationMinutes: 120,
-    totalMarks: 100,
-    calculatorAllowed: true,
-    color: "purple",
-  },
-  {
-    id: "alevel-p2",
-    title: "Paper 2: Pure Mathematics 2",
-    subtitle: "Vectors, Integration, Differential Equations",
-    targetDate: "2027-06-08T13:30:00",
-    durationMinutes: 120,
-    totalMarks: 100,
-    calculatorAllowed: true,
-    color: "blue",
-  },
-  {
-    id: "alevel-p3",
-    title: "Paper 3: Statistics & Mechanics",
-    subtitle: "Hypothesis Testing, Kinematics, Forces",
-    targetDate: "2027-06-18T13:30:00",
-    durationMinutes: 120,
-    totalMarks: 100,
-    calculatorAllowed: true,
-    color: "emerald",
-  },
-];
+/**
+ * Returns the Nth occurrence of a weekday in a given month (0-indexed month, 0 = Sun, 5 = Fri).
+ */
+function getNthWeekdayDate(
+  year: number,
+  monthIndex: number,
+  weekday: number,
+  n: number,
+  hour: number = 9,
+  minute: number = 0
+): Date {
+  let count = 0;
+  for (let day = 1; day <= 31; day++) {
+    const d = new Date(year, monthIndex, day, hour, minute, 0);
+    if (d.getMonth() !== monthIndex) break;
+    if (d.getDay() === weekday) {
+      count++;
+      if (count === n) return d;
+    }
+  }
+  return new Date(year, monthIndex, 15, hour, minute, 0);
+}
+
+/**
+ * Dynamically computes official GCSE and A-Level exam dates for any given academic year.
+ * This guarantees the clocks update every single year automatically without manual maintenance.
+ */
+export function getExamPapersForYear(year: number, tier: ExamTier): ExamPaper[] {
+  if (tier === "ALEVEL") {
+    // A-Level Pure 1: 1st Wednesday in June at 13:30
+    const p1Date = getNthWeekdayDate(year, 5, 3, 1, 13, 30);
+    // A-Level Pure 2: 2nd Tuesday in June at 13:30
+    const p2Date = getNthWeekdayDate(year, 5, 2, 2, 13, 30);
+    // A-Level Stats & Mechanics: 3rd Friday in June at 13:30
+    const p3Date = getNthWeekdayDate(year, 5, 5, 3, 13, 30);
+
+    return [
+      {
+        id: `alevel-p1-${year}`,
+        title: "Paper 1: Pure Mathematics 1",
+        subtitle: "Proof, Algebra, Calculus, Trigonometry",
+        targetDate: p1Date.toISOString(),
+        durationMinutes: 120,
+        totalMarks: 100,
+        calculatorAllowed: true,
+        color: "purple",
+      },
+      {
+        id: `alevel-p2-${year}`,
+        title: "Paper 2: Pure Mathematics 2",
+        subtitle: "Vectors, Integration, Differential Equations",
+        targetDate: p2Date.toISOString(),
+        durationMinutes: 120,
+        totalMarks: 100,
+        calculatorAllowed: true,
+        color: "blue",
+      },
+      {
+        id: `alevel-p3-${year}`,
+        title: "Paper 3: Statistics & Mechanics",
+        subtitle: "Hypothesis Testing, Kinematics, Forces",
+        targetDate: p3Date.toISOString(),
+        durationMinutes: 120,
+        totalMarks: 100,
+        calculatorAllowed: true,
+        color: "emerald",
+      },
+    ];
+  }
+
+  // GCSE Maths (JCQ common timetable anchor dates):
+  // Paper 1 (Non-Calculator): 2nd Friday in May at 09:00
+  const p1Date = getNthWeekdayDate(year, 4, 5, 2, 9, 0);
+  // Paper 2 (Calculator): 1st Thursday in June at 09:00
+  const p2Date = getNthWeekdayDate(year, 5, 4, 1, 9, 0);
+  // Paper 3 (Calculator): 2nd Wednesday in June at 09:00
+  const p3Date = getNthWeekdayDate(year, 5, 3, 2, 9, 0);
+
+  return [
+    {
+      id: `gcse-p1-${year}`,
+      title: "Paper 1 (Non-Calculator)",
+      subtitle: "Edexcel / AQA / OCR Higher & Foundation",
+      targetDate: p1Date.toISOString(),
+      durationMinutes: 90,
+      totalMarks: 80,
+      calculatorAllowed: false,
+      color: "blue",
+    },
+    {
+      id: `gcse-p2-${year}`,
+      title: "Paper 2 (Calculator)",
+      subtitle: "Edexcel / AQA / OCR Higher & Foundation",
+      targetDate: p2Date.toISOString(),
+      durationMinutes: 90,
+      totalMarks: 80,
+      calculatorAllowed: true,
+      color: "emerald",
+    },
+    {
+      id: `gcse-p3-${year}`,
+      title: "Paper 3 (Calculator)",
+      subtitle: "Edexcel / AQA / OCR Higher & Foundation",
+      targetDate: p3Date.toISOString(),
+      durationMinutes: 90,
+      totalMarks: 80,
+      calculatorAllowed: true,
+      color: "amber",
+    },
+  ];
+}
 
 const STORAGE_KEY = "lb_maths_student_exam_countdown_v3";
 
@@ -123,6 +185,11 @@ export default function ExamCountdownWidget({
 
   // Live ticking clock state
   const [now, setNow] = useState<number>(Date.now());
+
+  // Automatically determine the target exam year (e.g. 2027, 2028, etc.)
+  const examYear = useMemo(() => {
+    return getExamYear(new Date(now));
+  }, [now]);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -165,11 +232,10 @@ export default function ExamCountdownWidget({
     return () => clearInterval(timer);
   }, []);
 
-  // Active papers (strictly GCSE or A-Level, no mocks)
+  // Active papers dynamically calculated for the active exam year
   const activePapers = useMemo(() => {
-    if (tier === "ALEVEL") return DEFAULT_ALEVEL_PAPERS;
-    return DEFAULT_GCSE_PAPERS;
-  }, [tier]);
+    return getExamPapersForYear(examYear, tier);
+  }, [examYear, tier]);
 
   // Compute countdown metrics for each paper
   const paperMetrics = useMemo(() => {
@@ -184,8 +250,8 @@ export default function ExamCountdownWidget({
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
 
-      // Calculate progress relative to academic term (e.g. Sept 1, 2026 to targetDate)
-      const startDate = new Date(new Date(paper.targetDate).getFullYear() - 1, 8, 1).getTime();
+      // Calculate progress relative to academic term (Sept 1 of preceding year to targetDate)
+      const startDate = new Date(examYear - 1, 8, 1).getTime();
       const totalSpan = targetTime - startDate;
       const elapsed = now - startDate;
       const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalSpan) * 100)));
@@ -202,7 +268,7 @@ export default function ExamCountdownWidget({
         progressPercent,
       };
     });
-  }, [activePapers, now]);
+  }, [activePapers, now, examYear]);
 
   // Find the next upcoming paper
   const nextUpcoming = useMemo(() => {
@@ -215,7 +281,7 @@ export default function ExamCountdownWidget({
   const revisionAdvice = useMemo(() => {
     if (!nextUpcoming) {
       return {
-        title: "All Target Papers Complete!",
+        title: `Summer ${examYear} Exams Complete!`,
         desc: "Well done on completing your exams! Celebrate your hard work and achievements.",
         badge: "Exam Season Finished",
         badgeColor: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300",
@@ -255,7 +321,7 @@ export default function ExamCountdownWidget({
           : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 animate-pulse",
       };
     }
-  }, [nextUpcoming, preferences?.reducedMotion]);
+  }, [nextUpcoming, preferences?.reducedMotion, examYear]);
 
   const handleExportPaperToCalendar = (paper: typeof paperMetrics[0]) => {
     const event: CalendarEvent = {
@@ -298,20 +364,23 @@ export default function ExamCountdownWidget({
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                 <span>Maths Exam Countdown</span>
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                  (Summer {examYear})
+                </span>
               </h2>
               <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${revisionAdvice.badgeColor}`}>
                 {revisionAdvice.badge}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Official summer exam dates ticking in real time
+              Official summer {examYear} exam dates ticking in real time
             </p>
           </div>
         </div>
 
         {/* Action controls: Tier Picker (GCSE / A-Level) + Target Grade + Collapse Toggle */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Tier buttons: GCSE & A-Level only */}
+          {/* Tier buttons: GCSE & A-Level */}
           <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-semibold">
             <button
               type="button"
@@ -399,7 +468,7 @@ export default function ExamCountdownWidget({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-700 dark:text-slate-200">
-              Next Up: {nextUpcoming ? nextUpcoming.title : "Exam Season Complete"}
+              Next Up: {nextUpcoming ? nextUpcoming.title : `Summer ${examYear} Season Complete`}
             </span>
             {nextUpcoming && (
               <span className="px-2 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] font-extrabold text-[11px]">
