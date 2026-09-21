@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 try {
   process.loadEnvFile();
-} catch {}
+} catch { }
 
 async function setup() {
   const url = process.env.TURSO_DATABASE_URL;
@@ -41,10 +41,10 @@ async function setup() {
   // Migrate existing User table if columns missing
   try {
     await client.execute(`ALTER TABLE "User" ADD COLUMN "studentPay" REAL;`);
-  } catch {}
+  } catch { }
   try {
     await client.execute(`ALTER TABLE "User" ADD COLUMN "tutorPay" REAL;`);
-  } catch {}
+  } catch { }
 
   // 2. Create Session table
   await client.execute(`
@@ -82,7 +82,7 @@ async function setup() {
   // Migrate existing Session table if columns missing
   try {
     await client.execute(`ALTER TABLE "Session" ADD COLUMN "unlockEarlyMinutes" INTEGER NOT NULL DEFAULT 5;`);
-  } catch {}
+  } catch { }
 
   // 3. Create AuditLog table
   await client.execute(`

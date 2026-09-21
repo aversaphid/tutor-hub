@@ -92,7 +92,7 @@ function StudentLobbyContent() {
             return;
           }
         }
-      } catch {}
+      } catch { }
 
       // If neither magicKey nor auth session exists, redirect to home for PIN entry
       router.push("/");
@@ -139,7 +139,7 @@ function StudentLobbyContent() {
           new Date(s.scheduledEndTime).getTime() > now - 7 * 24 * 3600 * 1000
       );
       setCancelledSessions(cancelled);
-    } catch {}
+    } catch { }
   };
 
   // Smart real-time sync: pause completely when tab is hidden, sync immediately when tab is focused

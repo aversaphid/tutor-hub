@@ -498,7 +498,7 @@ export default function AdminPage() {
       if (auditLogsLoaded) {
         await loadAuditLogs(true);
       }
-    } catch {}
+    } catch { }
   };
 
   const handleToggleSubwaySurfers = async (enabled: boolean) => {
@@ -1365,10 +1365,10 @@ export default function AdminPage() {
       const payload = skipFeedback
         ? {}
         : {
-            feedbackRating: completeRating,
-            feedbackCovered: completeCovered.trim() || undefined,
-            feedbackNotes: completeNotes.trim() || undefined,
-          };
+          feedbackRating: completeRating,
+          feedbackCovered: completeCovered.trim() || undefined,
+          feedbackNotes: completeNotes.trim() || undefined,
+        };
 
       const res = await fetch(`/api/sessions/${completeTargetLesson.id}/complete`, {
         method: "POST",
@@ -1467,7 +1467,7 @@ export default function AdminPage() {
       await navigator.clipboard.writeText(url);
       setCopiedKey(key);
       setTimeout(() => setCopiedKey(null), 2500);
-    } catch {}
+    } catch { }
   };
 
   // Memoized filtered students list
@@ -1648,13 +1648,12 @@ export default function AdminPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                      activeLesson.status === "IN_PROGRESS"
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${activeLesson.status === "IN_PROGRESS"
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                         : activeLesson.status === "DELAYED"
-                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                        : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                    }`}
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                      }`}
                   >
                     ● {activeLesson.status}
                   </span>
@@ -1766,11 +1765,10 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => handleToggleConfirmation(activeLesson.id, "tutor", Boolean(activeLesson.tutorConfirmed))}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
-                        activeLesson.tutorConfirmed
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${activeLesson.tutorConfirmed
                           ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      }`}
+                        }`}
                       title="Click to toggle Tutor Confirmation"
                     >
                       {activeLesson.tutorConfirmed ? (
@@ -1790,11 +1788,10 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => handleToggleConfirmation(activeLesson.id, "tutee", Boolean(activeLesson.tuteeConfirmed))}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
-                        activeLesson.tuteeConfirmed
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${activeLesson.tuteeConfirmed
                           ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
                           : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      }`}
+                        }`}
                       title="Click to toggle Student Confirmation"
                     >
                       {activeLesson.tuteeConfirmed ? (
@@ -1953,41 +1950,37 @@ export default function AdminPage() {
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             onClick={() => setActiveTab("lessons")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "lessons"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "lessons"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             Lessons ({sessions.length})
           </button>
           <button
             onClick={() => setActiveTab("students")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "students"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "students"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             Students &amp; PINs ({students.length})
           </button>
           <button
             onClick={() => setActiveTab("tutors")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "tutors"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "tutors"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             Tutors ({tutors.length})
           </button>
           <button
             onClick={() => setActiveTab("resources")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "resources"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "resources"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Shared Resources</span>
@@ -1997,32 +1990,29 @@ export default function AdminPage() {
               setActiveTab("audit");
               loadAuditLogs();
             }}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "audit"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "audit"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             Activity Logs {auditLogsLoaded ? `(${auditLogs.length})` : ""}
           </button>
           <button
             onClick={() => setActiveTab("analytics")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "analytics"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "analytics"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Business Analytics</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "settings"
+            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "settings"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Settings</span>
@@ -2288,9 +2278,8 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
-                    isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
-                  }`}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -2314,235 +2303,232 @@ export default function AdminPage() {
                 {isUpcomingOpen && (
                   <div className="space-y-3 pt-3">
 
-                {upcomingList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-2">
-                    <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
-                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Upcoming Lessons</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Click &quot;Schedule Lesson&quot; above to book a new session.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
-                        <tr>
-                          <th className="px-4 py-3">Student &amp; Lesson</th>
-                          <th className="px-3 py-3">Tutor</th>
-                          <th className="px-3 py-3">Date &amp; Time</th>
-                          <th className="px-2 py-3 text-center">Status</th>
-                          <th className="px-3 py-3 text-center">Attendance</th>
-                          <th className="px-3 py-3">PIN &amp; Link</th>
-                          <th className="px-3 py-3 text-center">Reschedule / Repeat</th>
-                          <th className="px-3 py-3 text-center">Cancel / Delete</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {upcomingList.map((s) => (
-                          <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-slate-800 dark:text-slate-100">
-                                {s.tutee?.name}
-                              </div>
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                {s.title}
-                              </div>
-                              {/* Personal Admin Reminder */}
-                              {s.adminReminder ? (
-                                <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
-                                  <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                  <span className="font-semibold truncate max-w-[140px]" title={s.adminReminder}>
-                                    {s.adminReminder}
-                                  </span>
-                                  <button
-                                    onClick={() => {
-                                      setReminderModalSession(s);
-                                      setEditReminderText(s.adminReminder || "");
-                                    }}
-                                    className="text-[10px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
-                                    title="Edit Reminder"
-                                  >
-                                    Edit
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setReminderModalSession(s);
-                                    setEditReminderText("");
-                                  }}
-                                  className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                  title="Add personal reminder for this lesson"
-                                >
-                                  <Bell className="w-2.5 h-2.5" />
-                                  <span>+ Reminder</span>
-                                </button>
-                              )}
-                            </td>
-                            <td className="px-3 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
-                              {formatTutorName(s.tutor?.name)}
-                            </td>
-                            <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                              <div className="font-semibold text-slate-700 dark:text-slate-200">
-                                {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                })}{" "}
-                                &bull;{" "}
-                                {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </div>
-                              <div className="mt-1 flex items-center gap-2 font-sans">
-                                {s.teamsMeetingUrl ? (
-                                  <a
-                                    href={s.teamsMeetingUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
-                                  >
-                                    <Video className="w-3 h-3" />
-                                    <span>Teams</span>
-                                  </a>
-                                ) : (
-                                  <span className="text-slate-400 italic text-[10px]">No Teams</span>
-                                )}
-                                <AddToCalendar session={s} compact />
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center whitespace-nowrap">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  s.status === "IN_PROGRESS"
-                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                    : s.status === "DELAYED"
-                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                                }`}
-                              >
-                                {s.status}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3">
-                              {/* Confirmation Toggles */}
-                              <div className="flex flex-col gap-1 min-w-[105px]">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
-                                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${
-                                    s.tutorConfirmed
-                                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                                  }`}
-                                  title="Click to toggle Tutor Confirmation"
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {s.tutorConfirmed ? (
-                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                    {upcomingList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-2">
+                        <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Upcoming Lessons</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Click &quot;Schedule Lesson&quot; above to book a new session.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
+                            <tr>
+                              <th className="px-4 py-3">Student &amp; Lesson</th>
+                              <th className="px-3 py-3">Tutor</th>
+                              <th className="px-3 py-3">Date &amp; Time</th>
+                              <th className="px-2 py-3 text-center">Status</th>
+                              <th className="px-3 py-3 text-center">Attendance</th>
+                              <th className="px-3 py-3">PIN &amp; Link</th>
+                              <th className="px-3 py-3 text-center">Reschedule / Repeat</th>
+                              <th className="px-3 py-3 text-center">Cancel / Delete</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {upcomingList.map((s) => (
+                              <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                                <td className="px-4 py-3">
+                                  <div className="font-bold text-slate-800 dark:text-slate-100">
+                                    {s.tutee?.name}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    {s.title}
+                                  </div>
+                                  {/* Personal Admin Reminder */}
+                                  {s.adminReminder ? (
+                                    <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                      <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                      <span className="font-semibold truncate max-w-[140px]" title={s.adminReminder}>
+                                        {s.adminReminder}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          setReminderModalSession(s);
+                                          setEditReminderText(s.adminReminder || "");
+                                        }}
+                                        className="text-[10px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
+                                        title="Edit Reminder"
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setReminderModalSession(s);
+                                        setEditReminderText("");
+                                      }}
+                                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                      title="Add personal reminder for this lesson"
+                                    >
+                                      <Bell className="w-2.5 h-2.5" />
+                                      <span>+ Reminder</span>
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="px-3 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
+                                  {formatTutorName(s.tutor?.name)}
+                                </td>
+                                <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                                  <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                    {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                      weekday: "short",
+                                      month: "short",
+                                      day: "numeric",
+                                    })}{" "}
+                                    &bull;{" "}
+                                    {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                  <div className="mt-1 flex items-center gap-2 font-sans">
+                                    {s.teamsMeetingUrl ? (
+                                      <a
+                                        href={s.teamsMeetingUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                      >
+                                        <Video className="w-3 h-3" />
+                                        <span>Teams</span>
+                                      </a>
                                     ) : (
-                                      <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                      <span className="text-slate-400 italic text-[10px]">No Teams</span>
                                     )}
-                                    <span>Tutor</span>
+                                    <AddToCalendar session={s} compact />
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-center whitespace-nowrap">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === "IN_PROGRESS"
+                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                        : s.status === "DELAYED"
+                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                      }`}
+                                  >
+                                    {s.status}
                                   </span>
-                                  <span>{s.tutorConfirmed ? "✓" : "—"}</span>
-                                </button>
+                                </td>
+                                <td className="px-3 py-3">
+                                  {/* Confirmation Toggles */}
+                                  <div className="flex flex-col gap-1 min-w-[105px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${s.tutorConfirmed
+                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                        }`}
+                                      title="Click to toggle Tutor Confirmation"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        {s.tutorConfirmed ? (
+                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                        ) : (
+                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                        )}
+                                        <span>Tutor</span>
+                                      </span>
+                                      <span>{s.tutorConfirmed ? "✓" : "—"}</span>
+                                    </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
-                                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${
-                                    s.tuteeConfirmed
-                                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                                  }`}
-                                  title="Click to toggle Student Confirmation"
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {s.tuteeConfirmed ? (
-                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                                    ) : (
-                                      <Clock className="w-2.5 h-2.5 text-slate-400" />
-                                    )}
-                                    <span>Student</span>
-                                  </span>
-                                  <span>{s.tuteeConfirmed ? "✓" : "—"}</span>
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-3 py-3">
-                              <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
-                                  PIN: {s.tutee?.pin || "----"}
-                                </span>
-                                <button
-                                  onClick={() => copyMagicLink(s.tutee?.magicKey)}
-                                  className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
-                                  title="Copy Magic Link"
-                                >
-                                  {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
-                                </button>
-                              </div>
-                            </td>
-                            {/* Reschedule, +1 Wk, +2 Wks in one column */}
-                            <td className="px-3 py-3 text-center">
-                              <div className="flex flex-col items-center gap-1 min-w-[125px]">
-                                <button
-                                  onClick={() => handleOpenReschedule(s)}
-                                  className="w-full px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
-                                  title="Reschedule this lesson"
-                                >
-                                  <CalendarClock className="w-3 h-3 text-purple-500 shrink-0" />
-                                  <span>Reschedule</span>
-                                </button>
-                                <div className="flex items-center gap-1 w-full">
-                                  <button
-                                    onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                                    className="flex-1 px-1 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5"
-                                    title="Schedule next week (+7 days)"
-                                  >
-                                    <Repeat className="w-2.5 h-2.5 shrink-0" />
-                                    <span>+1 Wk</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                                    className="flex-1 px-1 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-purple-200 dark:border-purple-800"
-                                    title="Schedule biweekly (+14 days)"
-                                  >
-                                    <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
-                                    <span>+2 Wks</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
-                            {/* Cancel and Delete in separate column */}
-                            <td className="px-3 py-3 text-center">
-                              <div className="flex flex-col items-center gap-1 min-w-[70px]">
-                                <button
-                                  onClick={() => handleCancelSession(s)}
-                                  className="w-full px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800"
-                                  title="Cancel this lesson"
-                                >
-                                  <XCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                  <span>Cancel</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSession(s.id, s.title)}
-                                  className="w-full px-1.5 py-0.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
-                                  title="Delete Lesson Permanently"
-                                >
-                                  <Trash2 className="w-2.5 h-2.5 shrink-0" />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${s.tuteeConfirmed
+                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                        }`}
+                                      title="Click to toggle Student Confirmation"
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        {s.tuteeConfirmed ? (
+                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                        ) : (
+                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                        )}
+                                        <span>Student</span>
+                                      </span>
+                                      <span>{s.tuteeConfirmed ? "✓" : "—"}</span>
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                      PIN: {s.tutee?.pin || "----"}
+                                    </span>
+                                    <button
+                                      onClick={() => copyMagicLink(s.tutee?.magicKey)}
+                                      className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
+                                      title="Copy Magic Link"
+                                    >
+                                      {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
+                                    </button>
+                                  </div>
+                                </td>
+                                {/* Reschedule, +1 Wk, +2 Wks in one column */}
+                                <td className="px-3 py-3 text-center">
+                                  <div className="flex flex-col items-center gap-1 min-w-[125px]">
+                                    <button
+                                      onClick={() => handleOpenReschedule(s)}
+                                      className="w-full px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
+                                      title="Reschedule this lesson"
+                                    >
+                                      <CalendarClock className="w-3 h-3 text-purple-500 shrink-0" />
+                                      <span>Reschedule</span>
+                                    </button>
+                                    <div className="flex items-center gap-1 w-full">
+                                      <button
+                                        onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                        className="flex-1 px-1 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5"
+                                        title="Schedule next week (+7 days)"
+                                      >
+                                        <Repeat className="w-2.5 h-2.5 shrink-0" />
+                                        <span>+1 Wk</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                        className="flex-1 px-1 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-purple-200 dark:border-purple-800"
+                                        title="Schedule biweekly (+14 days)"
+                                      >
+                                        <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                        <span>+2 Wks</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+                                {/* Cancel and Delete in separate column */}
+                                <td className="px-3 py-3 text-center">
+                                  <div className="flex flex-col items-center gap-1 min-w-[70px]">
+                                    <button
+                                      onClick={() => handleCancelSession(s)}
+                                      className="w-full px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800"
+                                      title="Cancel this lesson"
+                                    >
+                                      <XCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                                      <span>Cancel</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSession(s.id, s.title)}
+                                      className="w-full px-1.5 py-0.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
+                                      title="Delete Lesson Permanently"
+                                    >
+                                      <Trash2 className="w-2.5 h-2.5 shrink-0" />
+                                      <span>Delete</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2552,9 +2538,8 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${
-                    isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
-                  }`}
+                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-2">
@@ -2728,161 +2713,159 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                {completedUnpaidList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-1">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">All Payouts Settled!</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      There are currently no completed lessons awaiting tutor payment.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {completedUnpaidList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
-                      >
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                              {s.tutee?.name}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}{" "}
-                              {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
+                    {completedUnpaidList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-1">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">All Payouts Settled!</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          There are currently no completed lessons awaiting tutor payment.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {completedUnpaidList.map((s) => (
+                          <div
+                            key={s.id}
+                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
+                          >
+                            <div className="space-y-2 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                  {s.tutee?.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                  Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                  {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}{" "}
+                                  {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
 
-                            {/* 5-Star Rating Badge */}
-                            {s.feedbackRating ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                <span>{s.feedbackRating}/5 Stars</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">No rating submitted</span>
-                            )}
+                                {/* 5-Star Rating Badge */}
+                                {s.feedbackRating ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold">
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span>{s.feedbackRating}/5 Stars</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No rating submitted</span>
+                                )}
 
-                            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
-                              Tutor Not Paid
-                            </span>
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
+                                  Tutor Not Paid
+                                </span>
 
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              s.tutorConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                            }`}>
-                              Tutor: {s.tutorConfirmed ? "Confirmed ✓" : "Pending"}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              s.tuteeConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                            }`}>
-                              Student: {s.tuteeConfirmed ? "Confirmed ✓" : "Pending"}
-                            </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.tutorConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                                  }`}>
+                                  Tutor: {s.tutorConfirmed ? "Confirmed ✓" : "Pending"}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.tuteeConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                                  }`}>
+                                  Student: {s.tuteeConfirmed ? "Confirmed ✓" : "Pending"}
+                                </span>
 
-                            {s.adminReminder && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px] font-semibold">
-                                <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                <span>Reminder: {s.adminReminder}</span>
-                              </span>
-                            )}
-                          </div>
+                                {s.adminReminder && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px] font-semibold">
+                                    <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                    <span>Reminder: {s.adminReminder}</span>
+                                  </span>
+                                )}
+                              </div>
 
-                          {/* Pay Breakdown Banner Under Lesson Header */}
-                          <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs font-semibold">
-                              <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                              <span>Needs to be Paid to Tutor:</span>
-                              <strong className="font-extrabold text-amber-800 dark:text-amber-300 font-mono">
-                                {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
-                                  ? formatCurrency(s.tutee.tutorPay)
-                                  : "Rate not set"}
-                              </strong>
-                            </div>
+                              {/* Pay Breakdown Banner Under Lesson Header */}
+                              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs font-semibold">
+                                  <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                  <span>Needs to be Paid to Tutor:</span>
+                                  <strong className="font-extrabold text-amber-800 dark:text-amber-300 font-mono">
+                                    {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
+                                      ? formatCurrency(s.tutee.tutorPay)
+                                      : "Rate not set"}
+                                  </strong>
+                                </div>
 
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                              <span>Student Fee:</span>
-                              <strong className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                                {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
-                                  ? formatCurrency(s.tutee.studentPay)
-                                  : "Rate not set"}
-                              </strong>
-                            </div>
-                          </div>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                                  <span>Student Fee:</span>
+                                  <strong className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                    {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
+                                      ? formatCurrency(s.tutee.studentPay)
+                                      : "Rate not set"}
+                                  </strong>
+                                </div>
+                              </div>
 
-                          {/* What was covered by tutor */}
-                          {s.feedbackCovered ? (
-                            <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
-                              <span>{s.feedbackCovered}</span>
-                              {s.feedbackNotes && (
-                                <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
-                                  Notes: &quot;{s.feedbackNotes}&quot;
+                              {/* What was covered by tutor */}
+                              {s.feedbackCovered ? (
+                                <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                                  <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
+                                  <span>{s.feedbackCovered}</span>
+                                  {s.feedbackNotes && (
+                                    <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
+                                      Notes: &quot;{s.feedbackNotes}&quot;
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-400 italic">
+                                  Lesson report pending from tutor.
                                 </p>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-xs text-slate-400 italic">
-                              Lesson report pending from tutor.
-                            </p>
-                          )}
-                        </div>
 
-                        {/* Mark Paid Toggle & Delete */}
-                        <div className="shrink-0 flex items-center gap-2">
-                          <button
-                            onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                            className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                            title="Schedule next week (+7 days)"
-                          >
-                            <Repeat className="w-3.5 h-3.5" />
-                            <span>+1 Wk</span>
-                          </button>
-                          <button
-                            onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                            className="py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-purple-200 dark:border-purple-800"
-                            title="Schedule biweekly (+14 days)"
-                          >
-                            <Repeat className="w-3.5 h-3.5 text-purple-500" />
-                            <span>+2 Wks</span>
-                          </button>
-                          <button
-                            onClick={() => openCompleteModal(s)}
-                            className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                            title="Rate lesson, edit topics covered, or view/update tutor notes"
-                          >
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                            <span>{s.feedbackCovered ? "Edit Feedback" : "Review"}</span>
-                          </button>
-                          <button
-                            onClick={() => handleToggleTutorPaid(s)}
-                            className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>Mark as Paid</span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSession(s.id, s.title)}
-                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Delete Lesson"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                            {/* Mark Paid Toggle & Delete */}
+                            <div className="shrink-0 flex items-center gap-2">
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                title="Schedule next week (+7 days)"
+                              >
+                                <Repeat className="w-3.5 h-3.5" />
+                                <span>+1 Wk</span>
+                              </button>
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                className="py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-purple-200 dark:border-purple-800"
+                                title="Schedule biweekly (+14 days)"
+                              >
+                                <Repeat className="w-3.5 h-3.5 text-purple-500" />
+                                <span>+2 Wks</span>
+                              </button>
+                              <button
+                                onClick={() => openCompleteModal(s)}
+                                className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                title="Rate lesson, edit topics covered, or view/update tutor notes"
+                              >
+                                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                <span>{s.feedbackCovered ? "Edit Feedback" : "Review"}</span>
+                              </button>
+                              <button
+                                onClick={() => handleToggleTutorPaid(s)}
+                                className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>Mark as Paid</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSession(s.id, s.title)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Delete Lesson"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
                   </div>
                 )}
               </div>
@@ -2892,9 +2875,8 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${
-                    isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
-                  }`}
+                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-rose-950 dark:text-rose-200 flex items-center gap-2">
@@ -2923,84 +2905,84 @@ export default function AdminPage() {
                 {isCancelledOpen && (
                   <div className="space-y-3">
 
-                {cancelledList.length === 0 ? (
-                  <div className="text-center py-8 px-4 space-y-1 text-xs text-slate-400">
-                    No cancelled lessons. All scheduled lessons are active.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {cancelledList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                      >
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                              {s.tutee?.name}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                              {s.title}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}{" "}
-                              {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-bold">
-                              ● Cancelled
-                            </span>
-                          </div>
-
-                          {s.notes && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              <strong>Notes:</strong> &quot;{s.notes}&quot;
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="shrink-0 flex items-center gap-2">
-                          <button
-                            onClick={() => handleOpenReschedule(s)}
-                            className="py-2 px-3.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-                            title="Reschedule this cancelled lesson"
-                          >
-                            <CalendarClock className="w-3.5 h-3.5" />
-                            <span>Reschedule Lesson</span>
-                          </button>
-                          <button
-                            onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                            className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                            title="Schedule next week (+7 days)"
-                          >
-                            <Repeat className="w-3.5 h-3.5" />
-                            <span>+1 Wk</span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSession(s.id, s.title)}
-                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Delete Permanently"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                    {cancelledList.length === 0 ? (
+                      <div className="text-center py-8 px-4 space-y-1 text-xs text-slate-400">
+                        No cancelled lessons. All scheduled lessons are active.
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {cancelledList.map((s) => (
+                          <div
+                            key={s.id}
+                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                  {s.tutee?.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                  {s.title}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                  Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                  {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}{" "}
+                                  {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10px] font-bold">
+                                  ● Cancelled
+                                </span>
+                              </div>
+
+                              {s.notes && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  <strong>Notes:</strong> &quot;{s.notes}&quot;
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="shrink-0 flex items-center gap-2">
+                              <button
+                                onClick={() => handleOpenReschedule(s)}
+                                className="py-2 px-3.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                                title="Reschedule this cancelled lesson"
+                              >
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                <span>Reschedule Lesson</span>
+                              </button>
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                className="py-2 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title="Schedule next week (+7 days)"
+                              >
+                                <Repeat className="w-3.5 h-3.5" />
+                                <span>+1 Wk</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSession(s.id, s.title)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Delete Permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -3010,9 +2992,8 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
-                    isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
-                  }`}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -3036,137 +3017,135 @@ export default function AdminPage() {
                 {isArchivedOpen && (
                   <div className="space-y-3">
 
-                {archivedPaidList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-1 text-xs text-slate-400">
-                    No archived paid lessons yet.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {archivedPaidList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                      >
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                              {s.tutee?.name}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                              Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
+                    {archivedPaidList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-1 text-xs text-slate-400">
+                        No archived paid lessons yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {archivedPaidList.map((s) => (
+                          <div
+                            key={s.id}
+                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                  {s.tutee?.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                  Tutor: <strong>{formatTutorName(s.tutor?.name)}</strong>
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                  {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
 
-                            {s.feedbackRating && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                <span>{s.feedbackRating}/5</span>
-                              </span>
-                            )}
+                                {s.feedbackRating && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span>{s.feedbackRating}/5</span>
+                                  </span>
+                                )}
 
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
-                              Paid &amp; Archived
-                            </span>
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
+                                  Paid &amp; Archived
+                                </span>
 
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              s.tutorConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                            }`}>
-                              Tutor: {s.tutorConfirmed ? "Confirmed ✓" : "Pending"}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              s.tuteeConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                            }`}>
-                              Student: {s.tuteeConfirmed ? "Confirmed ✓" : "Pending"}
-                            </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.tutorConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                                  }`}>
+                                  Tutor: {s.tutorConfirmed ? "Confirmed ✓" : "Pending"}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.tuteeConfirmed ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                                  }`}>
+                                  Student: {s.tuteeConfirmed ? "Confirmed ✓" : "Pending"}
+                                </span>
 
-                            {s.adminReminder && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px] font-semibold">
-                                <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                <span>Reminder: {s.adminReminder}</span>
-                              </span>
-                            )}
-                          </div>
+                                {s.adminReminder && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px] font-semibold">
+                                    <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                    <span>Reminder: {s.adminReminder}</span>
+                                  </span>
+                                )}
+                              </div>
 
-                          {/* Paid Breakdown */}
-                          <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
-                              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Paid to Tutor:</span>
-                              <span className="font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
-                                {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
-                                  ? formatCurrency(s.tutee.tutorPay)
-                                  : "Rate not set"}
-                              </span>
-                            </div>
+                              {/* Paid Breakdown */}
+                              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
+                                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Paid to Tutor:</span>
+                                  <span className="font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
+                                    {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
+                                      ? formatCurrency(s.tutee.tutorPay)
+                                      : "Rate not set"}
+                                  </span>
+                                </div>
 
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                              <span>Student Fee:</span>
-                              <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                                {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
-                                  ? formatCurrency(s.tutee.studentPay)
-                                  : "Rate not set"}
-                              </span>
-                            </div>
-                          </div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                                  <span>Student Fee:</span>
+                                  <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                    {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
+                                      ? formatCurrency(s.tutee.studentPay)
+                                      : "Rate not set"}
+                                  </span>
+                                </div>
+                              </div>
 
-                          {s.feedbackCovered && (
-                            <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
-                              <span>{s.feedbackCovered}</span>
-                              {s.feedbackNotes && (
-                                <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
-                                  Notes: &quot;{s.feedbackNotes}&quot;
-                                </p>
+                              {s.feedbackCovered && (
+                                <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                                  <span className="font-bold text-[#48A5EE] mr-1">Reported by Tutor ({formatTutorName(s.tutor?.name) || "Tutor"}):</span>
+                                  <span>{s.feedbackCovered}</span>
+                                  {s.feedbackNotes && (
+                                    <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
+                                      Notes: &quot;{s.feedbackNotes}&quot;
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* Rebook, Revert to Unpaid & Delete */}
-                        <div className="shrink-0 flex items-center gap-2">
-                          <button
-                            onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                            className="py-1.5 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                            title="Schedule next week (+7 days)"
-                          >
-                            <Repeat className="w-3.5 h-3.5" />
-                            <span>+1 Wk</span>
-                          </button>
-                          <button
-                            onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                            className="py-1.5 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-purple-200 dark:border-purple-800"
-                            title="Schedule biweekly (+14 days)"
-                          >
-                            <Repeat className="w-3.5 h-3.5 text-purple-500" />
-                            <span>+2 Wks</span>
-                          </button>
-                          <button
-                            onClick={() => handleToggleTutorPaid(s)}
-                            className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
-                            title="Revert to Unpaid"
-                          >
-                            Mark as Unpaid
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSession(s.id, s.title)}
-                            className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Delete Lesson"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                            {/* Rebook, Revert to Unpaid & Delete */}
+                            <div className="shrink-0 flex items-center gap-2">
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                className="py-1.5 px-3 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                title="Schedule next week (+7 days)"
+                              >
+                                <Repeat className="w-3.5 h-3.5" />
+                                <span>+1 Wk</span>
+                              </button>
+                              <button
+                                onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                className="py-1.5 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-purple-200 dark:border-purple-800"
+                                title="Schedule biweekly (+14 days)"
+                              >
+                                <Repeat className="w-3.5 h-3.5 text-purple-500" />
+                                <span>+2 Wks</span>
+                              </button>
+                              <button
+                                onClick={() => handleToggleTutorPaid(s)}
+                                className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                                title="Revert to Unpaid"
+                              >
+                                Mark as Unpaid
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSession(s.id, s.title)}
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                title="Delete Lesson"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
                   </div>
                 )}
               </div>
@@ -3345,11 +3324,11 @@ export default function AdminPage() {
                                 ● Live
                               </span>
                             ) : sessions.some(
-                                (s) =>
-                                  s.tuteeId === st.id &&
-                                  (s.status === "SCHEDULED" || s.status === "DELAYED") &&
-                                  new Date(s.scheduledEndTime).getTime() > Date.now()
-                              ) ? (
+                              (s) =>
+                                s.tuteeId === st.id &&
+                                (s.status === "SCHEDULED" || s.status === "DELAYED") &&
+                                new Date(s.scheduledEndTime).getTime() > Date.now()
+                            ) ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
                                 Upcoming
                               </span>
@@ -3414,7 +3393,7 @@ export default function AdminPage() {
                                     await navigator.clipboard.writeText(st.pin);
                                     setCopiedKey(`pin-${st.id}`);
                                     setTimeout(() => setCopiedKey(null), 2000);
-                                  } catch {}
+                                  } catch { }
                                 }}
                                 className="p-1 text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
                                 title="Copy PIN"
@@ -3458,11 +3437,10 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => handleToggleUserActive(st.id, st.active !== false)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${
-                              st.active !== false
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
                                 ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
                                 : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
-                            }`}
+                              }`}
                             title={`Click to set as ${st.active !== false ? "Inactive" : "Active"}`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${st.active !== false ? "bg-emerald-500" : "bg-slate-400"}`} />
@@ -3695,11 +3673,10 @@ export default function AdminPage() {
                         </td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              t.role === "HEAD_TUTOR"
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${t.role === "HEAD_TUTOR"
                                 ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"
                                 : "bg-[#48A5EE]/10 text-[#48A5EE]"
-                            }`}
+                              }`}
                           >
                             {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
                           </span>
@@ -3739,11 +3716,10 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={() => handleToggleUserActive(t.id, t.active !== false)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                                t.active !== false
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${t.active !== false
                                   ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
                                   : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
-                              }`}
+                                }`}
                               title={`Click to set as ${t.active !== false ? "Inactive" : "Active"}`}
                             >
                               {t.active !== false ? (
@@ -3771,8 +3747,8 @@ export default function AdminPage() {
                             </button>
 
                             {t.role !== "HEAD_TUTOR" &&
-                            t.id !== currentUser?.id &&
-                            t.email !== "luke@lbmathstuition.co.uk" ? (
+                              t.id !== currentUser?.id &&
+                              t.email !== "luke@lbmathstuition.co.uk" ? (
                               <>
                                 <button
                                   onClick={() => {
@@ -3932,11 +3908,10 @@ export default function AdminPage() {
                       Subway Surfers Focus Mode
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${
-                        subwaySurfersEnabled
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${subwaySurfersEnabled
                           ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                           : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                      }`}
+                        }`}
                     >
                       {subwaySurfersEnabled ? "Active" : "Disabled / Hidden"}
                     </span>
@@ -3956,15 +3931,13 @@ export default function AdminPage() {
                     disabled={isUpdatingSettings}
                     aria-checked={subwaySurfersEnabled}
                     onClick={() => handleToggleSubwaySurfers(!subwaySurfersEnabled)}
-                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      subwaySurfersEnabled ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
-                    } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${subwaySurfersEnabled ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
+                      } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
                     title={subwaySurfersEnabled ? "Click to hide Subway Surfers mode" : "Click to enable Subway Surfers mode"}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                        subwaySurfersEnabled ? "translate-x-7" : "translate-x-0"
-                      }`}
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${subwaySurfersEnabled ? "translate-x-7" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -4240,11 +4213,10 @@ export default function AdminPage() {
 
                 {backupStatusMessage && (
                   <div
-                    className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between animate-in fade-in ${
-                      backupStatusMessage.type === "success"
+                    className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between animate-in fade-in ${backupStatusMessage.type === "success"
                         ? "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
                         : "bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-                    }`}
+                      }`}
                   >
                     <span className="flex items-center gap-2">
                       {backupStatusMessage.type === "success" ? (
@@ -4515,11 +4487,10 @@ export default function AdminPage() {
                       key={mins}
                       type="button"
                       onClick={() => setNewLessonUnlockMinutes(mins)}
-                      className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        newLessonUnlockMinutes === mins
+                      className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${newLessonUnlockMinutes === mins
                           ? "bg-[#48A5EE] text-white border-[#48A5EE] shadow-xs shadow-[#48A5EE]/30"
                           : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                      }`}
+                        }`}
                     >
                       <span>{mins} mins</span>
                     </button>
@@ -4582,22 +4553,20 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => setRepeatIntervalWeeks(1)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            repeatIntervalWeeks === 1
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${repeatIntervalWeeks === 1
                               ? "bg-[#48A5EE] text-white shadow-xs"
                               : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                          }`}
+                            }`}
                         >
                           Weekly
                         </button>
                         <button
                           type="button"
                           onClick={() => setRepeatIntervalWeeks(2)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            repeatIntervalWeeks === 2
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${repeatIntervalWeeks === 2
                               ? "bg-[#48A5EE] text-white shadow-xs"
                               : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                          }`}
+                            }`}
                         >
                           Biweekly (Every 2 wks)
                         </button>
@@ -5039,11 +5008,10 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setEditStudentActive(!editStudentActive)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    editStudentActive
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${editStudentActive
                       ? "bg-emerald-500 text-white shadow-sm"
                       : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                  }`}
+                    }`}
                 >
                   {editStudentActive ? "Active" : "Inactive"}
                 </button>
@@ -5361,11 +5329,10 @@ export default function AdminPage() {
                       title={`${star} Star${star > 1 ? "s" : ""}`}
                     >
                       <Star
-                        className={`w-6 h-6 ${
-                          star <= completeRating
+                        className={`w-6 h-6 ${star <= completeRating
                             ? "fill-amber-400 text-amber-400"
                             : "text-slate-300 dark:text-slate-700"
-                        }`}
+                          }`}
                       />
                     </button>
                   ))}

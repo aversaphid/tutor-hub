@@ -33,9 +33,9 @@ export async function GET(
         auditLogs: isStudent
           ? false
           : {
-              orderBy: { timestamp: "desc" },
-              include: { actor: { select: { name: true, role: true } } },
-            },
+            orderBy: { timestamp: "desc" },
+            include: { actor: { select: { name: true, role: true } } },
+          },
       },
     });
 

@@ -84,7 +84,7 @@ export default function CountdownTimer({
       if (!preferences.reducedMotion) {
         try {
           confetti({ particleCount: 70, spread: 60 });
-        } catch {}
+        } catch { }
       }
       setNotification({
         type: "started",
@@ -118,7 +118,7 @@ export default function CountdownTimer({
           if (!preferences.reducedMotion) {
             try {
               confetti({ particleCount: 50, spread: 60 });
-            } catch {}
+            } catch { }
           }
         }
       } else {
@@ -162,11 +162,10 @@ export default function CountdownTimer({
       {/* Delay / Early start notifications */}
       {notification && (
         <div
-          className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between border animate-in fade-in ${
-            notification.type === "delay"
+          className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between border animate-in fade-in ${notification.type === "delay"
               ? "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
               : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             {notification.type === "delay" ? (
@@ -193,36 +192,33 @@ export default function CountdownTimer({
         aria-label={
           isLiveNow
             ? "Maths lesson is live now"
-            : `Maths lesson starts in ${
-                timeLeft.hours > 0 ? `${timeLeft.hours} hours, ` : ""
-              }${timeLeft.minutes} minutes and ${timeLeft.seconds} seconds`
+            : `Maths lesson starts in ${timeLeft.hours > 0 ? `${timeLeft.hours} hours, ` : ""
+            }${timeLeft.minutes} minutes and ${timeLeft.seconds} seconds`
         }
-        className={`rounded-3xl border p-6 bg-white dark:bg-slate-900 transition-all ${
-          isLiveNow
+        className={`rounded-3xl border p-6 bg-white dark:bg-slate-900 transition-all ${isLiveNow
             ? "border-emerald-500 dark:border-emerald-500/80 shadow-lg shadow-emerald-500/10"
             : session.status === "DELAYED"
-            ? "border-amber-400 dark:border-amber-500/80 shadow-md"
-            : "border-slate-200 dark:border-slate-800 shadow-sm"
-        }`}
+              ? "border-amber-400 dark:border-amber-500/80 shadow-md"
+              : "border-slate-200 dark:border-slate-800 shadow-sm"
+          }`}
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           {/* Lesson Overview */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <span
-                className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                  isLiveNow
+                className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${isLiveNow
                     ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
                     : session.status === "DELAYED"
-                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
-                    : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
-                }`}
+                      ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
+                      : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
+                  }`}
               >
                 {session.status === "IN_PROGRESS"
                   ? "● Lesson Live Now"
                   : session.status === "DELAYED"
-                  ? `Delayed (+${session.delayMinutes}m)`
-                  : "Next Lesson"}
+                    ? `Delayed (+${session.delayMinutes}m)`
+                    : "Next Lesson"}
               </span>
 
               <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">

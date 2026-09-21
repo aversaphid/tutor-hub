@@ -256,7 +256,7 @@ export default function TutorDashboardPage() {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedKey(key);
       setTimeout(() => setCopiedKey(null), 2000);
-    } catch {}
+    } catch { }
   };
 
   const handleCopyPin = async (key: string, pin: string) => {
@@ -264,7 +264,7 @@ export default function TutorDashboardPage() {
       await navigator.clipboard.writeText(pin);
       setCopiedKey(key);
       setTimeout(() => setCopiedKey(null), 2000);
-    } catch {}
+    } catch { }
   };
 
   const handleUpdateTeamsUrl = async () => {
@@ -311,7 +311,7 @@ export default function TutorDashboardPage() {
         loadMySessions();
         setTimeout(() => setActionMessage(""), 4000);
       }
-    } catch {}
+    } catch { }
   };
 
   const handleOpenDelayModal = (mins: number) => {
@@ -376,7 +376,7 @@ export default function TutorDashboardPage() {
         loadMySessions();
         setTimeout(() => setActionMessage(""), 4000);
       }
-    } catch {}
+    } catch { }
   };
 
   // Export tutor's current week schedule to .ics
@@ -564,55 +564,50 @@ export default function TutorDashboardPage() {
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             onClick={() => setActiveTab("active")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "active"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "active"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <Clock className="w-3.5 h-3.5" />
             <span>Next Meeting &amp; Live Deck</span>
           </button>
           <button
             onClick={() => setActiveTab("students")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "students"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "students"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <Users className="w-3.5 h-3.5" />
             <span>My Assigned Students ({assignedStudents.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("lessons")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "lessons"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "lessons"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>My Scheduled Lessons ({mySessions.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("resources")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "resources"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "resources"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Shared Resources</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "settings"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "settings"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            }`}
+              }`}
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Settings</span>
@@ -628,13 +623,12 @@ export default function TutorDashboardPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                          activeLesson.status === "IN_PROGRESS"
+                        className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${activeLesson.status === "IN_PROGRESS"
                             ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                             : activeLesson.status === "DELAYED"
-                            ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
-                            : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
-                        }`}
+                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
+                              : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
+                          }`}
                       >
                         ● {activeLesson.status === "IN_PROGRESS" ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                       </span>
@@ -877,73 +871,73 @@ export default function TutorDashboardPage() {
                     );
                   })
                   .map((student) => (
-                  <div
-                    key={student.id}
-                    className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
-                        {student.name}
+                    <div
+                      key={student.id}
+                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                          {student.name}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                          {student.email ? <span>{student.email}</span> : <span>Student Profile</span>}
+                          <span>•</span>
+                          <span className="text-[#48A5EE] font-medium">Assigned to You</span>
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                        {student.email ? <span>{student.email}</span> : <span>Student Profile</span>}
-                        <span>•</span>
-                        <span className="text-[#48A5EE] font-medium">Assigned to You</span>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Weekly Calendar Modal Button */}
-                      <button
-                        onClick={() => handleOpenCalendar(student)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/70 dark:border-slate-700"
-                        title="Open Weekly Timetable"
-                      >
-                        <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-                        <span>Weekly Calendar</span>
-                      </button>
-
-                      {/* Visible PIN */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                        <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                        <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
-                        <strong className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
-                          {student.pin || "----"}
-                        </strong>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Weekly Calendar Modal Button */}
                         <button
-                          onClick={() => handleCopyPin(`stu-pin-${student.id}`, student.pin)}
-                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                          title="Copy PIN"
+                          onClick={() => handleOpenCalendar(student)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/70 dark:border-slate-700"
+                          title="Open Weekly Timetable"
                         >
-                          {copiedKey === `stu-pin-${student.id}` ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                          <span>Weekly Calendar</span>
+                        </button>
+
+                        {/* Visible PIN */}
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
+                          <strong className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
+                            {student.pin || "----"}
+                          </strong>
+                          <button
+                            onClick={() => handleCopyPin(`stu-pin-${student.id}`, student.pin)}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                            title="Copy PIN"
+                          >
+                            {copiedKey === `stu-pin-${student.id}` ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* 1-Click Copy Magic Link */}
+                        <button
+                          onClick={() => handleCopyLink(`stu-magic-${student.id}`, student.magicKey)}
+                          className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          title="Copy Student Magic Link"
+                        >
+                          {copiedKey === `stu-magic-${student.id}` ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Link Copied!</span>
+                            </>
                           ) : (
-                            <Copy className="w-3.5 h-3.5" />
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Copy Magic Link</span>
+                            </>
                           )}
                         </button>
                       </div>
-
-                      {/* 1-Click Copy Magic Link */}
-                      <button
-                        onClick={() => handleCopyLink(`stu-magic-${student.id}`, student.magicKey)}
-                        className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                        title="Copy Student Magic Link"
-                      >
-                        {copiedKey === `stu-magic-${student.id}` ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Link Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>Copy Magic Link</span>
-                          </>
-                        )}
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -1143,9 +1137,8 @@ export default function TutorDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
-                    isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
-                  }`}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -1169,123 +1162,122 @@ export default function TutorDashboardPage() {
                 {isUpcomingOpen && (
                   <div className="space-y-3 pt-3">
 
-                {upcomingList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-2">
-                    <Calendar className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
-                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Upcoming Lessons</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Your upcoming scheduled lessons will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
-                        <tr>
-                          <th className="px-4 py-3">Student &amp; Lesson</th>
-                          <th className="px-3 py-3">Date &amp; Time</th>
-                          <th className="px-2 py-3 text-center">Status</th>
-                          <th className="px-3 py-3">PIN &amp; Link</th>
-                          <th className="px-3 py-3 text-center">Cancel / Complete</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {upcomingList.map((s) => (
-                          <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-slate-800 dark:text-slate-100">
-                                {s.tutee?.name}
-                              </div>
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                {s.title}
-                              </div>
-                            </td>
-                            <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                              <div className="font-semibold text-slate-700 dark:text-slate-200">
-                                {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                })}{" "}
-                                &bull;{" "}
-                                {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </div>
-                              <div className="mt-1 flex items-center gap-2 font-sans">
-                                {s.teamsMeetingUrl ? (
-                                  <a
-                                    href={s.teamsMeetingUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                    {upcomingList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-2">
+                        <Calendar className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Upcoming Lessons</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Your upcoming scheduled lessons will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
+                            <tr>
+                              <th className="px-4 py-3">Student &amp; Lesson</th>
+                              <th className="px-3 py-3">Date &amp; Time</th>
+                              <th className="px-2 py-3 text-center">Status</th>
+                              <th className="px-3 py-3">PIN &amp; Link</th>
+                              <th className="px-3 py-3 text-center">Cancel / Complete</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {upcomingList.map((s) => (
+                              <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                                <td className="px-4 py-3">
+                                  <div className="font-bold text-slate-800 dark:text-slate-100">
+                                    {s.tutee?.name}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    {s.title}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                                  <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                    {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                      weekday: "short",
+                                      month: "short",
+                                      day: "numeric",
+                                    })}{" "}
+                                    &bull;{" "}
+                                    {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                  <div className="mt-1 flex items-center gap-2 font-sans">
+                                    {s.teamsMeetingUrl ? (
+                                      <a
+                                        href={s.teamsMeetingUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                      >
+                                        <Video className="w-3 h-3" />
+                                        <span>Teams</span>
+                                      </a>
+                                    ) : (
+                                      <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                    )}
+                                    <AddToCalendar session={s} compact />
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-center whitespace-nowrap">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === "IN_PROGRESS"
+                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                        : s.status === "DELAYED"
+                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                      }`}
                                   >
-                                    <Video className="w-3 h-3" />
-                                    <span>Teams</span>
-                                  </a>
-                                ) : (
-                                  <span className="text-slate-400 italic text-[10px]">No Teams</span>
-                                )}
-                                <AddToCalendar session={s} compact />
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center whitespace-nowrap">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  s.status === "IN_PROGRESS"
-                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                    : s.status === "DELAYED"
-                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                                }`}
-                              >
-                                {s.status}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3">
-                              <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
-                                  PIN: {s.tutee?.pin || "----"}
-                                </span>
-                                <button
-                                  onClick={() => handleCopyLink(`sess-${s.id}`, s.tutee?.magicKey)}
-                                  className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
-                                  title="Copy Magic Link"
-                                >
-                                  {copiedKey === `sess-${s.id}` ? "Copied!" : "Link"}
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-3 py-3 text-center">
-                              <div className="flex flex-col items-center gap-1 min-w-[90px]">
-                                <button
-                                  onClick={() => {
-                                    setSessionToComplete(s);
-                                    setIsCompletionModalOpen(true);
-                                  }}
-                                  className="w-full px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap"
-                                  title="Complete Lesson & Submit Report"
-                                >
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  <span>Complete</span>
-                                </button>
-                                <button
-                                  onClick={() => handleCancelSession(s)}
-                                  className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"
-                                  title="Cancel this lesson"
-                                >
-                                  <XCircle className="w-2.5 h-2.5 text-rose-500" />
-                                  <span>Cancel</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                                    {s.status}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                      PIN: {s.tutee?.pin || "----"}
+                                    </span>
+                                    <button
+                                      onClick={() => handleCopyLink(`sess-${s.id}`, s.tutee?.magicKey)}
+                                      className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
+                                      title="Copy Magic Link"
+                                    >
+                                      {copiedKey === `sess-${s.id}` ? "Copied!" : "Link"}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3 text-center">
+                                  <div className="flex flex-col items-center gap-1 min-w-[90px]">
+                                    <button
+                                      onClick={() => {
+                                        setSessionToComplete(s);
+                                        setIsCompletionModalOpen(true);
+                                      }}
+                                      className="w-full px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap"
+                                      title="Complete Lesson & Submit Report"
+                                    >
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      <span>Complete</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleCancelSession(s)}
+                                      className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"
+                                      title="Cancel this lesson"
+                                    >
+                                      <XCircle className="w-2.5 h-2.5 text-rose-500" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1295,9 +1287,8 @@ export default function TutorDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${
-                    isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
-                  }`}
+                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-2">
@@ -1321,90 +1312,90 @@ export default function TutorDashboardPage() {
                 {isCompletedOpen && (
                   <div className="space-y-3">
 
-                {completedUnpaidList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-1">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Pending Payouts</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      All your completed lessons have been paid or none are pending.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {completedUnpaidList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
-                      >
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                              {s.tutee?.name}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}{" "}
-                              {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
+                    {completedUnpaidList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-1">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Pending Payouts</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          All your completed lessons have been paid or none are pending.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {completedUnpaidList.map((s) => (
+                          <div
+                            key={s.id}
+                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                  {s.tutee?.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                  {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}{" "}
+                                  {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
 
-                            {/* 5-Star Rating Badge */}
-                            {s.feedbackRating ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                <span>{s.feedbackRating}/5 Stars</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">No rating submitted</span>
-                            )}
+                                {/* 5-Star Rating Badge */}
+                                {s.feedbackRating ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold">
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span>{s.feedbackRating}/5 Stars</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No rating submitted</span>
+                                )}
 
-                            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
-                              Payment Pending
-                            </span>
-                          </div>
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
+                                  Payment Pending
+                                </span>
+                              </div>
 
-                          {/* What was covered & notes */}
-                          {s.feedbackCovered ? (
-                            <div className="text-xs bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-[#48A5EE] mr-1">Covered:</span>
-                              {s.feedbackCovered}
-                              {s.feedbackNotes && (
-                                <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
-                                  Notes: &quot;{s.feedbackNotes}&quot;
+                              {/* What was covered & notes */}
+                              {s.feedbackCovered ? (
+                                <div className="text-xs bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                  <span className="font-bold text-[#48A5EE] mr-1">Covered:</span>
+                                  {s.feedbackCovered}
+                                  {s.feedbackNotes && (
+                                    <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
+                                      Notes: &quot;{s.feedbackNotes}&quot;
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-400 italic">
+                                  Lesson report pending.
                                 </p>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-xs text-slate-400 italic">
-                              Lesson report pending.
-                            </p>
-                          )}
-                        </div>
 
-                        {/* Edit Report Button (Available until marked as paid by admin) */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => {
-                              setSessionToComplete(s);
-                              setIsCompletionModalOpen(true);
-                            }}
-                            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE] text-slate-700 dark:text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm cursor-pointer"
-                            title="Edit Covered Topics, Rating & Notes"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Edit Report</span>
-                          </button>
-                        </div>
+                            {/* Edit Report Button (Available until marked as paid by admin) */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setSessionToComplete(s);
+                                  setIsCompletionModalOpen(true);
+                                }}
+                                className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE] text-slate-700 dark:text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm cursor-pointer"
+                                title="Edit Covered Topics, Rating & Notes"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit Report</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
                   </div>
                 )}
               </div>
@@ -1414,9 +1405,8 @@ export default function TutorDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${
-                    isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
-                  }`}
+                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-rose-950 dark:text-rose-200 flex items-center gap-2">
@@ -1509,9 +1499,8 @@ export default function TutorDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${
-                    isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
-                  }`}
+                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                    }`}
                 >
                   <div>
                     <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -1535,65 +1524,65 @@ export default function TutorDashboardPage() {
                 {isArchivedOpen && (
                   <div className="space-y-3">
 
-                {archivedPaidList.length === 0 ? (
-                  <div className="text-center py-10 px-4 space-y-1 text-xs text-slate-400">
-                    No archived paid lessons yet.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {archivedPaidList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                      >
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                              {s.tutee?.name}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                              {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
+                    {archivedPaidList.length === 0 ? (
+                      <div className="text-center py-10 px-4 space-y-1 text-xs text-slate-400">
+                        No archived paid lessons yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {archivedPaidList.map((s) => (
+                          <div
+                            key={s.id}
+                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                                  {s.tutee?.name}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">&bull;</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                  {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
 
-                            {s.feedbackRating && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                <span>{s.feedbackRating}/5</span>
-                              </span>
-                            )}
+                                {s.feedbackRating && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                    <span>{s.feedbackRating}/5</span>
+                                  </span>
+                                )}
 
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
-                              Paid &amp; Archived
-                            </span>
-                          </div>
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
+                                  Paid &amp; Archived
+                                </span>
+                              </div>
 
-                          {s.feedbackCovered && (
-                            <div className="text-xs bg-slate-50 dark:bg-slate-800/70 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                              <span className="font-bold text-slate-600 dark:text-slate-400 mr-1">Covered:</span>
-                              {s.feedbackCovered}
-                              {s.feedbackNotes && (
-                                <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
-                                  Notes: &quot;{s.feedbackNotes}&quot;
-                                </p>
+                              {s.feedbackCovered && (
+                                <div className="text-xs bg-slate-50 dark:bg-slate-800/70 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                  <span className="font-bold text-slate-600 dark:text-slate-400 mr-1">Covered:</span>
+                                  {s.feedbackCovered}
+                                  {s.feedbackNotes && (
+                                    <p className="text-slate-500 dark:text-slate-400 mt-0.5 italic">
+                                      Notes: &quot;{s.feedbackNotes}&quot;
+                                    </p>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* Paid Lock Indicator */}
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs font-semibold shrink-0 border border-slate-200 dark:border-slate-700">
-                          <Lock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Report Locked (Paid)</span>
-                        </div>
+                            {/* Paid Lock Indicator */}
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs font-semibold shrink-0 border border-slate-200 dark:border-slate-700">
+                              <Lock className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Report Locked (Paid)</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
                   </div>
                 )}
               </div>
