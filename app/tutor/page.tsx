@@ -136,7 +136,7 @@ export default function TutorDashboardPage() {
     initTutorData();
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 15000);
+    }, 1000);
 
     const handleSwitchTab = (e: any) => {
       if (e.detail) setActiveTab(e.detail);
@@ -157,6 +157,16 @@ export default function TutorDashboardPage() {
       window.removeEventListener("switch-tab", handleSwitchTab);
     };
   }, []);
+
+  // When a lesson hits its start time, automatically sync with server to pick up IN_PROGRESS status
+  useEffect(() => {
+    if (!activeLesson || activeLesson.status === "IN_PROGRESS") return;
+    const startMs = new Date(activeLesson.scheduledStartTime).getTime();
+    const endMs = new Date(activeLesson.scheduledEndTime).getTime();
+    if (currentTime >= startMs && currentTime < endMs) {
+      loadMySessions();
+    }
+  }, [currentTime, activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
   // Smart polling: refresh the active lesson so the tutor sees studentTopic updates in real time
   useEffect(() => {
@@ -264,6 +274,8 @@ export default function TutorDashboardPage() {
       if (live) {
         setActiveLesson(live);
         setTeamsUrlInput(live.teamsMeetingUrl || "");
+      } else {
+        setActiveLesson(null);
       }
     } catch (err) {
       console.error("Error loading sessions:", err);
@@ -531,6 +543,14 @@ export default function TutorDashboardPage() {
     }
   };
 
+  const isLessonLive =
+    activeLesson &&
+    (activeLesson.status === "IN_PROGRESS" ||
+      (currentTime >= new Date(activeLesson.scheduledStartTime).getTime() &&
+        currentTime < new Date(activeLesson.scheduledEndTime).getTime() &&
+        activeLesson.status !== "COMPLETED" &&
+        activeLesson.status !== "CANCELLED"));
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
       <Navbar user={currentUser} />
@@ -671,14 +691,14 @@ export default function TutorDashboardPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${activeLesson.status === "IN_PROGRESS"
+                        className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${isLessonLive
                             ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                             : activeLesson.status === "DELAYED"
                               ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
                               : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
                           }`}
                       >
-                        ● {activeLesson.status === "IN_PROGRESS" ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
+                        ● {isLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                       </span>
                       {activeLesson.status === "DELAYED" && activeLesson.delayReason && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
@@ -799,7 +819,7 @@ export default function TutorDashboardPage() {
 
                 {/* Real-time Session Action Triggers */}
                 <div className="flex flex-wrap items-center gap-3 pt-2">
-                  {activeLesson.status !== "IN_PROGRESS" && (
+                  {!isLessonLive && (
                     <>
                       <button
                         onClick={handleStartLessonNow}
@@ -1237,7 +1257,15 @@ export default function TutorDashboardPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {upcomingList.map((s) => (
+                            {upcomingList.map((s) => {
+                              const isRowLive =
+                                s.status === "IN_PROGRESS" ||
+                                (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                  currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                  s.status !== "COMPLETED" &&
+                                  s.status !== "CANCELLED");
+
+                              return (
                               <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                                 <td className="px-4 py-3">
                                   <div className="font-bold text-slate-800 dark:text-slate-100">
@@ -1285,14 +1313,14 @@ export default function TutorDashboardPage() {
                                 </td>
                                 <td className="px-2 py-3 text-center whitespace-nowrap">
                                   <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === "IN_PROGRESS"
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
                                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                         : s.status === "DELAYED"
                                           ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                           : "bg-[#48A5EE]/15 text-[#48A5EE]"
                                       }`}
                                   >
-                                    {s.status}
+                                    {isRowLive ? "IN_PROGRESS" : s.status}
                                   </span>
                                 </td>
                                 <td className="px-3 py-3">
@@ -1333,7 +1361,8 @@ export default function TutorDashboardPage() {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                            );
+                          })}
                           </tbody>
                         </table>
                       </div>

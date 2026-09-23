@@ -21,6 +21,24 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const activeOnly = searchParams.get("active") === "true";
 
+    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
+    const now = new Date();
+    try {
+      await prisma.session.updateMany({
+        where: {
+          status: { in: ["SCHEDULED", "DELAYED"] },
+          scheduledStartTime: { lte: now },
+          scheduledEndTime: { gt: now },
+        },
+        data: {
+          status: "IN_PROGRESS",
+          actualStartTime: now,
+        },
+      });
+    } catch (e) {
+      console.error("Auto-start sessions error in /api/sessions:", e);
+    }
+
     const where: any = {};
 
     if (user.role === "TUTEE") {

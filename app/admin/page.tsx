@@ -386,7 +386,7 @@ export default function AdminPage() {
     initAdminData();
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 15000);
+    }, 1000);
 
     const handleSwitchTab = (e: any) => {
       if (e.detail) setActiveTab(e.detail);
@@ -407,6 +407,16 @@ export default function AdminPage() {
       window.removeEventListener("switch-tab", handleSwitchTab);
     };
   }, []);
+
+  // When an active lesson hits its start time, automatically sync with server to pick up IN_PROGRESS status
+  useEffect(() => {
+    if (!activeLesson || activeLesson.status === "IN_PROGRESS") return;
+    const startMs = new Date(activeLesson.scheduledStartTime).getTime();
+    const endMs = new Date(activeLesson.scheduledEndTime).getTime();
+    if (currentTime >= startMs && currentTime < endMs) {
+      refreshAllData();
+    }
+  }, [currentTime, activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
   const initAdminData = async () => {
     setLoading(true);
@@ -1583,6 +1593,14 @@ export default function AdminPage() {
     );
   }
 
+  const isAdminLessonLive =
+    activeLesson &&
+    (activeLesson.status === "IN_PROGRESS" ||
+      (currentTime >= new Date(activeLesson.scheduledStartTime).getTime() &&
+        currentTime < new Date(activeLesson.scheduledEndTime).getTime() &&
+        activeLesson.status !== "COMPLETED" &&
+        activeLesson.status !== "CANCELLED"));
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <Navbar user={currentUser} />
@@ -1648,14 +1666,14 @@ export default function AdminPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${activeLesson.status === "IN_PROGRESS"
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${isAdminLessonLive
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                         : activeLesson.status === "DELAYED"
                           ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                           : "bg-[#48A5EE]/15 text-[#48A5EE]"
                       }`}
                   >
-                    ● {activeLesson.status}
+                    ● {isAdminLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                   </span>
                   {activeLesson.delayMinutes > 0 && (
                     <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold">
@@ -1820,7 +1838,7 @@ export default function AdminPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {activeLesson.status !== "IN_PROGRESS" && (
+                {!isAdminLessonLive && (
                   <>
                     <button
                       onClick={handleStartNow}
@@ -2335,7 +2353,15 @@ export default function AdminPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {upcomingList.map((s) => (
+                            {upcomingList.map((s) => {
+                              const isRowLive =
+                                s.status === "IN_PROGRESS" ||
+                                (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                  currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                  s.status !== "COMPLETED" &&
+                                  s.status !== "CANCELLED");
+
+                              return (
                               <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                                 <td className="px-4 py-3">
                                   <div className="font-bold text-slate-800 dark:text-slate-100">
@@ -2411,14 +2437,14 @@ export default function AdminPage() {
                                 </td>
                                 <td className="px-2 py-3 text-center whitespace-nowrap">
                                   <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === "IN_PROGRESS"
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
                                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                         : s.status === "DELAYED"
                                           ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                           : "bg-[#48A5EE]/15 text-[#48A5EE]"
                                       }`}
                                   >
-                                    {s.status}
+                                    {isRowLive ? "IN_PROGRESS" : s.status}
                                   </span>
                                 </td>
                                 <td className="px-3 py-3">
@@ -2532,7 +2558,8 @@ export default function AdminPage() {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                            );
+                          })}
                           </tbody>
                         </table>
                       </div>
@@ -3327,7 +3354,7 @@ export default function AdminPage() {
                         <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <span>{st.name}</span>
-                            {sessions.some((s) => s.tuteeId === st.id && s.status === "IN_PROGRESS") ? (
+                            {sessions.some((s) => s.tuteeId === st.id && (s.status === "IN_PROGRESS" || (currentTime >= new Date(s.scheduledStartTime).getTime() && currentTime < new Date(s.scheduledEndTime).getTime() && s.status !== "COMPLETED" && s.status !== "CANCELLED"))) ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
                                 ● Live
                               </span>
@@ -3335,7 +3362,7 @@ export default function AdminPage() {
                               (s) =>
                                 s.tuteeId === st.id &&
                                 (s.status === "SCHEDULED" || s.status === "DELAYED") &&
-                                new Date(s.scheduledEndTime).getTime() > Date.now()
+                                new Date(s.scheduledEndTime).getTime() > currentTime
                             ) ? (
                               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
                                 Upcoming

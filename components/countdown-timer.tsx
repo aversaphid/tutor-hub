@@ -120,6 +120,11 @@ export default function CountdownTimer({
               confetti({ particleCount: 50, spread: 60 });
             } catch { }
           }
+          if (session.status !== "IN_PROGRESS") {
+            const updatedLiveSession = { ...session, status: "IN_PROGRESS" as const };
+            setSession(updatedLiveSession);
+            onStatusChange?.(updatedLiveSession);
+          }
         }
       } else {
         const totalSeconds = Math.floor(diff / 1000);
@@ -214,7 +219,7 @@ export default function CountdownTimer({
                       : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
                   }`}
               >
-                {session.status === "IN_PROGRESS"
+                {isLiveNow
                   ? "● Lesson Live Now"
                   : session.status === "DELAYED"
                     ? `Delayed (+${session.delayMinutes}m)`

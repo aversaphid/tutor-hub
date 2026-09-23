@@ -20,6 +20,23 @@ export async function GET(request: Request) {
     let session = null;
     const now = new Date();
 
+    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
+    try {
+      await prisma.session.updateMany({
+        where: {
+          status: { in: ["SCHEDULED", "DELAYED"] },
+          scheduledStartTime: { lte: now },
+          scheduledEndTime: { gt: now },
+        },
+        data: {
+          status: "IN_PROGRESS",
+          actualStartTime: now,
+        },
+      });
+    } catch (e) {
+      console.error("Auto-start sessions error in /api/sessions/live:", e);
+    }
+
     const isStudent = user.role === "TUTEE";
     const include = {
       tutor: { select: { id: true, name: true, email: true } },

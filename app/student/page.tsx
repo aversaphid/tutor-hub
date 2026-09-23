@@ -424,7 +424,12 @@ function StudentLobbyContent() {
             {/* Countdown Box */}
             <CountdownTimer
               initialSession={activeSession}
-              onStatusChange={(updated) => setActiveSession(updated)}
+              onStatusChange={(updated) => {
+                setActiveSession(updated);
+                if (currentUser?.id) {
+                  loadStudentSessions(currentUser.id);
+                }
+              }}
             />
 
             {/* Topic for Today's Lesson */}
