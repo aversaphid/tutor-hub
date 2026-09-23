@@ -21,6 +21,8 @@ import {
   X,
   XCircle,
   Info,
+  BookOpen,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
@@ -45,6 +47,28 @@ function StudentLobbyContent() {
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
+
+  // Student topic for lesson
+  const [topicInput, setTopicInput] = useState("");
+  const [topicSaved, setTopicSaved] = useState(false);
+  const [isSavingTopic, setIsSavingTopic] = useState(false);
+
+  const handleSaveTopic = async () => {
+    if (!activeSession) return;
+    setIsSavingTopic(true);
+    try {
+      const res = await fetch(`/api/sessions/${activeSession.id}/topic`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentTopic: topicInput.trim() || null }),
+      });
+      if (res.ok) {
+        setTopicSaved(true);
+        setTimeout(() => setTopicSaved(false), 2500);
+      }
+    } catch { }
+    setIsSavingTopic(false);
+  };
 
   const getTutorEmail = (tutorName?: string | null) => {
     const cleanName = (tutorName || "tutor").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -122,6 +146,8 @@ function StudentLobbyContent() {
             new Date(s.scheduledEndTime).getTime() > now
         );
       setActiveSession(live || null);
+      // Pre-fill topic input with whatever the student previously saved
+      if (live?.studentTopic) setTopicInput(live.studentTopic);
       setUpcomingSessions(
         sessions.filter(
           (s) =>
@@ -400,6 +426,50 @@ function StudentLobbyContent() {
               initialSession={activeSession}
               onStatusChange={(updated) => setActiveSession(updated)}
             />
+
+            {/* Topic for Today's Lesson */}
+            {(activeSession.status === "SCHEDULED" || activeSession.status === "DELAYED" || activeSession.status === "IN_PROGRESS") && (
+              <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center shrink-0">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">What would you like to cover today?</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Your tutor can see this as soon as you save it.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    id="student-topic-input"
+                    type="text"
+                    value={topicInput}
+                    onChange={(e) => setTopicInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveTopic()}
+                    placeholder="e.g. Quadratics, Trigonometry, Past paper Q5..."
+                    maxLength={300}
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveTopic}
+                    disabled={isSavingTopic}
+                    className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                  >
+                    {topicSaved ? (
+                      <><Check className="w-3.5 h-3.5" /><span>Saved!</span></>
+                    ) : (
+                      <><Send className="w-3.5 h-3.5" /><span>{isSavingTopic ? "Saving..." : "Save"}</span></>
+                    )}
+                  </button>
+                </div>
+                {activeSession.studentTopic && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-1">
+                    Currently saved: <span className="font-semibold text-slate-700 dark:text-slate-300">{activeSession.studentTopic}</span>
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* InPrivate Teams Launcher */}
             <TeamsLauncher

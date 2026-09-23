@@ -1729,6 +1729,14 @@ export default function AdminPage() {
                   </button>
                 </div>
 
+                {/* STUDENT TOPIC FOR TODAY */}
+                {activeLesson.studentTopic && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                    <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                    <span>Student&apos;s topic: {activeLesson.studentTopic}</span>
+                  </div>
+                )}
+
                 {/* PERSONAL REMINDER & ATTENDANCE CONFIRMATION TOGGLES */}
                 <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                   {/* Reminder Badge/Button */}

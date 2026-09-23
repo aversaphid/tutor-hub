@@ -158,6 +158,54 @@ export default function TutorDashboardPage() {
     };
   }, []);
 
+  // Smart polling: refresh the active lesson so the tutor sees studentTopic updates in real time
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    let pollTimer: NodeJS.Timeout | null = null;
+
+    const scheduleNextPoll = () => {
+      if (pollTimer) clearTimeout(pollTimer);
+      // Don't poll when tab is hidden
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+
+      // Poll faster when a lesson is live or starting soon
+      const now = Date.now();
+      const isLiveOrSoon =
+        activeLesson &&
+        (activeLesson.status === "IN_PROGRESS" ||
+          new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
+
+      const delay = isLiveOrSoon ? 6000 : 10000;
+
+      pollTimer = setTimeout(async () => {
+        await loadMySessions();
+        scheduleNextPoll();
+      }, delay);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadMySessions();
+        scheduleNextPoll();
+      } else if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+
+    scheduleNextPoll();
+
+    return () => {
+      if (pollTimer) clearTimeout(pollTimer);
+      window.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, [currentUser?.id, activeLesson?.status, activeLesson?.scheduledStartTime]);
+
   const initTutorData = async () => {
     setLoading(true);
     try {
@@ -194,7 +242,7 @@ export default function TutorDashboardPage() {
 
   const loadMySessions = async () => {
     try {
-      const res = await fetch("/api/sessions", { cache: "no-store" });
+      const res = await fetch(`/api/sessions?_t=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       const sessions = data.sessions || [];
@@ -665,6 +713,12 @@ export default function TutorDashboardPage() {
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
                     </p>
+                    {activeLesson.studentTopic && (
+                      <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                        <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                        <span>Today&apos;s topic: {activeLesson.studentTopic}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* VISIBLE PIN & MAGIC LINK FOR NEXT MEETING */}
@@ -1192,6 +1246,12 @@ export default function TutorDashboardPage() {
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {s.title}
                                   </div>
+                                  {s.studentTopic && (
+                                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
+                                      <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                                      <span>{s.studentTopic}</span>
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
                                   <div className="font-semibold text-slate-700 dark:text-slate-200">

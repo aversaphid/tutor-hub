@@ -71,6 +71,7 @@ model Session {
   teamsMeetingUrl    String?
   unlockEarlyMinutes Int           @default(5)
   notes              String?
+  studentTopic       String?       // Topic set by the student before the lesson starts
 
   // Admin Personal Reminder & Attendance Confirmations
   adminReminder      String?       // Personal reminder set by admin on the lesson
