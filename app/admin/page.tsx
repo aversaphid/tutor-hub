@@ -102,8 +102,6 @@ export default function AdminPage() {
   const [studentTutorFilter, setStudentTutorFilter] = useState("ALL");
   const [studentLessonFilter, setStudentLessonFilter] = useState<"ALL" | "HAS_UPCOMING" | "NO_UPCOMING">("ALL");
   const [studentStatusFilter, setStudentStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "FLAGGED">("ALL");
-  const [retentionThresholdDays, setRetentionThresholdDays] = useState<number>(90);
-  const [isDebugRetentionOpen, setIsDebugRetentionOpen] = useState(false);
   const [studentSortBy, setStudentSortBy] = useState<"name_asc" | "name_desc" | "tutor" | "newest">("name_asc");
 
   // Search, filter, and sort state for Tutors directory
@@ -1489,6 +1487,9 @@ export default function AdminPage() {
     } catch { }
   };
 
+  // Data retention policy: 90 days of no lessons flags student profile for erasure per UK GDPR Art. 5(1)(e)
+  const RETENTION_THRESHOLD_DAYS = 90;
+
   // Helper to compute inactivity and data retention flag for a student
   const getStudentInactivityInfo = (st: any) => {
     const studentSessions = sessions.filter(
@@ -1523,7 +1524,7 @@ export default function AdminPage() {
     }
 
     const daysSinceLastLesson = Math.max(0, Math.floor((now - referenceMs) / (1000 * 60 * 60 * 24)));
-    const isFlaggedForRetention = daysSinceLastLesson >= retentionThresholdDays;
+    const isFlaggedForRetention = daysSinceLastLesson >= RETENTION_THRESHOLD_DAYS;
 
     return {
       daysSinceLastLesson,
@@ -1536,7 +1537,7 @@ export default function AdminPage() {
 
   const flaggedStudentsCount = useMemo(() => {
     return students.filter((st) => getStudentInactivityInfo(st).isFlaggedForRetention).length;
-  }, [students, sessions, retentionThresholdDays, currentTime]);
+  }, [students, sessions, currentTime]);
 
   // Memoized filtered students list
   const filteredStudents = useMemo(() => {
@@ -1596,7 +1597,7 @@ export default function AdminPage() {
         }
         return 0;
       });
-  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentStatusFilter, studentSortBy, sessions, retentionThresholdDays, currentTime]);
+  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentStatusFilter, studentSortBy, sessions, currentTime]);
 
   // Memoized filtered tutors list
   const filteredTutors = useMemo(() => {
@@ -3296,7 +3297,7 @@ export default function AdminPage() {
                     <span className="ml-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 text-rose-500" />
                       <span>
-                        {flaggedStudentsCount} Flagged for Deletion ({retentionThresholdDays}d+ No Lessons)
+                        {flaggedStudentsCount} Flagged for Deletion (90d+ No Lessons)
                       </span>
                     </span>
                   )}
@@ -3410,21 +3411,6 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              {/* Retention Policy Debug Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsDebugRetentionOpen(!isDebugRetentionOpen)}
-                className={`py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border shrink-0 ${
-                  isDebugRetentionOpen
-                    ? "bg-purple-600 text-white border-purple-700 shadow-sm"
-                    : "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/60"
-                }`}
-                title="Toggle Local Debug Controls for testing inactivity data retention thresholds"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Debug Retention ({retentionThresholdDays}d)</span>
-              </button>
-
               {/* Reset button */}
               {(studentSearchTerm || studentTutorFilter !== "ALL" || studentStatusFilter !== "ALL" || studentLessonFilter !== "ALL" || studentSortBy !== "name_asc") && (
                 <button
@@ -3443,58 +3429,6 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* Interactive Debug Controls for Testing Inactivity Deletion Flag Locally */}
-            {isDebugRetentionOpen && (
-              <div className="p-3.5 bg-purple-50/90 dark:bg-purple-950/50 border-b border-purple-200 dark:border-purple-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 font-mono font-bold text-[10px]">
-                    LOCAL DEBUG
-                  </span>
-                  <span className="font-semibold text-purple-950 dark:text-purple-200">
-                    Simulate Inactivity Threshold (Days without lessons):
-                  </span>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {[
-                      { label: "0 Days (Test All)", value: 0 },
-                      { label: "7 Days", value: 7 },
-                      { label: "30 Days", value: 30 },
-                      { label: "90 Days (Policy)", value: 90 },
-                      { label: "180 Days", value: 180 },
-                    ].map((preset) => (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => setRetentionThresholdDays(preset.value)}
-                        className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
-                          retentionThresholdDays === preset.value
-                            ? "bg-purple-600 text-white shadow-sm"
-                            : "bg-white dark:bg-slate-800 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700 hover:bg-purple-100"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-purple-800 dark:text-purple-300">
-                  <span>
-                    Threshold: <strong>{retentionThresholdDays}d</strong> &bull;{" "}
-                    <strong>{flaggedStudentsCount}</strong> student{flaggedStudentsCount === 1 ? "" : "s"} currently flagged
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRetentionThresholdDays(90);
-                      setStudentStatusFilter("ALL");
-                    }}
-                    className="text-[10px] underline text-purple-600 dark:text-purple-400 hover:text-purple-800 cursor-pointer font-semibold"
-                  >
-                    Reset to 90d
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* UK GDPR & Privacy Policy Inactivity Deletion Notice */}
             {flaggedStudentsCount > 0 && (
               <div className="mx-4 my-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -3506,7 +3440,7 @@ export default function AdminPage() {
                     <div className="font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5 flex-wrap">
                       <span>Data Retention Policy Alert: {flaggedStudentsCount} Student{flaggedStudentsCount > 1 ? "s" : ""} Flagged for Deletion</span>
                       <span className="px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-mono text-[10px]">
-                        No lessons for &ge; {retentionThresholdDays} days
+                        No lessons for &ge; 90 days
                       </span>
                     </div>
                     <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
@@ -3595,19 +3529,15 @@ export default function AdminPage() {
                               ) : null}
                             </div>
                             {/* Inactivity Deletion Flag (Policy: no lessons for retention threshold) */}
-                            {inactivity.isFlaggedForRetention ? (
+                            {inactivity.isFlaggedForRetention && (
                               <span
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-[10px] font-bold w-fit"
-                                title={`Flagged for Deletion: No lessons conducted for ${inactivity.daysSinceLastLesson} days (Threshold: ${retentionThresholdDays}d). In abidance with UK GDPR Art. 5(1)(e) & Privacy Policy.`}
+                                title={`Flagged for Deletion: No lessons conducted for ${inactivity.daysSinceLastLesson} days (Policy threshold: 90 days). In abidance with UK GDPR Art. 5(1)(e) & Privacy Policy.`}
                               >
                                 <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
                                 <span>Flagged for Deletion ({inactivity.daysSinceLastLesson}d no lessons)</span>
                               </span>
-                            ) : isDebugRetentionOpen ? (
-                              <span className="text-[10px] font-mono font-medium text-purple-600 dark:text-purple-400">
-                                {inactivity.hasUpcoming ? "debug: upcoming scheduled" : `debug: ${inactivity.daysSinceLastLesson}d without lessons`}
-                              </span>
-                            ) : null}
+                            )}
                           </div>
                         </td>
 
