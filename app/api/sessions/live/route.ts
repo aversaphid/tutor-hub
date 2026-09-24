@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 import { getCurrentUser } from "@/lib/auth";
 
+import { sanitizeSessionForRole } from "@/lib/session-sanitizer";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -112,7 +114,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       serverTime: now.toISOString(),
-      session,
+      session: sanitizeSessionForRole(session, user.role),
     });
   } catch (err) {
     console.error("Live session polling error:", err);

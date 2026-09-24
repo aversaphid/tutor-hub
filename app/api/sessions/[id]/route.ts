@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { UpdateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
 import { logSessionAudit } from "@/lib/audit";
+import { sanitizeSessionForRole } from "@/lib/session-sanitizer";
 
 export async function GET(
   request: Request,
@@ -55,7 +56,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
 
-    return NextResponse.json({ session });
+    return NextResponse.json({ session: sanitizeSessionForRole(session, user.role) });
   } catch (err) {
     console.error("Session GET error:", err);
     return NextResponse.json(
@@ -76,7 +77,12 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const existing = await prisma.session.findUnique({ where: { id } });
+    const existing = await prisma.session.findUnique({
+      where: { id },
+      include: {
+        tutee: { select: { studentPay: true, tutorPay: true } },
+      },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
@@ -100,8 +106,8 @@ export async function PATCH(
 
     const updates = parseResult.data;
     const updateData: any = {};
-    let auditAction: any = "TEAMS_LINK_UPDATED";
-    let auditDetails = "";
+    const auditDetailsList: string[] = [];
+    let auditAction: any = "REPORT_EDITED";
 
     const targetTutorId = (updates.tutorId && user.role === "HEAD_TUTOR") ? updates.tutorId : existing.tutorId;
 
@@ -143,17 +149,17 @@ export async function PATCH(
         updateData.tutorId = updates.tutorId;
       }
       auditAction = "RESCHEDULED";
-      auditDetails = `Session adjusted: ${newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${newEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      auditDetailsList.push(`Session adjusted: ${newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${newEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
     }
 
     if (updates.teamsMeetingUrl !== undefined) {
       updateData.teamsMeetingUrl = updates.teamsMeetingUrl || null;
-      if (!auditDetails) {
-        auditAction = "TEAMS_LINK_UPDATED";
-        auditDetails = updates.teamsMeetingUrl
+      auditDetailsList.push(
+        updates.teamsMeetingUrl
           ? "Teams meeting link updated."
-          : "Teams meeting link cleared.";
-      }
+          : "Teams meeting link cleared."
+      );
+      if (auditAction === "REPORT_EDITED") auditAction = "TEAMS_LINK_UPDATED";
     }
 
     if (user.role === "TUTEE") {
@@ -169,9 +175,13 @@ export async function PATCH(
         updateData.status = updates.status;
         if (updates.status === "CANCELLED") {
           auditAction = "CANCELLED";
-          auditDetails = updates.notes
-            ? `Lesson cancelled. Reason: ${updates.notes}`
-            : "Lesson cancelled by tutor/admin.";
+          auditDetailsList.push(
+            updates.notes
+              ? `Lesson cancelled. Reason: ${updates.notes}`
+              : "Lesson cancelled by tutor/admin."
+          );
+        } else {
+          auditDetailsList.push(`Status changed to ${updates.status}`);
         }
       }
       if (updates.tutorId !== undefined && user.role === "HEAD_TUTOR" && !updateData.tutorId) {
@@ -182,41 +192,52 @@ export async function PATCH(
         updateData.tutorPaidAt = updates.tutorPaid ? new Date() : null;
         if (updates.tutorPaid) {
           // Permanently snapshot studentPay and tutorPay on the session at archive time to protect historical records
-          const existingSession: any = await prisma.session.findUnique({
-            where: { id },
-            select: { studentPay: true, tutorPay: true, tutee: { select: { studentPay: true, tutorPay: true } } },
-          } as any);
-          if (existingSession) {
-            updateData.studentPay = existingSession.studentPay ?? existingSession.tutee?.studentPay ?? null;
-            updateData.tutorPay = existingSession.tutorPay ?? existingSession.tutee?.tutorPay ?? null;
-          }
+          updateData.studentPay = existing.studentPay ?? existing.tutee?.studentPay ?? null;
+          updateData.tutorPay = existing.tutorPay ?? existing.tutee?.tutorPay ?? null;
+        } else {
+          // Unarchiving reverts to dynamic live rates
+          updateData.studentPay = null;
+          updateData.tutorPay = null;
         }
         auditAction = updates.tutorPaid ? "TUTOR_PAID" : "TUTOR_UNPAID";
-        auditDetails = updates.tutorPaid ? "Tutor payout marked as PAID by Admin." : "Tutor payout marked as NOT PAID by Admin.";
+        auditDetailsList.push(
+          updates.tutorPaid
+            ? "Tutor payout marked as PAID by Admin."
+            : "Tutor payout marked as NOT PAID by Admin."
+        );
       }
       if (updates.adminReminder !== undefined && user.role === "HEAD_TUTOR") {
         updateData.adminReminder = updates.adminReminder ? updates.adminReminder.trim() : null;
         auditAction = "REMINDER_UPDATED";
-        auditDetails = updateData.adminReminder
-          ? `Personal admin reminder updated: "${updateData.adminReminder}"`
-          : "Personal admin reminder cleared.";
+        auditDetailsList.push(
+          updateData.adminReminder
+            ? `Personal admin reminder updated: "${updateData.adminReminder}"`
+            : "Personal admin reminder cleared."
+        );
       }
       // Attendance confirmations: ONLY admin can toggle as personal reminders
       if (user.role === "HEAD_TUTOR") {
         if (updates.tutorConfirmed !== undefined) {
           updateData.tutorConfirmed = updates.tutorConfirmed;
           auditAction = "CONFIRMATION_UPDATED";
-          auditDetails = `Tutor attendance marked as ${updates.tutorConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`;
+          auditDetailsList.push(`Tutor attendance marked as ${updates.tutorConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`);
         }
         if (updates.tuteeConfirmed !== undefined) {
           updateData.tuteeConfirmed = updates.tuteeConfirmed;
           auditAction = "CONFIRMATION_UPDATED";
-          auditDetails = `Student attendance marked as ${updates.tuteeConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`;
+          auditDetailsList.push(`Student attendance marked as ${updates.tuteeConfirmed ? "CONFIRMED" : "UNCONFIRMED"} by Admin.`);
         }
       }
       if (updates.feedbackCovered !== undefined) updateData.feedbackCovered = updates.feedbackCovered;
       if (updates.feedbackRating !== undefined) updateData.feedbackRating = updates.feedbackRating;
       if (updates.feedbackNotes !== undefined) updateData.feedbackNotes = updates.feedbackNotes;
+      if (
+        updates.feedbackCovered !== undefined ||
+        updates.feedbackRating !== undefined ||
+        updates.feedbackNotes !== undefined
+      ) {
+        auditDetailsList.push("Lesson report feedback updated.");
+      }
     }
 
     const updated = await prisma.session.update({
@@ -228,14 +249,18 @@ export async function PATCH(
       },
     });
 
+    const auditDetails = auditDetailsList.join("; ") || `Session updated by ${user.name}`;
     await logSessionAudit({
       sessionId: id,
       actorId: user.id,
       action: auditAction,
-      details: auditDetails || `Session updated by ${user.name}`,
+      details: auditDetails,
     });
 
-    return NextResponse.json({ success: true, session: updated });
+    return NextResponse.json({
+      success: true,
+      session: sanitizeSessionForRole(updated, user.role),
+    });
   } catch (err) {
     console.error("Session update error:", err);
     return NextResponse.json(

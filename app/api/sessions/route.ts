@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { CreateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
 import { logSessionAudit } from "@/lib/audit";
+import { sanitizeSessionsForRole } from "@/lib/session-sanitizer";
 import crypto from "crypto";
 
 export async function GET(request: Request) {
@@ -115,8 +116,10 @@ export async function GET(request: Request) {
       orderBy: { scheduledStartTime: "asc" },
     });
 
+    const sanitizedSessions = sanitizeSessionsForRole(sessions, user.role);
+
     // Compute lightweight ETag for cache validation
-    const etagSeed = sessions
+    const etagSeed = sanitizedSessions
       .map((s) => `${s.id}-${new Date(s.updatedAt).getTime()}`)
       .join(":");
     const etag = `"${crypto.createHash("md5").update(etagSeed).digest("hex")}"`;
@@ -133,7 +136,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(
-      { sessions },
+      { sessions: sanitizedSessions },
       {
         headers: {
           "Cache-Control": "private, no-cache, no-store, must-revalidate",
