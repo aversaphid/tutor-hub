@@ -6,10 +6,12 @@ interface RateLimitEntry {
 
 // In-memory trackers for rate limiting
 const pinAttempts = new Map<string, RateLimitEntry>();
+const pinIpAttempts = new Map<string, RateLimitEntry>();
 const passwordAttempts = new Map<string, RateLimitEntry>();
 const magicKeyAttempts = new Map<string, RateLimitEntry>();
 
 const MAX_ATTEMPTS = 5;
+const MAX_IP_PIN_ATTEMPTS = 10;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 // Periodic cleanup of expired entries every 10 minutes to prevent memory leak
@@ -26,6 +28,7 @@ if (typeof setInterval !== "undefined") {
       }
     };
     cleanup(pinAttempts);
+    cleanup(pinIpAttempts);
     cleanup(passwordAttempts);
     cleanup(magicKeyAttempts);
   }, 10 * 60 * 1000).unref?.();
@@ -126,7 +129,7 @@ function recordGenericFailedAttempt(
   };
 }
 
-// Student PIN Rate Limiting
+// Student PIN Rate Limiting (Single-key)
 export function checkPinRateLimit(key: string): RateLimitResult {
   return checkGenericRateLimit(pinAttempts, key, MAX_ATTEMPTS);
 }
@@ -137,6 +140,70 @@ export function recordFailedPinAttempt(key: string): RateLimitResult {
 
 export function resetPinRateLimit(key: string): void {
   pinAttempts.delete(key);
+}
+
+// Student PIN Rate Limiting (Dual-Tier: IP-level + Student Key)
+export function checkDualPinRateLimit(ip: string, tuteeId?: string): RateLimitResult {
+  // Check IP-wide limit first (defense against distributed enumeration across multiple student profiles)
+  const ipCheck = checkGenericRateLimit(
+    pinIpAttempts,
+    ip,
+    MAX_IP_PIN_ATTEMPTS,
+    "Too many failed PIN attempts from this network. Access locked for 15 minutes."
+  );
+  if (!ipCheck.allowed) {
+    return ipCheck;
+  }
+
+  // Check student-specific attempt limit
+  const studentKey = `${ip}:${tuteeId || "direct"}`;
+  const studentCheck = checkGenericRateLimit(pinAttempts, studentKey, MAX_ATTEMPTS);
+  if (!studentCheck.allowed) {
+    return studentCheck;
+  }
+
+  return {
+    allowed: true,
+    remainingAttempts: Math.min(ipCheck.remainingAttempts, studentCheck.remainingAttempts),
+  };
+}
+
+export function recordFailedDualPinAttempt(ip: string, tuteeId?: string): RateLimitResult {
+  // Record on IP tracker
+  const ipFail = recordGenericFailedAttempt(
+    pinIpAttempts,
+    ip,
+    MAX_IP_PIN_ATTEMPTS,
+    "network PIN attempt"
+  );
+
+  // Record on student-specific tracker
+  const studentKey = `${ip}:${tuteeId || "direct"}`;
+  const studentFail = recordGenericFailedAttempt(
+    pinAttempts,
+    studentKey,
+    MAX_ATTEMPTS,
+    "PIN attempt"
+  );
+
+  // If student is locked or IP is locked, return the locked state
+  if (!studentFail.allowed) {
+    return studentFail;
+  }
+  if (!ipFail.allowed) {
+    return ipFail;
+  }
+
+  return {
+    allowed: true,
+    remainingAttempts: Math.min(ipFail.remainingAttempts, studentFail.remainingAttempts),
+    error: studentFail.error,
+  };
+}
+
+export function resetDualPinRateLimit(ip: string, tuteeId?: string): void {
+  const studentKey = `${ip}:${tuteeId || "direct"}`;
+  pinAttempts.delete(studentKey);
 }
 
 // Password Login Rate Limiting

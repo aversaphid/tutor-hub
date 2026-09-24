@@ -75,6 +75,18 @@ const nextConfig: NextConfig = {
           value: "nosniff",
         },
         {
+          key: "X-DNS-Prefetch-Control",
+          value: "on",
+        },
+        {
+          key: "X-Download-Options",
+          value: "noopen",
+        },
+        {
+          key: "X-Permitted-Cross-Domain-Policies",
+          value: "none",
+        },
+        {
           key: "Referrer-Policy",
           value: "strict-origin-when-cross-origin",
         },

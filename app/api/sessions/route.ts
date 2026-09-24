@@ -35,8 +35,19 @@ export async function GET(request: Request) {
           actualStartTime: now,
         },
       });
+
+      // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
+      await prisma.session.updateMany({
+        where: {
+          status: "IN_PROGRESS",
+          scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
+        },
+        data: {
+          status: "COMPLETED",
+        },
+      });
     } catch (e) {
-      console.error("Auto-start sessions error in /api/sessions:", e);
+      console.error("Auto-start/auto-resolve sessions error in /api/sessions:", e);
     }
 
     const where: any = {};

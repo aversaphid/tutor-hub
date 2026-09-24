@@ -3,7 +3,47 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { prisma } from "./prisma";
 
+import { NextResponse } from "next/server";
+
 export const AUTH_COOKIE_NAME = "th_auth_token";
+
+export function isSecureContext(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.env.DENO_DEPLOYMENT_ID) ||
+    Boolean(process.env.TURSO_DATABASE_URL)
+  );
+}
+
+export function setAuthCookie(
+  response: NextResponse,
+  token: string,
+  role?: string
+): void {
+  const maxAge = role === "TUTEE" ? 60 * 60 * 24 : 60 * 60 * 24 * 7;
+  response.cookies.set({
+    name: AUTH_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: isSecureContext(),
+    sameSite: "lax",
+    path: "/",
+    maxAge,
+  });
+}
+
+export function clearAuthCookie(response: NextResponse): void {
+  response.cookies.delete(AUTH_COOKIE_NAME);
+  response.cookies.set({
+    name: AUTH_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    secure: isSecureContext(),
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);

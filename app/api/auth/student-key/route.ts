@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { MagicKeySchema } from "@/lib/validations";
-import { createAuthToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createAuthToken, setAuthCookie } from "@/lib/auth";
 import {
   getClientIp,
   checkMagicKeyRateLimit,
@@ -60,15 +60,7 @@ export async function POST(request: Request) {
       },
     });
 
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
-    });
+    setAuthCookie(response, token, student.role);
 
     return response;
   } catch (err) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createAuthToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { verifyPassword, createAuthToken, setAuthCookie } from "@/lib/auth";
 import {
   getClientIp,
   checkPasswordRateLimit,
@@ -97,15 +97,7 @@ export async function POST(request: Request) {
       },
     });
 
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    setAuthCookie(response, token, user.role);
 
     return response;
   } catch (err: unknown) {

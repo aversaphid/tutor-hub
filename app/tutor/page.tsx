@@ -1383,12 +1383,21 @@ export default function TutorDashboardPage() {
                     <h3 className="text-base font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                       <span>Completed Lessons &bull; Payment Pending ({completedUnpaidList.length})</span>
+                      {completedUnpaidList.filter((s) => !s.feedbackCovered).length > 0 && (
+                        <span className="ml-1 px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 text-xs font-bold border border-red-200 dark:border-red-800 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 text-red-500" />
+                          <span>
+                            {completedUnpaidList.filter((s) => !s.feedbackCovered).length} Report
+                            {completedUnpaidList.filter((s) => !s.feedbackCovered).length > 1 ? "s" : ""} Needed
+                          </span>
+                        </span>
+                      )}
                     </h3>
                     <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
                       Finished sessions with student feedback and ratings. The admin will mark these as paid once processed.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 self-end sm:self-center">
+                  <div className="flex items-center gap-2 self-end sm:flex-row sm:items-center">
                     <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
                       {isCompletedOpen ? "Hide" : "Show"}
                     </span>
@@ -1447,6 +1456,13 @@ export default function TutorDashboardPage() {
                                 <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
                                   Payment Pending
                                 </span>
+
+                                {!s.feedbackCovered && (
+                                  <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold flex items-center gap-1 border border-red-200 dark:border-red-800">
+                                    <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />
+                                    <span>Report Needed</span>
+                                  </span>
+                                )}
                               </div>
 
                               {/* What was covered & notes */}
@@ -1461,24 +1477,33 @@ export default function TutorDashboardPage() {
                                   )}
                                 </div>
                               ) : (
-                                <p className="text-xs text-slate-400 italic">
-                                  Lesson report pending.
+                                <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold italic flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 shrink-0" />
+                                  Lesson report pending &mdash; click Submit Report to record topics covered.
                                 </p>
                               )}
                             </div>
 
-                            {/* Edit Report Button (Available until marked as paid by admin) */}
+                            {/* Submit / Edit Report Button */}
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 onClick={() => {
                                   setSessionToComplete(s);
                                   setIsCompletionModalOpen(true);
                                 }}
-                                className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE] text-slate-700 dark:text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm cursor-pointer"
-                                title="Edit Covered Topics, Rating & Notes"
+                                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer ${
+                                  !s.feedbackCovered
+                                    ? "bg-amber-500 hover:bg-amber-600 text-white border border-amber-600"
+                                    : "bg-slate-100 dark:bg-slate-800 hover:bg-[#48A5EE] text-slate-700 dark:text-slate-200 hover:text-white border border-slate-200 dark:border-slate-700"
+                                }`}
+                                title={!s.feedbackCovered ? "Submit Lesson Report" : "Edit Covered Topics, Rating & Notes"}
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>Edit Report</span>
+                                {s.feedbackCovered ? (
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                ) : (
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                )}
+                                <span>{!s.feedbackCovered ? "Submit Report" : "Edit Report"}</span>
                               </button>
                             </div>
                           </div>

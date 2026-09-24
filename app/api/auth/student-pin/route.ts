@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { StudentPinLoginSchema } from "@/lib/validations";
 import {
   getClientIp,
-  checkPinRateLimit,
-  recordFailedPinAttempt,
-  resetPinRateLimit,
+  checkDualPinRateLimit,
+  recordFailedDualPinAttempt,
+  resetDualPinRateLimit,
 } from "@/lib/rate-limiter";
-import { createAuthToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createAuthToken, setAuthCookie } from "@/lib/auth";
 import crypto from "crypto";
 
 export async function POST(request: Request) {
@@ -24,10 +24,9 @@ export async function POST(request: Request) {
     }
 
     const { tuteeId, pin } = parseResult.data;
-    const rateLimitKey = `${ip}:${tuteeId || "direct"}`;
 
-    // Rate limiting check
-    const rateLimitCheck = checkPinRateLimit(rateLimitKey);
+    // Dual-tier rate limiting check (IP network tier + Student key tier)
+    const rateLimitCheck = checkDualPinRateLimit(ip, tuteeId);
     if (!rateLimitCheck.allowed) {
       return NextResponse.json(
         {
@@ -63,7 +62,7 @@ export async function POST(request: Request) {
     );
 
     if (!student || !isPinValid) {
-      const failResult = recordFailedPinAttempt(rateLimitKey);
+      const failResult = recordFailedDualPinAttempt(ip, tuteeId);
       return NextResponse.json(
         {
           error: failResult.error || "Incorrect PIN.",
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     // PIN is correct, reset rate limit
-    resetPinRateLimit(rateLimitKey);
+    resetDualPinRateLimit(ip, tuteeId);
 
     const token = createAuthToken({ id: student.id, role: student.role });
     const response = NextResponse.json({
@@ -87,15 +86,7 @@ export async function POST(request: Request) {
       },
     });
 
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
-    });
+    setAuthCookie(response, token, student.role);
 
     return response;
   } catch (err) {
