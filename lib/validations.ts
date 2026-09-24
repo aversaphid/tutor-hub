@@ -58,18 +58,7 @@ export const CreateUserSchema = z.object({
   assignedTutorId: z.string().optional().nullable(),
   studentPay: z.number().min(0, "Student pay must be 0 or more").optional().nullable(),
   tutorPay: z.number().min(0, "Tutor pay must be 0 or more").optional().nullable(),
-}).refine(
-  (data) => {
-    if (data.studentPay !== undefined && data.studentPay !== null && data.tutorPay !== undefined && data.tutorPay !== null) {
-      return data.studentPay >= data.tutorPay;
-    }
-    return true;
-  },
-  {
-    message: "Student fee cannot be less than tutor pay.",
-    path: ["studentPay"],
-  }
-);
+});
 
 // Change password schema
 export const ChangePasswordSchema = z.object({
@@ -93,18 +82,7 @@ export const UpdateStudentSchema = z.object({
   pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().nullable().or(z.literal("")),
   active: z.boolean().optional(),
   cycleMagicKey: z.boolean().optional(),
-}).refine(
-  (data) => {
-    if (data.studentPay !== undefined && data.studentPay !== null && data.tutorPay !== undefined && data.tutorPay !== null) {
-      return data.studentPay >= data.tutorPay;
-    }
-    return true;
-  },
-  {
-    message: "Student fee cannot be less than tutor pay.",
-    path: ["studentPay"],
-  }
-);
+});
 
 // Toggle user active status
 export const ToggleUserActiveSchema = z.object({

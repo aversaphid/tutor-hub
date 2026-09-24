@@ -285,7 +285,7 @@ export async function PATCH(request: Request) {
 
     const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active, cycleMagicKey } = parseResult.data;
 
-    // Verify student fee cannot be less than tutor pay against current/new rates
+    // Handle pay rate updates: freeze historical rates on archived lessons, update unarchived lessons
     if (studentPay !== undefined || tutorPay !== undefined) {
       const existingStudent = await prisma.user.findUnique({
         where: { id: studentId, role: "TUTEE" },
@@ -293,20 +293,6 @@ export async function PATCH(request: Request) {
       });
       if (!existingStudent) {
         return NextResponse.json({ error: "Student not found." }, { status: 404 });
-      }
-      const effectiveStudentPay = studentPay !== undefined ? studentPay : existingStudent.studentPay;
-      const effectiveTutorPay = tutorPay !== undefined ? tutorPay : existingStudent.tutorPay;
-      if (
-        effectiveStudentPay !== null &&
-        effectiveStudentPay !== undefined &&
-        effectiveTutorPay !== null &&
-        effectiveTutorPay !== undefined &&
-        effectiveStudentPay < effectiveTutorPay
-      ) {
-        return NextResponse.json(
-          { error: "Student fee cannot be less than tutor pay." },
-          { status: 400 }
-        );
       }
 
       // 1. Freeze historical rates on all already-archived lessons that don't yet have locked rates

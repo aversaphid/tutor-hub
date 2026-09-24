@@ -106,4 +106,25 @@ if (getSessionStudentPay(upcomingLesson) !== 55) {
   throw new Error(`Upcoming lesson was not updated to 55! Got ${getSessionStudentPay(upcomingLesson)}`);
 }
 
-console.log("\n ALL RATE IMMUTABILITY & DYNAMIC UPDATE TESTS PASSED!");
+// Scenario 2: Free / Subsidised lesson (e.g. scholarship or pro bono: studentPay = 0, tutorPay = 25)
+const freeLessonRates = { studentPay: 0, tutorPay: 25 };
+const freeLesson: RateTestSession = {
+  id: "free-lesson-1",
+  tutorPaid: false,
+  studentPay: null,
+  tutorPay: null,
+  tutee: freeLessonRates,
+};
+
+if (getSessionStudentPay(freeLesson) !== 0) {
+  throw new Error(`Expected free lesson studentPay to be 0, got ${getSessionStudentPay(freeLesson)}`);
+}
+if (getSessionTutorPay(freeLesson) !== 25) {
+  throw new Error(`Expected free lesson tutorPay to be 25, got ${getSessionTutorPay(freeLesson)}`);
+}
+const netProfit = getSessionStudentPay(freeLesson) - getSessionTutorPay(freeLesson);
+if (netProfit !== -25) {
+  throw new Error(`Expected net margin to be -25 (absorbed by business), got ${netProfit}`);
+}
+
+console.log("\n ALL RATE IMMUTABILITY, DYNAMIC UPDATE & FREE LESSON TESTS PASSED!");
