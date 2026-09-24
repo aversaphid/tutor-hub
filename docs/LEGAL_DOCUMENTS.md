@@ -77,7 +77,8 @@ Your data is securely stored and processed through reputable infrastructure prov
 
 ### 5. Data Retention & Deletion
 - Student and tutor profiles remain active while tuition is ongoing.
-- **Account Deletion:** When an administrator deletes a student profile from the portal, the student record, all associated lesson history, and related audit log entries are permanently erased from our database.
+- **Storage Limitation & Inactive Student Retention Policy:** In accordance with the storage limitation principle of UK GDPR (Article 5(1)(e)), student profiles marked as inactive (no longer participating in tuition) are automatically flagged for deletion on the administrator portal and queued for permanent erasure to ensure minor student personal data is never retained indefinitely.
+- **Permanent Account Deletion:** When an administrator deletes a student profile from the portal, the student record, access PIN, magic links, all associated lesson history, and related audit log entries are permanently erased from our database.
 - Tutors or parents may request the correction or deletion of profile details at any time by contacting `luke@lbmathstuition.co.uk`.
 
 ### 6. Your Rights Under UK GDPR

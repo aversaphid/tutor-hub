@@ -58,6 +58,9 @@ export default function TermsPage() {
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
             2.3 Parents and students are responsible for maintaining the confidentiality of their PIN and Magic Link. You must notify us immediately at <a href="mailto:luke@lbmathstuition.co.uk" className="text-[#48A5EE] underline">luke@lbmathstuition.co.uk</a> if you suspect unauthorized access.
           </p>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
+            2.4 <strong>Account Inactivity &amp; Deletion Policy:</strong> To adhere to statutory data minimization principles and ensure personal data of minor students is not retained indefinitely, student profiles that become inactive (no longer participating in active lessons) are automatically flagged for deletion on the administrative dashboard and queued for permanent database removal in accordance with our Privacy Policy.
+          </p>
         </section>
 
         <section className="space-y-2">

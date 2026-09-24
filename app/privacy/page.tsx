@@ -97,7 +97,10 @@ export default function PrivacyPage() {
             <span>5. Data Retention, Deletion &amp; Your Rights</span>
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-            When an administrator deletes a student profile from the portal, all associated lesson history and audit entries are permanently purged from the database.
+            <strong>Storage Limitation &amp; Inactive Student Retention Policy:</strong> In accordance with the storage limitation principle of UK GDPR (Article 5(1)(e)), personal data of minors is retained only for as long as necessary for active tuition delivery. Student profiles marked as inactive (no longer participating in tuition) are automatically flagged for deletion on the administrator portal and queued for permanent erasure so student credentials, names, and lesson logs are not retained indefinitely.
+          </p>
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
+            <strong>Permanent Account Deletion:</strong> When an administrator deletes a student profile from the portal, the student record, access PIN, magic links, all associated lesson history, and audit log entries are permanently erased from the database.
           </p>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
             Under UK GDPR, you have the right to request access to your data, request rectification or erasure (&quot;right to be forgotten&quot;), or object to processing. You may also lodge a complaint with the UK supervisory authority:

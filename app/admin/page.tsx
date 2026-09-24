@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   Sparkles,
   UserCheck,
+  ShieldCheck,
   RefreshCw,
   Search,
   Filter,
@@ -99,6 +100,7 @@ export default function AdminPage() {
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [studentTutorFilter, setStudentTutorFilter] = useState("ALL");
   const [studentLessonFilter, setStudentLessonFilter] = useState<"ALL" | "HAS_UPCOMING" | "NO_UPCOMING">("ALL");
+  const [studentStatusFilter, setStudentStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [studentSortBy, setStudentSortBy] = useState<"name_asc" | "name_desc" | "tutor" | "newest">("name_asc");
 
   // Search, filter, and sort state for Tutors directory
@@ -586,14 +588,18 @@ export default function AdminPage() {
   };
 
   // Delete Student Handler
-  const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    if (!confirm(`Are you sure you want to delete student "${studentName}"? This will permanently remove all their scheduled lessons.`)) return;
+  const handleDeleteStudent = async (studentId: string, studentName: string, isInactive?: boolean) => {
+    const confirmMessage = isInactive
+      ? `Are you sure you want to permanently delete inactive student "${studentName}"?\n\nIn accordance with our Terms of Service & Privacy Policy data retention rules (UK GDPR Art. 5(1)(e)), this will permanently erase their profile, access credentials, and all associated lesson records.`
+      : `Are you sure you want to delete student "${studentName}"? This will permanently remove all their scheduled lessons and credentials.`;
+
+    if (!confirm(confirmMessage)) return;
 
     try {
       const res = await fetch(`/api/admin/users?id=${studentId}`, { method: "DELETE" });
       const data = await res.json();
       if (res.ok) {
-        setActionMessage(`Student "${studentName}" deleted successfully.`);
+        setActionMessage(`Student "${studentName}" permanently deleted per retention policy.`);
         await refreshAllData();
         setTimeout(() => setActionMessage(""), 4000);
       } else {
@@ -1515,6 +1521,10 @@ export default function AdminPage() {
           if (studentLessonFilter === "NO_UPCOMING" && hasUpcoming) return false;
         }
 
+        // 4. Filter by student account status (Privacy Policy & Retention compliance)
+        if (studentStatusFilter === "ACTIVE" && st.active === false) return false;
+        if (studentStatusFilter === "INACTIVE" && st.active !== false) return false;
+
         return true;
       })
       .sort((a, b) => {
@@ -1530,7 +1540,7 @@ export default function AdminPage() {
         }
         return 0;
       });
-  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentSortBy, sessions]);
+  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentStatusFilter, studentSortBy, sessions]);
 
   // Memoized filtered tutors list
   const filteredTutors = useMemo(() => {
@@ -3220,12 +3230,20 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
                   <Users className="w-4 h-4 text-[#48A5EE]" />
                   <span>
                     Students &amp; PIN Directory ({filteredStudents.length}
                     {filteredStudents.length !== students.length ? ` of ${students.length}` : ""})
                   </span>
+                  {students.filter((s) => s.active === false).length > 0 && (
+                    <span className="ml-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-rose-500" />
+                      <span>
+                        {students.filter((s) => s.active === false).length} Inactive &bull; Flagged for Deletion
+                      </span>
+                    </span>
+                  )}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Manage student accounts, view secret PINs, and copy direct magic links.
@@ -3285,6 +3303,23 @@ export default function AdminPage() {
                 </select>
               </div>
 
+              {/* Filter by Account Status (Terms & Privacy Policy retention) */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={studentStatusFilter}
+                  onChange={(e) => setStudentStatusFilter(e.target.value as any)}
+                  aria-label="Filter students by account status"
+                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                >
+                  <option value="ALL">All Account Statuses</option>
+                  <option value="ACTIVE">Active Only ({activeStudents.length})</option>
+                  <option value="INACTIVE">
+                    Inactive &bull; Flagged for Deletion ({students.length - activeStudents.length})
+                  </option>
+                </select>
+              </div>
+
               {/* Filter by Lesson Status */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -3317,11 +3352,12 @@ export default function AdminPage() {
               </div>
 
               {/* Reset button */}
-              {(studentSearchTerm || studentTutorFilter !== "ALL" || studentLessonFilter !== "ALL" || studentSortBy !== "name_asc") && (
+              {(studentSearchTerm || studentTutorFilter !== "ALL" || studentStatusFilter !== "ALL" || studentLessonFilter !== "ALL" || studentSortBy !== "name_asc") && (
                 <button
                   onClick={() => {
                     setStudentSearchTerm("");
                     setStudentTutorFilter("ALL");
+                    setStudentStatusFilter("ALL");
                     setStudentLessonFilter("ALL");
                     setStudentSortBy("name_asc");
                   }}
@@ -3332,6 +3368,34 @@ export default function AdminPage() {
                 </button>
               )}
             </div>
+
+            {/* UK GDPR & Privacy Policy Inactivity Deletion Notice */}
+            {students.filter((s) => s.active === false).length > 0 && (
+              <div className="mx-4 my-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 mt-0.5 shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+                      <span>Data Retention &amp; Privacy Policy: {students.filter((s) => s.active === false).length} Inactive Student{students.filter((s) => s.active === false).length > 1 ? "s" : ""} Flagged for Deletion</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                      Under UK GDPR storage limitation (Art. 5(1)(e)) and our Terms of Service &amp; Privacy Policy, personal data for inactive minor students should not be kept indefinitely. Review flagged profiles and delete when no longer required.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setStudentStatusFilter(studentStatusFilter === "INACTIVE" ? "ALL" : "INACTIVE")}
+                    className="py-1 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    {studentStatusFilter === "INACTIVE" ? "Show All Students" : "Filter Flagged Only"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {students.length === 0 ? (
               <div className="text-center py-12 px-4 space-y-2">
@@ -3379,22 +3443,35 @@ export default function AdminPage() {
                       <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         {/* 1. Student Name & Live/Upcoming Badge */}
                         <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span>{st.name}</span>
-                            {sessions.some((s) => s.tuteeId === st.id && (s.status === "IN_PROGRESS" || (currentTime >= new Date(s.scheduledStartTime).getTime() && currentTime < new Date(s.scheduledEndTime).getTime() && s.status !== "COMPLETED" && s.status !== "CANCELLED"))) ? (
-                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
-                                ● Live
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className={st.active === false ? "text-slate-500 dark:text-slate-400 line-through decoration-slate-400" : ""}>
+                                {st.name}
                               </span>
-                            ) : sessions.some(
-                              (s) =>
-                                s.tuteeId === st.id &&
-                                (s.status === "SCHEDULED" || s.status === "DELAYED") &&
-                                new Date(s.scheduledEndTime).getTime() > currentTime
-                            ) ? (
-                              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
-                                Upcoming
+                              {sessions.some((s) => s.tuteeId === st.id && (s.status === "IN_PROGRESS" || (currentTime >= new Date(s.scheduledStartTime).getTime() && currentTime < new Date(s.scheduledEndTime).getTime() && s.status !== "COMPLETED" && s.status !== "CANCELLED"))) ? (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
+                                  ● Live
+                                </span>
+                              ) : sessions.some(
+                                (s) =>
+                                  s.tuteeId === st.id &&
+                                  (s.status === "SCHEDULED" || s.status === "DELAYED") &&
+                                  new Date(s.scheduledEndTime).getTime() > currentTime
+                              ) ? (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
+                                  Upcoming
+                                </span>
+                              ) : null}
+                            </div>
+                            {st.active === false && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold w-fit"
+                                title="Flagged for permanent erasure in abidance with Terms of Service, Privacy Policy & UK GDPR (Art. 5(1)(e))"
+                              >
+                                <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                <span>Flagged for Deletion</span>
                               </span>
-                            ) : null}
+                            )}
                           </div>
                         </td>
 
@@ -3501,12 +3578,16 @@ export default function AdminPage() {
                             onClick={() => handleToggleUserActive(st.id, st.active !== false)}
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
                                 ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
-                                : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600"
+                                : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800"
                               }`}
-                            title={`Click to set as ${st.active !== false ? "Inactive" : "Active"}`}
+                            title={
+                              st.active !== false
+                                ? "Active: Click to set Inactive (flags for deletion per Privacy Policy)"
+                                : "Inactive (Flagged for Deletion): Click to restore to Active"
+                            }
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${st.active !== false ? "bg-emerald-500" : "bg-slate-400"}`} />
-                            <span>{st.active !== false ? "Active" : "Inactive"}</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${st.active !== false ? "bg-emerald-500" : "bg-rose-500 animate-pulse"}`} />
+                            <span>{st.active !== false ? "Active" : "Inactive • Flagged"}</span>
                           </button>
                         </td>
 
@@ -3546,9 +3627,17 @@ export default function AdminPage() {
                               <RefreshCw className={`w-3.5 h-3.5 ${cyclingStudentId === st.id ? "animate-spin text-amber-500" : ""}`} />
                             </button>
                             <button
-                              onClick={() => handleDeleteStudent(st.id, st.name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                              title="Delete Student"
+                              onClick={() => handleDeleteStudent(st.id, st.name, st.active === false)}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                st.active === false
+                                  ? "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800"
+                                  : "text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              }`}
+                              title={
+                                st.active === false
+                                  ? "Permanently Delete Student (Purge flagged inactive profile per Privacy Policy)"
+                                  : "Delete Student"
+                              }
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -5058,25 +5147,37 @@ export default function AdminPage() {
               </div>
 
               {/* Active / Inactive Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                    Account Active Status
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">
-                    When inactive, student is excluded from booking combo lists.
-                  </span>
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                      Account Status
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {editStudentActive
+                        ? "Active: student can access portal and take scheduled lessons."
+                        : "Inactive: flagged for deletion under UK GDPR Data Retention & Privacy Policy."}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditStudentActive(!editStudentActive)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${editStudentActive
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : "bg-rose-500 text-white shadow-sm"
+                      }`}
+                  >
+                    {editStudentActive ? "Active" : "Inactive (Flagged for Deletion)"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditStudentActive(!editStudentActive)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${editStudentActive
-                      ? "bg-emerald-500 text-white shadow-sm"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                    }`}
-                >
-                  {editStudentActive ? "Active" : "Inactive"}
-                </button>
+                {!editStudentActive && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Privacy Policy &amp; Terms Notice:</strong> Marking this student profile as inactive flags it for permanent database deletion. Under UK GDPR storage limitation (Art. 5(1)(e)), minor student personal data must not be retained indefinitely after tuition finishes.
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">

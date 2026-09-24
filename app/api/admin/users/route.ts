@@ -212,7 +212,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({
         success: true,
         user: updated,
-        message: `${targetUser.name} is now ${newActive ? "Active" : "Inactive"}.`,
+        message:
+          targetUser.role === "TUTEE" && !newActive
+            ? `${targetUser.name} is now Inactive (Flagged for deletion per Privacy Policy).`
+            : `${targetUser.name} is now ${newActive ? "Active" : "Inactive"}.`,
       });
     }
 
