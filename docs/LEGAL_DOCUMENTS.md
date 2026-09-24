@@ -76,8 +76,8 @@ Your data is securely stored and processed through reputable infrastructure prov
 - **Live Video Provider:** **Microsoft Ireland Operations Limited (Microsoft Teams)** — Facilitates live video calls. *No audio or video recordings are made or retained on the platform.*
 
 ### 5. Data Retention & Deletion
-- Student and tutor profiles remain active while tuition is ongoing.
-- **Storage Limitation & Inactive Student Retention Policy:** In accordance with the storage limitation principle of UK GDPR (Article 5(1)(e)), student profiles marked as inactive (no longer participating in tuition) are automatically flagged for deletion on the administrator portal and queued for permanent erasure to ensure minor student personal data is never retained indefinitely.
+- **Temporary Breaks vs. Retention Erasure:** An "Inactive" status in the system represents a temporary break (e.g., summer break, holiday, or short hiatus) and does not flag a student for deletion.
+- **Storage Limitation & Prolonged Inactivity Retention Policy:** In accordance with the storage limitation principle of UK GDPR (Article 5(1)(e)), student profiles that have conducted no lessons for a prolonged period (default 90 days with no future scheduled lessons) are automatically flagged for deletion on the administrator portal and queued for permanent erasure to ensure minor student personal data is never retained indefinitely.
 - **Permanent Account Deletion:** When an administrator deletes a student profile from the portal, the student record, access PIN, magic links, all associated lesson history, and related audit log entries are permanently erased from our database.
 - Tutors or parents may request the correction or deletion of profile details at any time by contacting `luke@lbmathstuition.co.uk`.
 

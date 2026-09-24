@@ -11,7 +11,8 @@
     "db:setup-turso": "tsx scripts/setup-turso.ts",
     "test:engine": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts",
     "test:buttons": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts",
-    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts"
+    "test:retention": "node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

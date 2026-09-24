@@ -214,7 +214,7 @@ export async function PATCH(request: Request) {
         user: updated,
         message:
           targetUser.role === "TUTEE" && !newActive
-            ? `${targetUser.name} is now Inactive (Flagged for deletion per Privacy Policy).`
+            ? `${targetUser.name} is now Inactive (On Break / Holiday).`
             : `${targetUser.name} is now ${newActive ? "Active" : "Inactive"}.`,
       });
     }

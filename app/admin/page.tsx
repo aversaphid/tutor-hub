@@ -51,6 +51,7 @@ import {
   UploadCloud,
   TrendingUp,
   FileJson,
+  Info,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -100,7 +101,9 @@ export default function AdminPage() {
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [studentTutorFilter, setStudentTutorFilter] = useState("ALL");
   const [studentLessonFilter, setStudentLessonFilter] = useState<"ALL" | "HAS_UPCOMING" | "NO_UPCOMING">("ALL");
-  const [studentStatusFilter, setStudentStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [studentStatusFilter, setStudentStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "FLAGGED">("ALL");
+  const [retentionThresholdDays, setRetentionThresholdDays] = useState<number>(90);
+  const [isDebugRetentionOpen, setIsDebugRetentionOpen] = useState(false);
   const [studentSortBy, setStudentSortBy] = useState<"name_asc" | "name_desc" | "tutor" | "newest">("name_asc");
 
   // Search, filter, and sort state for Tutors directory
@@ -588,9 +591,9 @@ export default function AdminPage() {
   };
 
   // Delete Student Handler
-  const handleDeleteStudent = async (studentId: string, studentName: string, isInactive?: boolean) => {
-    const confirmMessage = isInactive
-      ? `Are you sure you want to permanently delete inactive student "${studentName}"?\n\nIn accordance with our Terms of Service & Privacy Policy data retention rules (UK GDPR Art. 5(1)(e)), this will permanently erase their profile, access credentials, and all associated lesson records.`
+  const handleDeleteStudent = async (studentId: string, studentName: string, isFlagged?: boolean, daysSinceLesson?: number) => {
+    const confirmMessage = isFlagged
+      ? `Are you sure you want to permanently delete student "${studentName}"?\n\nThis student has had no lessons for ${daysSinceLesson !== undefined ? `${daysSinceLesson} days` : "an extended period"} and is flagged for deletion in accordance with our Privacy Policy data retention rules (UK GDPR Art. 5(1)(e)). This will permanently erase their profile, access credentials, and all associated lesson records.`
       : `Are you sure you want to delete student "${studentName}"? This will permanently remove all their scheduled lessons and credentials.`;
 
     if (!confirm(confirmMessage)) return;
@@ -599,7 +602,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/users?id=${studentId}`, { method: "DELETE" });
       const data = await res.json();
       if (res.ok) {
-        setActionMessage(`Student "${studentName}" permanently deleted per retention policy.`);
+        setActionMessage(`Student "${studentName}" deleted successfully.`);
         await refreshAllData();
         setTimeout(() => setActionMessage(""), 4000);
       } else {
@@ -1486,6 +1489,55 @@ export default function AdminPage() {
     } catch { }
   };
 
+  // Helper to compute inactivity and data retention flag for a student
+  const getStudentInactivityInfo = (st: any) => {
+    const studentSessions = sessions.filter(
+      (s) => s.tuteeId === st.id && s.status !== "CANCELLED"
+    );
+
+    const now = currentTime;
+    const hasUpcoming = studentSessions.some(
+      (s) => new Date(s.scheduledEndTime).getTime() > now
+    );
+
+    if (hasUpcoming) {
+      return {
+        daysSinceLastLesson: 0,
+        lastLessonDate: null,
+        hasUpcoming: true,
+        isFlaggedForRetention: false,
+        noLessonsEver: studentSessions.length === 0,
+      };
+    }
+
+    let referenceMs: number;
+    let lastLessonDate: Date | null = null;
+
+    if (studentSessions.length > 0) {
+      const pastTimes = studentSessions.map((s) => new Date(s.scheduledEndTime).getTime());
+      referenceMs = Math.max(...pastTimes);
+      lastLessonDate = new Date(referenceMs);
+    } else {
+      referenceMs = new Date(st.createdAt || 0).getTime();
+      lastLessonDate = null;
+    }
+
+    const daysSinceLastLesson = Math.max(0, Math.floor((now - referenceMs) / (1000 * 60 * 60 * 24)));
+    const isFlaggedForRetention = daysSinceLastLesson >= retentionThresholdDays;
+
+    return {
+      daysSinceLastLesson,
+      lastLessonDate,
+      hasUpcoming: false,
+      isFlaggedForRetention,
+      noLessonsEver: studentSessions.length === 0,
+    };
+  };
+
+  const flaggedStudentsCount = useMemo(() => {
+    return students.filter((st) => getStudentInactivityInfo(st).isFlaggedForRetention).length;
+  }, [students, sessions, retentionThresholdDays, currentTime]);
+
   // Memoized filtered students list
   const filteredStudents = useMemo(() => {
     return students
@@ -1521,9 +1573,13 @@ export default function AdminPage() {
           if (studentLessonFilter === "NO_UPCOMING" && hasUpcoming) return false;
         }
 
-        // 4. Filter by student account status (Privacy Policy & Retention compliance)
+        // 4. Filter by student account status or retention flag
         if (studentStatusFilter === "ACTIVE" && st.active === false) return false;
         if (studentStatusFilter === "INACTIVE" && st.active !== false) return false;
+        if (studentStatusFilter === "FLAGGED") {
+          const info = getStudentInactivityInfo(st);
+          if (!info.isFlaggedForRetention) return false;
+        }
 
         return true;
       })
@@ -1540,7 +1596,7 @@ export default function AdminPage() {
         }
         return 0;
       });
-  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentStatusFilter, studentSortBy, sessions]);
+  }, [students, studentSearchTerm, studentTutorFilter, studentLessonFilter, studentStatusFilter, studentSortBy, sessions, retentionThresholdDays, currentTime]);
 
   // Memoized filtered tutors list
   const filteredTutors = useMemo(() => {
@@ -3236,11 +3292,11 @@ export default function AdminPage() {
                     Students &amp; PIN Directory ({filteredStudents.length}
                     {filteredStudents.length !== students.length ? ` of ${students.length}` : ""})
                   </span>
-                  {students.filter((s) => s.active === false).length > 0 && (
+                  {flaggedStudentsCount > 0 && (
                     <span className="ml-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 text-rose-500" />
                       <span>
-                        {students.filter((s) => s.active === false).length} Inactive &bull; Flagged for Deletion
+                        {flaggedStudentsCount} Flagged for Deletion ({retentionThresholdDays}d+ No Lessons)
                       </span>
                     </span>
                   )}
@@ -3303,7 +3359,7 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              {/* Filter by Account Status (Terms & Privacy Policy retention) */}
+              {/* Filter by Account Status */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <UserCheck className="w-3.5 h-3.5 text-slate-400" />
                 <select
@@ -3313,9 +3369,12 @@ export default function AdminPage() {
                   className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="ALL">All Account Statuses</option>
-                  <option value="ACTIVE">Active Only ({activeStudents.length})</option>
+                  <option value="ACTIVE">Active (Taking Lessons) ({activeStudents.length})</option>
                   <option value="INACTIVE">
-                    Inactive &bull; Flagged for Deletion ({students.length - activeStudents.length})
+                    Inactive (On Break / Holiday) ({students.length - activeStudents.length})
+                  </option>
+                  <option value="FLAGGED">
+                    ⚠️ Flagged for Deletion ({flaggedStudentsCount})
                   </option>
                 </select>
               </div>
@@ -3351,6 +3410,21 @@ export default function AdminPage() {
                 </select>
               </div>
 
+              {/* Retention Policy Debug Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsDebugRetentionOpen(!isDebugRetentionOpen)}
+                className={`py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border shrink-0 ${
+                  isDebugRetentionOpen
+                    ? "bg-purple-600 text-white border-purple-700 shadow-sm"
+                    : "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/60"
+                }`}
+                title="Toggle Local Debug Controls for testing inactivity data retention thresholds"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Debug Retention ({retentionThresholdDays}d)</span>
+              </button>
+
               {/* Reset button */}
               {(studentSearchTerm || studentTutorFilter !== "ALL" || studentStatusFilter !== "ALL" || studentLessonFilter !== "ALL" || studentSortBy !== "name_asc") && (
                 <button
@@ -3369,29 +3443,84 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Interactive Debug Controls for Testing Inactivity Deletion Flag Locally */}
+            {isDebugRetentionOpen && (
+              <div className="p-3.5 bg-purple-50/90 dark:bg-purple-950/50 border-b border-purple-200 dark:border-purple-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 font-mono font-bold text-[10px]">
+                    LOCAL DEBUG
+                  </span>
+                  <span className="font-semibold text-purple-950 dark:text-purple-200">
+                    Simulate Inactivity Threshold (Days without lessons):
+                  </span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {[
+                      { label: "0 Days (Test All)", value: 0 },
+                      { label: "7 Days", value: 7 },
+                      { label: "30 Days", value: 30 },
+                      { label: "90 Days (Policy)", value: 90 },
+                      { label: "180 Days", value: 180 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setRetentionThresholdDays(preset.value)}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
+                          retentionThresholdDays === preset.value
+                            ? "bg-purple-600 text-white shadow-sm"
+                            : "bg-white dark:bg-slate-800 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700 hover:bg-purple-100"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-purple-800 dark:text-purple-300">
+                  <span>
+                    Threshold: <strong>{retentionThresholdDays}d</strong> &bull;{" "}
+                    <strong>{flaggedStudentsCount}</strong> student{flaggedStudentsCount === 1 ? "" : "s"} currently flagged
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRetentionThresholdDays(90);
+                      setStudentStatusFilter("ALL");
+                    }}
+                    className="text-[10px] underline text-purple-600 dark:text-purple-400 hover:text-purple-800 cursor-pointer font-semibold"
+                  >
+                    Reset to 90d
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* UK GDPR & Privacy Policy Inactivity Deletion Notice */}
-            {students.filter((s) => s.active === false).length > 0 && (
+            {flaggedStudentsCount > 0 && (
               <div className="mx-4 my-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="flex items-start gap-2.5">
                   <div className="p-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 mt-0.5 shrink-0">
                     <ShieldCheck className="w-4 h-4 text-amber-700 dark:text-amber-300" />
                   </div>
                   <div>
-                    <div className="font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
-                      <span>Data Retention &amp; Privacy Policy: {students.filter((s) => s.active === false).length} Inactive Student{students.filter((s) => s.active === false).length > 1 ? "s" : ""} Flagged for Deletion</span>
+                    <div className="font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5 flex-wrap">
+                      <span>Data Retention Policy Alert: {flaggedStudentsCount} Student{flaggedStudentsCount > 1 ? "s" : ""} Flagged for Deletion</span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-mono text-[10px]">
+                        No lessons for &ge; {retentionThresholdDays} days
+                      </span>
                     </div>
                     <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                      Under UK GDPR storage limitation (Art. 5(1)(e)) and our Terms of Service &amp; Privacy Policy, personal data for inactive minor students should not be kept indefinitely. Review flagged profiles and delete when no longer required.
+                      Under UK GDPR storage limitation (Art. 5(1)(e)) and our Privacy Policy, students who haven&apos;t done lessons for an extended period must not have personal credentials or profiles kept indefinitely. Inactive status is for temporary breaks, but prolonged inactivity flags profiles for permanent database erasure.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                   <button
                     type="button"
-                    onClick={() => setStudentStatusFilter(studentStatusFilter === "INACTIVE" ? "ALL" : "INACTIVE")}
+                    onClick={() => setStudentStatusFilter(studentStatusFilter === "FLAGGED" ? "ALL" : "FLAGGED")}
                     className="py-1 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
-                    {studentStatusFilter === "INACTIVE" ? "Show All Students" : "Filter Flagged Only"}
+                    {studentStatusFilter === "FLAGGED" ? "Show All Students" : "Filter Flagged Only"}
                   </button>
                 </div>
               </div>
@@ -3439,13 +3568,15 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredStudents.map((st) => (
+                    {filteredStudents.map((st) => {
+                      const inactivity = getStudentInactivityInfo(st);
+                      return (
                       <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         {/* 1. Student Name & Live/Upcoming Badge */}
                         <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
-                              <span className={st.active === false ? "text-slate-500 dark:text-slate-400 line-through decoration-slate-400" : ""}>
+                              <span className={st.active === false ? "text-slate-500 dark:text-slate-400" : ""}>
                                 {st.name}
                               </span>
                               {sessions.some((s) => s.tuteeId === st.id && (s.status === "IN_PROGRESS" || (currentTime >= new Date(s.scheduledStartTime).getTime() && currentTime < new Date(s.scheduledEndTime).getTime() && s.status !== "COMPLETED" && s.status !== "CANCELLED"))) ? (
@@ -3463,15 +3594,20 @@ export default function AdminPage() {
                                 </span>
                               ) : null}
                             </div>
-                            {st.active === false && (
+                            {/* Inactivity Deletion Flag (Policy: no lessons for retention threshold) */}
+                            {inactivity.isFlaggedForRetention ? (
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold w-fit"
-                                title="Flagged for permanent erasure in abidance with Terms of Service, Privacy Policy & UK GDPR (Art. 5(1)(e))"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-[10px] font-bold w-fit"
+                                title={`Flagged for Deletion: No lessons conducted for ${inactivity.daysSinceLastLesson} days (Threshold: ${retentionThresholdDays}d). In abidance with UK GDPR Art. 5(1)(e) & Privacy Policy.`}
                               >
-                                <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                <span>Flagged for Deletion</span>
+                                <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                <span>Flagged for Deletion ({inactivity.daysSinceLastLesson}d no lessons)</span>
                               </span>
-                            )}
+                            ) : isDebugRetentionOpen ? (
+                              <span className="text-[10px] font-mono font-medium text-purple-600 dark:text-purple-400">
+                                {inactivity.hasUpcoming ? "debug: upcoming scheduled" : `debug: ${inactivity.daysSinceLastLesson}d without lessons`}
+                              </span>
+                            ) : null}
                           </div>
                         </td>
 
@@ -3571,23 +3707,23 @@ export default function AdminPage() {
                           </div>
                         </td>
 
-                        {/* 6. Status Toggle */}
+                        {/* 6. Status Toggle (Active vs Break / Holiday) */}
                         <td className="px-2 py-2.5 text-center whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => handleToggleUserActive(st.id, st.active !== false)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
                                 ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
-                                : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700"
                               }`}
                             title={
                               st.active !== false
-                                ? "Active: Click to set Inactive (flags for deletion per Privacy Policy)"
-                                : "Inactive (Flagged for Deletion): Click to restore to Active"
+                                ? "Active: Click to set Inactive (pause for break or holiday)"
+                                : "On Break: Click to restore to Active"
                             }
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${st.active !== false ? "bg-emerald-500" : "bg-rose-500 animate-pulse"}`} />
-                            <span>{st.active !== false ? "Active" : "Inactive • Flagged"}</span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${st.active !== false ? "bg-emerald-500" : "bg-slate-400"}`} />
+                            <span>{st.active !== false ? "Active" : "On Break"}</span>
                           </button>
                         </td>
 
@@ -3627,15 +3763,15 @@ export default function AdminPage() {
                               <RefreshCw className={`w-3.5 h-3.5 ${cyclingStudentId === st.id ? "animate-spin text-amber-500" : ""}`} />
                             </button>
                             <button
-                              onClick={() => handleDeleteStudent(st.id, st.name, st.active === false)}
+                              onClick={() => handleDeleteStudent(st.id, st.name, inactivity.isFlaggedForRetention, inactivity.daysSinceLastLesson)}
                               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                st.active === false
-                                  ? "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-800"
+                                inactivity.isFlaggedForRetention
+                                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900 border border-amber-300 dark:border-amber-700"
                                   : "text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                               }`}
                               title={
-                                st.active === false
-                                  ? "Permanently Delete Student (Purge flagged inactive profile per Privacy Policy)"
+                                inactivity.isFlaggedForRetention
+                                  ? `Permanently Delete Student (Profile flagged for retention: no lessons for ${inactivity.daysSinceLastLesson}d)`
                                   : "Delete Student"
                               }
                             >
@@ -3644,7 +3780,8 @@ export default function AdminPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -5146,7 +5283,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Active / Inactive Toggle */}
+              {/* Active / Inactive Toggle (Break / Holiday) */}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -5156,7 +5293,7 @@ export default function AdminPage() {
                     <span className="text-[10px] text-slate-400 block">
                       {editStudentActive
                         ? "Active: student can access portal and take scheduled lessons."
-                        : "Inactive: flagged for deletion under UK GDPR Data Retention & Privacy Policy."}
+                        : "Inactive: on temporary break (e.g. holiday or summer break)."}
                     </span>
                   </div>
                   <button
@@ -5164,17 +5301,17 @@ export default function AdminPage() {
                     onClick={() => setEditStudentActive(!editStudentActive)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${editStudentActive
                         ? "bg-emerald-500 text-white shadow-sm"
-                        : "bg-rose-500 text-white shadow-sm"
+                        : "bg-slate-600 text-white shadow-sm"
                       }`}
                   >
-                    {editStudentActive ? "Active" : "Inactive (Flagged for Deletion)"}
+                    {editStudentActive ? "Active" : "Inactive (On Break)"}
                   </button>
                 </div>
                 {!editStudentActive && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[11px] text-rose-800 dark:text-rose-300 flex items-start gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                    <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Privacy Policy &amp; Terms Notice:</strong> Marking this student profile as inactive flags it for permanent database deletion. Under UK GDPR storage limitation (Art. 5(1)(e)), minor student personal data must not be retained indefinitely after tuition finishes.
+                      <strong>Break / Hiatus:</strong> Setting status to Inactive indicates this student is temporarily taking a break (such as summer holidays). Profile and lesson history are preserved. A deletion flag will only appear if the student has conducted no lessons for a prolonged period in abidance with our data retention policy.
                     </span>
                   </div>
                 )}
