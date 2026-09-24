@@ -308,6 +308,33 @@ export async function PATCH(request: Request) {
           { status: 400 }
         );
       }
+
+      // 1. Freeze historical rates on all already-archived lessons that don't yet have locked rates
+      if (existingStudent.studentPay !== null || existingStudent.tutorPay !== null) {
+        await prisma.session.updateMany({
+          where: {
+            tuteeId: studentId,
+            tutorPaid: true,
+            OR: [{ studentPay: null }, { tutorPay: null }],
+          },
+          data: {
+            studentPay: existingStudent.studentPay,
+            tutorPay: existingStudent.tutorPay,
+          },
+        });
+      }
+
+      // 2. Ensure all unarchived lessons (needs-to-be-paid & upcoming) update to the new rates dynamically
+      await prisma.session.updateMany({
+        where: {
+          tuteeId: studentId,
+          tutorPaid: false,
+        },
+        data: {
+          studentPay: null,
+          tutorPay: null,
+        },
+      });
     }
 
     const updateData: any = {};

@@ -46,9 +46,12 @@ export async function POST(request: Request) {
         id: true,
         title: true,
         scheduledStartTime: true,
+        studentPay: true,
+        tutorPay: true,
         tutee: {
           select: {
             name: true,
+            studentPay: true,
             tutorPay: true,
           },
         },
@@ -66,20 +69,26 @@ export async function POST(request: Request) {
 
     const ids = sessionsToArchive.map((s) => s.id);
     const totalPayout = sessionsToArchive.reduce(
-      (sum, s) => sum + (s.tutee?.tutorPay || 0),
+      (sum, s) => sum + (s.tutorPay ?? s.tutee?.tutorPay ?? 0),
       0
     );
 
     const now = new Date();
 
-    // Batch update to mark tutorPaid = true and tutorPaidAt = now
-    await prisma.session.updateMany({
-      where: { id: { in: ids } },
-      data: {
-        tutorPaid: true,
-        tutorPaidAt: now,
-      },
-    });
+    // Batch update to mark tutorPaid = true, tutorPaidAt = now, and snapshot rates to freeze historical records
+    await prisma.$transaction(
+      sessionsToArchive.map((s) =>
+        prisma.session.update({
+          where: { id: s.id },
+          data: {
+            tutorPaid: true,
+            tutorPaidAt: now,
+            studentPay: s.studentPay ?? s.tutee?.studentPay ?? null,
+            tutorPay: s.tutorPay ?? s.tutee?.tutorPay ?? null,
+          },
+        })
+      )
+    );
 
     // Create an audit log record for each session
     try {

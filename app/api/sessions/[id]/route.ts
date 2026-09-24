@@ -180,6 +180,17 @@ export async function PATCH(
       if (updates.tutorPaid !== undefined && user.role === "HEAD_TUTOR") {
         updateData.tutorPaid = updates.tutorPaid;
         updateData.tutorPaidAt = updates.tutorPaid ? new Date() : null;
+        if (updates.tutorPaid) {
+          // Permanently snapshot studentPay and tutorPay on the session at archive time to protect historical records
+          const existingSession = await prisma.session.findUnique({
+            where: { id },
+            select: { studentPay: true, tutorPay: true, tutee: { select: { studentPay: true, tutorPay: true } } },
+          });
+          if (existingSession) {
+            updateData.studentPay = existingSession.studentPay ?? existingSession.tutee?.studentPay ?? null;
+            updateData.tutorPay = existingSession.tutorPay ?? existingSession.tutee?.tutorPay ?? null;
+          }
+        }
         auditAction = updates.tutorPaid ? "TUTOR_PAID" : "TUTOR_UNPAID";
         auditDetails = updates.tutorPaid ? "Tutor payout marked as PAID by Admin." : "Tutor payout marked as NOT PAID by Admin.";
       }

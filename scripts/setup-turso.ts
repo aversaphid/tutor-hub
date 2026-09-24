@@ -68,6 +68,8 @@ async function setup() {
       "tuteeConfirmed" BOOLEAN NOT NULL DEFAULT false,
       "tutorPaid" BOOLEAN NOT NULL DEFAULT false,
       "tutorPaidAt" DATETIME,
+      "studentPay" REAL,
+      "tutorPay" REAL,
       "feedbackCovered" TEXT,
       "feedbackRating" INTEGER,
       "feedbackNotes" TEXT,
@@ -82,6 +84,12 @@ async function setup() {
   // Migrate existing Session table if columns missing
   try {
     await client.execute(`ALTER TABLE "Session" ADD COLUMN "unlockEarlyMinutes" INTEGER NOT NULL DEFAULT 5;`);
+  } catch { }
+  try {
+    await client.execute(`ALTER TABLE "Session" ADD COLUMN "studentPay" REAL;`);
+  } catch { }
+  try {
+    await client.execute(`ALTER TABLE "Session" ADD COLUMN "tutorPay" REAL;`);
   } catch { }
 
   // 3. Create AuditLog table

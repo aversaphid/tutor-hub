@@ -12,7 +12,8 @@
     "test:engine": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts",
     "test:buttons": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts",
     "test:retention": "node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts",
-    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts"
+    "test:rates": "node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts && node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

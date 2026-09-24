@@ -81,6 +81,8 @@ model Session {
   // Tutor Payment Tracking (Upcoming vs Completed Unpaid vs Archived Paid)
   tutorPaid          Boolean       @default(false)
   tutorPaidAt        DateTime?
+  studentPay         Float?        // Historical snapshotted student fee at time of archive
+  tutorPay           Float?        // Historical snapshotted tutor pay at time of archive
 
   // Tutee Lesson Completion & Review
   feedbackCovered    String?       // What was covered in the lesson
