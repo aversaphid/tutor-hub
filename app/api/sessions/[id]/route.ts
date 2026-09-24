@@ -182,10 +182,10 @@ export async function PATCH(
         updateData.tutorPaidAt = updates.tutorPaid ? new Date() : null;
         if (updates.tutorPaid) {
           // Permanently snapshot studentPay and tutorPay on the session at archive time to protect historical records
-          const existingSession = await prisma.session.findUnique({
+          const existingSession: any = await prisma.session.findUnique({
             where: { id },
             select: { studentPay: true, tutorPay: true, tutee: { select: { studentPay: true, tutorPay: true } } },
-          });
+          } as any);
           if (existingSession) {
             updateData.studentPay = existingSession.studentPay ?? existingSession.tutee?.studentPay ?? null;
             updateData.tutorPay = existingSession.tutorPay ?? existingSession.tutee?.tutorPay ?? null;

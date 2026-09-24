@@ -302,11 +302,11 @@ export async function PATCH(request: Request) {
             tuteeId: studentId,
             tutorPaid: true,
             OR: [{ studentPay: null }, { tutorPay: null }],
-          },
+          } as any,
           data: {
             studentPay: existingStudent.studentPay,
             tutorPay: existingStudent.tutorPay,
-          },
+          } as any,
         });
       }
 
@@ -319,7 +319,7 @@ export async function PATCH(request: Request) {
         data: {
           studentPay: null,
           tutorPay: null,
-        },
+        } as any,
       });
     }
 
