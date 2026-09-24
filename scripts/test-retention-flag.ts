@@ -1,7 +1,9 @@
+export {};
+
 // scripts/test-retention-flag.ts
 // Unit verification test for Inactivity Flag and Break vs Retention logic
 
-interface Session {
+interface RetentionTestSession {
   id: string;
   tuteeId: string;
   status: string;
@@ -17,7 +19,7 @@ interface Student {
 
 function getStudentInactivityInfo(
   st: Student,
-  sessions: Session[],
+  sessions: RetentionTestSession[],
   retentionThresholdDays: number,
   currentTime: number
 ) {
@@ -96,7 +98,7 @@ const studentNewNoLessonsYet: Student = {
   createdAt: new Date(NOW - 5 * ONE_DAY_MS).toISOString(),
 };
 
-const mockSessions: Session[] = [
+const mockSessions: RetentionTestSession[] = [
   // Alice had a lesson 15 days ago before going on summer break
   {
     id: "sess1",

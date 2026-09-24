@@ -1,8 +1,10 @@
+export {};
+
 // scripts/test-historical-rates.ts
 // Unit test: Verify that student price changes do NOT edit archived lessons or historical business analytics,
 // but update all unarchived / currently needs-to-be-paid lessons.
 
-interface Session {
+interface RateTestSession {
   id: string;
   tutorPaid: boolean;
   studentPay?: number | null;
@@ -14,13 +16,13 @@ interface Session {
 }
 
 // Analytics rate extraction helper (identical to components/revenue-analytics-hub.tsx)
-function getSessionStudentPay(s: Session): number {
+function getSessionStudentPay(s: RateTestSession): number {
   if (typeof s.studentPay === "number" && !isNaN(s.studentPay)) return s.studentPay;
   if (typeof s.tutee?.studentPay === "number" && !isNaN(s.tutee.studentPay)) return s.tutee.studentPay;
   return 0;
 }
 
-function getSessionTutorPay(s: Session): number {
+function getSessionTutorPay(s: RateTestSession): number {
   if (typeof s.tutorPay === "number" && !isNaN(s.tutorPay)) return s.tutorPay;
   if (typeof s.tutee?.tutorPay === "number" && !isNaN(s.tutee.tutorPay)) return s.tutee.tutorPay;
   return 0;
@@ -35,7 +37,7 @@ let studentRates = {
 
 // Lesson 1: Conducted last month and archived (tutorPaid = true)
 // When archived, its rates were snapshotted to 40 and 30
-const archivedLesson: Session = {
+const archivedLesson: RateTestSession = {
   id: "lesson-archived-1",
   tutorPaid: true,
   studentPay: 40,
@@ -44,7 +46,7 @@ const archivedLesson: Session = {
 };
 
 // Lesson 2: Completed recently, currently needs to be paid (tutorPaid = false)
-const needsPaymentLesson: Session = {
+const needsPaymentLesson: RateTestSession = {
   id: "lesson-needs-payment-2",
   tutorPaid: false,
   studentPay: null, // dynamic until archived
@@ -53,7 +55,7 @@ const needsPaymentLesson: Session = {
 };
 
 // Lesson 3: Upcoming scheduled lesson (tutorPaid = false)
-const upcomingLesson: Session = {
+const upcomingLesson: RateTestSession = {
   id: "lesson-upcoming-3",
   tutorPaid: false,
   studentPay: null,
