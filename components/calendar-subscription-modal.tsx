@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
-  Calendar,
   RefreshCw,
   Copy,
   Check,
   ExternalLink,
-  Smartphone,
-  Globe,
-  Mail,
   Sparkles,
 } from "lucide-react";
 
@@ -29,6 +26,7 @@ export default function CalendarSubscriptionModal({
   subtitle = "Sync your lessons directly to your phone and computer calendar with automatic live updates.",
   magicKey,
 }: CalendarSubscriptionModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [feedData, setFeedData] = useState<{
     webcalUrl?: string;
     httpsUrl?: string;
@@ -37,6 +35,10 @@ export default function CalendarSubscriptionModal({
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -61,9 +63,9 @@ export default function CalendarSubscriptionModal({
           setIsLoading(false);
         });
     }
-  }, [isOpen]);
+  }, [isOpen, magicKey]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleCopy = async () => {
     if (!feedData?.httpsUrl) return;
@@ -86,32 +88,32 @@ export default function CalendarSubscriptionModal({
     window.open(feedData.googleCalendarUrl, "_blank", "noopener,noreferrer");
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="calendar-sub-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-md bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-start justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 flex items-center justify-center text-[#48A5EE] shrink-0">
-                <RefreshCw className="w-3.5 h-3.5" />
-              </div>
-              <h3 id="calendar-sub-title" className="text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 flex items-center justify-center text-[#48A5EE] shrink-0 mt-0.5">
+              <RefreshCw className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 id="calendar-sub-title" className="text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
                 {title}
               </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug break-words">
+                {subtitle}
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-9 break-words">
-              {subtitle}
-            </p>
           </div>
 
           <button
@@ -230,7 +232,7 @@ export default function CalendarSubscriptionModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-end">
+        <div className="p-3.5 sm:p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -240,6 +242,7 @@ export default function CalendarSubscriptionModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
