@@ -116,8 +116,11 @@ export async function POST(request: Request) {
         finalEmail = `${name.trim().toLowerCase().replace(/\s+/g, "")}@lbmathstuition.co.uk`;
       }
       passwordHash = await hashPassword(password);
-      if (pin && /^\d{4}$/.test(pin.trim())) {
-        const trimmedPin = pin.trim();
+      magicKey = crypto.randomBytes(16).toString("hex");
+    } else if (role === "TUTEE") {
+      // Validate or auto-generate a unique 4-digit numeric PIN for students
+      const trimmedPin = pin ? pin.trim() : "";
+      if (trimmedPin && /^\d{4}$/.test(trimmedPin)) {
         const existingPin = await prisma.user.findFirst({
           where: { pin: trimmedPin, role: "TUTEE" },
         });
@@ -140,9 +143,19 @@ export async function POST(request: Request) {
         }
         finalPin = candidatePin;
       }
+
+      // Generate a unique magic link for the student
       const cleanName = name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
-      const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
-      magicKey = `STU-${cleanName}-${randomHex}`;
+      let candidateKey = "";
+      let attempts = 0;
+      while (attempts < 50) {
+        const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+        candidateKey = `STU-${cleanName}-${randomHex}`;
+        const keyExists = await prisma.user.findFirst({ where: { magicKey: candidateKey } });
+        if (!keyExists) break;
+        attempts++;
+      }
+      magicKey = candidateKey;
     }
 
     if (finalEmail) {

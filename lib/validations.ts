@@ -54,7 +54,15 @@ export const CreateUserSchema = z.object({
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
   role: z.enum(["HEAD_TUTOR", "TUTOR", "TUTEE"]),
   password: z.string().min(5, "Password must be at least 5 characters").optional(),
-  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().or(z.literal("")),
+  pin: z
+    .string()
+    .trim()
+    .refine((val) => val === "" || /^\d{4}$/.test(val), {
+      message: "PIN must be exactly 4 digits.",
+    })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   assignedTutorId: z.string().optional().nullable(),
   studentPay: z.number().min(0, "Student pay must be 0 or more").optional().nullable(),
   tutorPay: z.number().min(0, "Tutor pay must be 0 or more").optional().nullable(),
@@ -79,7 +87,15 @@ export const UpdateStudentSchema = z.object({
   assignedTutorId: z.string().nullable().optional(),
   studentPay: z.number().min(0).nullable().optional(),
   tutorPay: z.number().min(0).nullable().optional(),
-  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits").optional().nullable().or(z.literal("")),
+  pin: z
+    .string()
+    .trim()
+    .refine((val) => val === "" || /^\d{4}$/.test(val), {
+      message: "PIN must be exactly 4 digits.",
+    })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   active: z.boolean().optional(),
   cycleMagicKey: z.boolean().optional(),
 });
