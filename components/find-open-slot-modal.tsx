@@ -48,6 +48,7 @@ export default function FindOpenSlotModal({
   const [existingSessions, setExistingSessions] = useState<any[]>([]);
   const [unavailabilities, setUnavailabilities] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const activeStudents = useMemo(() => {
     return students.filter((s) => s.active !== false);
@@ -56,6 +57,17 @@ export default function FindOpenSlotModal({
   const activeTutors = useMemo(() => {
     return tutors.filter((t) => t.active !== false);
   }, [tutors]);
+
+  // Keep currentTime live and reset immediately whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentTime(Date.now());
+      const timer = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 10000);
+      return () => clearInterval(timer);
+    }
+  }, [isOpen]);
 
   // Sync initial student and tutor selection when modal opens
   useEffect(() => {
@@ -90,15 +102,23 @@ export default function FindOpenSlotModal({
       setIsLoading(true);
       setErrorMsg("");
       try {
-        const [sessRes, unavailRes] = await Promise.all([
+        const [sessRes, studRes, unavailRes] = await Promise.all([
           fetch(`/api/sessions?tutorId=${selectedTutorId}`),
+          selectedStudentId
+            ? fetch(`/api/sessions?tuteeId=${selectedStudentId}`)
+            : Promise.resolve(null),
           fetch(`/api/tutor/unavailability?tutorId=${selectedTutorId}`),
         ]);
 
-        if (sessRes.ok) {
-          const sData = await sessRes.json();
-          setExistingSessions(sData.sessions || []);
-        }
+        const tutorSessions = sessRes.ok ? (await sessRes.json()).sessions || [] : [];
+        const studentSessions =
+          studRes && studRes.ok ? (await studRes.json()).sessions || [] : [];
+
+        // Deduplicate sessions
+        const sessionMap = new Map();
+        [...tutorSessions, ...studentSessions].forEach((s) => sessionMap.set(s.id, s));
+        setExistingSessions(Array.from(sessionMap.values()));
+
         if (unavailRes.ok) {
           const uData = await unavailRes.json();
           setUnavailabilities(uData.unavailabilities || []);
@@ -112,7 +132,7 @@ export default function FindOpenSlotModal({
     };
 
     loadData();
-  }, [isOpen, selectedTutorId]);
+  }, [isOpen, selectedTutorId, selectedStudentId]);
 
   // Compute available slots
   const openSlotsByDay = useMemo(() => {
@@ -125,12 +145,22 @@ export default function FindOpenSlotModal({
       slots: { startTime: string; endTime: string }[];
     }[] = [];
 
-    const now = new Date();
+    const now = new Date(currentTime);
     const activeStatuses = ["SCHEDULED", "DELAYED", "IN_PROGRESS"];
 
+    // Base date at local midnight today
+    const todayMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+
     for (let dayOffset = 0; dayOffset < daysAhead; dayOffset++) {
-      const d = new Date();
-      d.setDate(now.getDate() + dayOffset);
+      const d = new Date(todayMidnight.getTime() + dayOffset * 24 * 60 * 60 * 1000);
       const isToday = dayOffset === 0;
 
       const dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
@@ -162,11 +192,10 @@ export default function FindOpenSlotModal({
           const endMinsTotal = startMinsTotal + slotDuration;
           if (endMinsTotal > endHour * 60) continue;
 
-          const slotStart = new Date(d);
-          slotStart.setHours(h, m, 0, 0);
+          const slotStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0);
 
-          // If today, skip times that have already passed
-          if (isToday && slotStart.getTime() <= now.getTime() + 15 * 60 * 1000) {
+          // STRICT FILTER: If slot start time has already passed or is within 15 minutes of right now, SKIP IT!
+          if (slotStart.getTime() <= currentTime + 15 * 60 * 1000) {
             continue;
           }
 
@@ -238,6 +267,8 @@ export default function FindOpenSlotModal({
     slotDuration,
     existingSessions,
     unavailabilities,
+    currentTime,
+    isOpen,
   ]);
 
   if (!isOpen) return null;
