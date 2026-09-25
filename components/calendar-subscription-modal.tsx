@@ -95,21 +95,21 @@ export default function CalendarSubscriptionModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-md bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-start justify-between gap-4">
-          <div className="space-y-1">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-start justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 flex items-center justify-center text-[#48A5EE]">
-                <RefreshCw className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 flex items-center justify-center text-[#48A5EE] shrink-0">
+                <RefreshCw className="w-3.5 h-3.5" />
               </div>
-              <h3 id="calendar-sub-title" className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+              <h3 id="calendar-sub-title" className="text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate">
                 {title}
               </h3>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 pl-10">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-9 break-words">
               {subtitle}
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function CalendarSubscriptionModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -125,7 +125,7 @@ export default function CalendarSubscriptionModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto overflow-x-hidden flex-1 text-xs">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 space-y-3">
               <RefreshCw className="w-6 h-6 text-[#48A5EE] animate-spin" />
@@ -138,69 +138,69 @@ export default function CalendarSubscriptionModal({
           ) : (
             <>
               {/* Highlight Banner */}
-              <div className="p-4 rounded-2xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 text-slate-700 dark:text-slate-200 space-y-1.5">
-                <div className="font-bold flex items-center gap-1.5 text-[#48A5EE]">
-                  <Sparkles className="w-4 h-4 shrink-0" />
+              <div className="p-3.5 rounded-2xl bg-[#48A5EE]/10 border border-[#48A5EE]/20 text-slate-700 dark:text-slate-200 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-[#48A5EE] text-xs">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span>Always Up-to-Date</span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed break-words">
                   Unlike a one-time download, a calendar subscription stays connected. Any rescheduled lessons, cancellations, or new bookings will automatically sync directly to your devices!
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-2.5 pt-1">
+              <div className="space-y-2 pt-0.5">
                 {/* 1. Apple Calendar (iOS / Mac) */}
                 <button
                   type="button"
                   onClick={handleAppleSubscribe}
-                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold flex items-center justify-between transition-all cursor-pointer group"
+                  className="w-full p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold flex items-center justify-between transition-all cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
                       
                     </div>
-                    <div className="text-left">
-                      <div className="text-xs font-bold">Apple Calendar</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                    <div className="text-left min-w-0">
+                      <div className="text-xs font-bold truncate">Apple Calendar</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal truncate">
                         One-click subscribe on iPhone, iPad &amp; Mac
                       </div>
                     </div>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
+                  <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors shrink-0" />
                 </button>
 
                 {/* 2. Google Calendar */}
                 <button
                   type="button"
                   onClick={handleGoogleSubscribe}
-                  className="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold flex items-center justify-between transition-all cursor-pointer group"
+                  className="w-full p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold flex items-center justify-between transition-all cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                       G
                     </div>
-                    <div className="text-left">
-                      <div className="text-xs font-bold">Google Calendar</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                    <div className="text-left min-w-0">
+                      <div className="text-xs font-bold truncate">Google Calendar</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal truncate">
                         Add to your Google account from URL
                       </div>
                     </div>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
+                  <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors shrink-0" />
                 </button>
 
                 {/* 3. Copy WebCal Feed URL */}
-                <div className="pt-2 space-y-1.5">
-                  <label className="font-bold text-slate-700 dark:text-slate-300 block">
+                <div className="pt-1.5 space-y-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block text-[11px]">
                     Subscribe URL (Outlook / Thunderbird / Other Apps):
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <input
                       type="text"
                       readOnly
                       value={feedData?.httpsUrl || ""}
-                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-[11px] text-slate-600 dark:text-slate-400 select-all focus:outline-none"
+                      className="flex-1 min-w-0 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-[11px] text-slate-600 dark:text-slate-400 select-all focus:outline-none"
                     />
                     <button
                       type="button"
