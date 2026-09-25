@@ -244,6 +244,15 @@ export default function AdminPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
 
+  // Count strictly upcoming lessons (unpaid, not completed/cancelled, and end time in future)
+  const upcomingLessonsCount = useMemo(() => {
+    return sessions.filter((s) => {
+      const endMs = new Date(s.scheduledEndTime).getTime();
+      const isDone = s.status === "COMPLETED" || s.status === "CANCELLED";
+      return !s.tutorPaid && !isDone && endMs > currentTime;
+    }).length;
+  }, [sessions, currentTime]);
+
   // Complete / Review Lesson Modal State
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [completeTargetLesson, setCompleteTargetLesson] = useState<any>(null);
@@ -2204,8 +2213,9 @@ export default function AdminPage() {
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
+            title={`${upcomingLessonsCount} upcoming lessons scheduled`}
           >
-            Lessons ({sessions.length})
+            Lessons ({upcomingLessonsCount})
           </button>
           <button
             onClick={() => setActiveTab("students")}

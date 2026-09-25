@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
@@ -117,6 +117,16 @@ export default function TutorDashboardPage() {
     "soonest" | "newest" | "oldest" | "student" | "rating"
   >("soonest");
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Count strictly upcoming lessons (unpaid, not completed/cancelled, and end time in future)
+  const upcomingLessonsCount = useMemo(() => {
+    return mySessions.filter((s) => {
+      const endMs = new Date(s.scheduledEndTime).getTime();
+      const isDone = s.status === "COMPLETED" || s.status === "CANCELLED";
+      return !s.tutorPaid && !isDone && endMs > currentTime;
+    }).length;
+  }, [mySessions, currentTime]);
+
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
 
   // Collapsible Lesson Sections state (Upcoming expanded by default, others collapsed)
@@ -658,9 +668,10 @@ export default function TutorDashboardPage() {
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
+            title={`${upcomingLessonsCount} upcoming lessons scheduled`}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>My Scheduled Lessons ({mySessions.length})</span>
+            <span>Upcoming Lessons ({upcomingLessonsCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("resources")}
