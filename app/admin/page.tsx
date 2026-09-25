@@ -57,6 +57,8 @@ import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
+import SessionAuditModal from "@/components/session-audit-modal";
+import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 
 // Dynamic imports for secondary heavy modals & tabs to keep initial page bundle lean
 const SharedResourcesHub = dynamic(() => import("@/components/shared-resources-hub"), { ssr: false });
@@ -89,6 +91,7 @@ export default function AdminPage() {
   const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(true);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
 
   // Search, filter, and sort state for lessons
   const [lessonSearchTerm, setLessonSearchTerm] = useState("");
@@ -129,6 +132,7 @@ export default function AdminPage() {
   const [notes, setNotes] = useState("");
   const [newLessonAdminReminder, setNewLessonAdminReminder] = useState("");
   const [conflictError, setConflictError] = useState("");
+  const [allowLessonOverlap, setAllowLessonOverlap] = useState(false);
   const [isSubmittingLesson, setIsSubmittingLesson] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [repeatWeeks, setRepeatWeeks] = useState(4);
@@ -258,6 +262,12 @@ export default function AdminPage() {
   // Cancel Lesson Modal state
   const [cancelTargetLesson, setCancelTargetLesson] = useState<any>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+
+  // Per-Session Audit Timeline Modal state
+  const [sessionAuditTarget, setSessionAuditTarget] = useState<any>(null);
+  const [sessionAuditLogs, setSessionAuditLogs] = useState<any[]>([]);
+  const [isLoadingSessionAudit, setIsLoadingSessionAudit] = useState(false);
+  const [isSessionAuditOpen, setIsSessionAuditOpen] = useState(false);
 
   // Collapsible Lesson Sections state (Upcoming expanded by default, others collapsed)
   const [isUpcomingOpen, setIsUpcomingOpen] = useState(true);
@@ -891,8 +901,41 @@ export default function AdminPage() {
     setRepeatWeeks(1);
     setRepeatIntervalWeeks(weeksAhead);
     setConflictError("");
+    setAllowLessonOverlap(false);
     setIsNewLessonOpen(true);
   };
+
+  // Real-time conflict detection for New Lesson modal
+  const newLessonConflict = useMemo(() => {
+    if (!isNewLessonOpen || !lessonDate || !lessonStartTime || !lessonEndTime) return null;
+    const [startH, startM] = lessonStartTime.split(":").map(Number);
+    const [endH, endM] = lessonEndTime.split(":").map(Number);
+    const [year, month, day] = lessonDate.split("-").map(Number);
+    const start = new Date(year, month - 1, day, startH, startM, 0, 0);
+    const end = new Date(year, month - 1, day, endH, endM, 0, 0);
+    if (end <= start) return null;
+
+    const tid = selectedTutorId || currentUser?.id;
+    const sid = selectedStudentId;
+    if (!tid && !sid) return null;
+
+    const conflict = sessions.find((s) => {
+      if (s.status === "CANCELLED") return false;
+      const sStart = new Date(s.scheduledStartTime);
+      const sEnd = new Date(s.scheduledEndTime);
+      const overlaps = sStart < end && sEnd > start;
+      if (!overlaps) return false;
+      return (tid && s.tutorId === tid) || (sid && s.tuteeId === sid);
+    });
+
+    if (!conflict) return null;
+    const isTutorConflict = tid && conflict.tutorId === tid;
+    const conflictStartStr = new Date(conflict.scheduledStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const conflictEndStr = new Date(conflict.scheduledEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return isTutorConflict
+      ? `Tutor ${formatTutorName(conflict.tutor?.name)} is already teaching ${conflict.tutee?.name || "a student"} (${conflictStartStr} – ${conflictEndStr}).`
+      : `Student ${conflict.tutee?.name || "Student"} already has an active lesson with ${formatTutorName(conflict.tutor?.name)} (${conflictStartStr} – ${conflictEndStr}).`;
+  }, [isNewLessonOpen, lessonDate, lessonStartTime, lessonEndTime, selectedTutorId, selectedStudentId, currentUser, sessions]);
 
   // Schedule Lesson (Conflict Engine) - Supports bulk recurring weekly or biweekly!
   const handleCreateLesson = async (e: React.FormEvent) => {
@@ -905,6 +948,11 @@ export default function AdminPage() {
     }
     if (lessonStartTime >= lessonEndTime) {
       setConflictError("End time must be after start time.");
+      return;
+    }
+
+    if (newLessonConflict && !allowLessonOverlap) {
+      setConflictError("Schedule conflict detected. Please select another time or check 'Allow overlap anyway'.");
       return;
     }
 
@@ -928,6 +976,7 @@ export default function AdminPage() {
           adminReminder: newLessonAdminReminder.trim() || undefined,
           repeatWeeks: isRepeating ? repeatWeeks : 1,
           repeatIntervalWeeks: isRepeating ? repeatIntervalWeeks : 1,
+          allowOverlap: allowLessonOverlap,
         }),
       });
 
@@ -950,6 +999,7 @@ export default function AdminPage() {
       setIsRepeating(false);
       setRepeatWeeks(4);
       setRepeatIntervalWeeks(1);
+      setAllowLessonOverlap(false);
       await refreshAllData();
       setActionMessage(data.message || "Lesson scheduled successfully!");
       setTimeout(() => setActionMessage(""), 4000);
@@ -1254,6 +1304,59 @@ export default function AdminPage() {
     }
   };
 
+  // Tutor-Specific Batch Settlement
+  const handleSettleTutor = async (tutor: any, tutorSessions: any[], totalPayout: number) => {
+    if (!tutorSessions || tutorSessions.length === 0) return;
+    const tutorName = formatTutorName(tutor?.name);
+    if (
+      !confirm(
+        `Are you sure you want to mark all ${tutorSessions.length} completed unpaid lesson${
+          tutorSessions.length === 1 ? "" : "s"
+        } for ${tutorName} (${formatCurrency(totalPayout)}) as Paid?`
+      )
+    ) {
+      return;
+    }
+
+    setIsBatchArchiving(true);
+    try {
+      const sessionIds = tutorSessions.map((s) => s.id);
+      const res = await fetch("/api/sessions/batch-archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: new Date(0).toISOString(),
+          endDate: new Date(8640000000000000).toISOString(),
+          sessionIds,
+          tutorId: tutor?.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        const targetIdSet = new Set(sessionIds);
+        const nowIso = new Date().toISOString();
+        setSessions((prev) =>
+          prev.map((s) =>
+            targetIdSet.has(s.id)
+              ? { ...s, tutorPaid: true, tutorPaidAt: nowIso }
+              : s
+          )
+        );
+        setActionMessage(`Settled ${tutorSessions.length} lessons for ${tutorName} (${formatCurrency(totalPayout)})!`);
+        playSessionStartChime();
+        await refreshAllData();
+        setTimeout(() => setActionMessage(""), 5000);
+      } else {
+        alert(data.error || "Failed to settle tutor lessons.");
+      }
+    } catch {
+      alert("Network error settling tutor lessons.");
+    } finally {
+      setIsBatchArchiving(false);
+    }
+  };
+
   // Permanent Tutor Reassignment
   const handleReassignTutor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1500,6 +1603,26 @@ export default function AdminPage() {
     if (!session) return;
     setRescheduleTargetLesson(session);
     setIsRescheduleOpen(true);
+  };
+
+  // Open Per-Session Audit Timeline Modal
+  const handleOpenSessionAudit = async (session: any) => {
+    if (!session) return;
+    setSessionAuditTarget(session);
+    setIsSessionAuditOpen(true);
+    setIsLoadingSessionAudit(true);
+    setSessionAuditLogs([]);
+    try {
+      const res = await fetch(`/api/admin/audit-logs?sessionId=${session.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSessionAuditLogs(data.auditLogs || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch session audit logs:", err);
+    } finally {
+      setIsLoadingSessionAudit(false);
+    }
   };
 
   const copyMagicLink = async (key?: string | null) => {
@@ -1981,6 +2104,15 @@ export default function AdminPage() {
                   <XCircle className="w-3.5 h-3.5 text-rose-500" />
                   <span>Cancel</span>
                 </button>
+
+                <button
+                  onClick={() => handleOpenSessionAudit(activeLesson)}
+                  className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1"
+                  title="View lesson history & audit trail"
+                >
+                  <History className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Audit</span>
+                </button>
               </div>
             </div>
 
@@ -2236,9 +2368,26 @@ export default function AdminPage() {
 
           // Total payout sum for all completed unpaid lessons
           const totalUnpaidTutorPayout = completedUnpaidList.reduce(
-            (sum, s) => sum + (s.tutee?.tutorPay || 0),
+            (sum, s) => sum + (s.tutorPay ?? s.tutee?.tutorPay ?? 0),
             0
           );
+
+          // Breakdown of completed unpaid lessons grouped by tutor
+          const unpaidTutorBreakdown = (() => {
+            const map = new Map<string, { tutor: any; sessions: any[]; totalPayout: number }>();
+            for (const s of completedUnpaidList) {
+              const tid = s.tutorId || "unknown";
+              const existing = map.get(tid) || {
+                tutor: s.tutor,
+                sessions: [],
+                totalPayout: 0,
+              };
+              existing.sessions.push(s);
+              existing.totalPayout += (s.tutorPay ?? s.tutee?.tutorPay ?? 0);
+              map.set(tid, existing);
+            }
+            return Array.from(map.values());
+          })();
 
           // Matching lessons for batch archive date range
           const batchMatchingSessions = completedUnpaidList.filter((s) => {
@@ -2640,6 +2789,14 @@ export default function AdminPage() {
                                       <span>Cancel</span>
                                     </button>
                                     <button
+                                      onClick={() => handleOpenSessionAudit(s)}
+                                      className="w-full px-1.5 py-0.5 rounded-lg text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
+                                      title="View Lesson Audit Trail"
+                                    >
+                                      <History className="w-2.5 h-2.5 shrink-0" />
+                                      <span>Audit</span>
+                                    </button>
+                                    <button
                                       onClick={() => handleDeleteSession(s.id, s.title)}
                                       className="w-full px-1.5 py-0.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
                                       title="Delete Lesson Permanently"
@@ -2730,6 +2887,48 @@ export default function AdminPage() {
                         <span>{isBatchArchiveOpen ? "Hide Date Range Filter" : "Select by Date Range & Archive"}</span>
                       </button>
                     </div>
+
+                    {/* Tutor-Specific Quick Settlement Strip */}
+                    {unpaidTutorBreakdown.length > 0 && (
+                      <div className="p-3.5 bg-amber-50/40 dark:bg-amber-950/20 border-b border-amber-200/70 dark:border-amber-900/50 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>Settle by Tutor ({unpaidTutorBreakdown.length} tutor{unpaidTutorBreakdown.length > 1 ? "s" : ""} pending)</span>
+                          </span>
+                          <span className="text-[10px] text-amber-700/80 dark:text-amber-400">
+                            One-click settlement per tutor
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {unpaidTutorBreakdown.map(({ tutor, sessions: tSessions, totalPayout: tPayout }) => (
+                            <div
+                              key={tutor?.id || "unknown"}
+                              className="flex items-center gap-2.5 py-1.5 px-3 rounded-2xl bg-white dark:bg-slate-800 border border-amber-200/80 dark:border-amber-800/80 shadow-2xs text-xs"
+                            >
+                              <div>
+                                <span className="font-extrabold text-slate-800 dark:text-slate-100">
+                                  {formatTutorName(tutor?.name)}
+                                </span>
+                                <div className="text-[10px] text-amber-800 dark:text-amber-300 font-mono font-bold">
+                                  {tSessions.length} lesson{tSessions.length === 1 ? "" : "s"} &bull; {formatCurrency(tPayout)}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleSettleTutor(tutor, tSessions, tPayout)}
+                                disabled={isBatchArchiving}
+                                className="py-1 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                                title={`Mark all ${tSessions.length} completed lessons for ${formatTutorName(tutor?.name)} as Paid`}
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Settle</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Batch Date-Range Archive Toolbar */}
                     {isBatchArchiveOpen && (
@@ -3012,6 +3211,13 @@ export default function AdminPage() {
                                 <span>Mark as Paid</span>
                               </button>
                               <button
+                                onClick={() => handleOpenSessionAudit(s)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                title="View Lesson Audit History"
+                              >
+                                <History className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleDeleteSession(s.id, s.title)}
                                 className="p-2 rounded-xl text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                                 title="Delete Lesson"
@@ -3127,6 +3333,13 @@ export default function AdminPage() {
                               >
                                 <Repeat className="w-3.5 h-3.5" />
                                 <span>+1 Wk</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenSessionAudit(s)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                title="View Lesson Audit History"
+                              >
+                                <History className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteSession(s.id, s.title)}
@@ -3290,6 +3503,13 @@ export default function AdminPage() {
                                 title="Revert to Unpaid"
                               >
                                 Mark as Unpaid
+                              </button>
+                              <button
+                                onClick={() => handleOpenSessionAudit(s)}
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                title="View Lesson Audit History"
+                              >
+                                <History className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteSession(s.id, s.title)}
@@ -4431,7 +4651,16 @@ export default function AdminPage() {
                         Export all lessons for the current week into an iCalendar <code>.ics</code> file for Apple Calendar, Microsoft Outlook, or Google Calendar.
                       </p>
                     </div>
-                    <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsCalendarSubOpen(true)}
+                        className="py-2 px-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        title="Subscribe phone or computer to auto-syncing WebCal feed"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-purple-500" />
+                        <span>Live Calendar Feed (WebCal)</span>
+                      </button>
                       <button
                         type="button"
                         onClick={handleExportWeekSchedule}
@@ -4843,6 +5072,28 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+
+              {/* Real-time Conflict Alert Box in New Lesson Modal */}
+              {newLessonConflict && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-2 animate-in fade-in">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Schedule Conflict Warning</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                    {newLessonConflict}
+                  </p>
+                  <label className="flex items-center gap-2 pt-1 font-semibold text-[11px] cursor-pointer text-amber-900 dark:text-amber-200 select-none">
+                    <input
+                      type="checkbox"
+                      checked={allowLessonOverlap}
+                      onChange={(e) => setAllowLessonOverlap(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                    />
+                    <span>Allow overlap anyway (group lesson / override)</span>
+                  </label>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
@@ -5657,6 +5908,7 @@ export default function AdminPage() {
       <RescheduleModal
         isOpen={isRescheduleOpen}
         session={rescheduleTargetLesson}
+        allSessions={sessions}
         onClose={() => {
           setIsRescheduleOpen(false);
           setRescheduleTargetLesson(null);
@@ -5701,6 +5953,26 @@ export default function AdminPage() {
         tutors={tutors}
         preselectedStudentId={findSlotInitialStudentId}
         onSelectSlot={handleSelectFoundSlot}
+      />
+
+      {/* Per-Session Audit Timeline Modal */}
+      <SessionAuditModal
+        isOpen={isSessionAuditOpen}
+        session={sessionAuditTarget}
+        auditLogs={sessionAuditLogs}
+        isLoading={isLoadingSessionAudit}
+        onClose={() => {
+          setIsSessionAuditOpen(false);
+          setSessionAuditTarget(null);
+        }}
+      />
+
+      {/* Live Calendar Subscription Modal */}
+      <CalendarSubscriptionModal
+        isOpen={isCalendarSubOpen}
+        onClose={() => setIsCalendarSubOpen(false)}
+        title="Platform Master Calendar Feed"
+        subtitle="Subscribe your phone or computer calendar to live syncing lessons across LB Maths Tuition."
       />
 
       <Footer />

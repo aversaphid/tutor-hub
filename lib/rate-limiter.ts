@@ -8,6 +8,7 @@ interface RateLimitEntry {
 const pinAttempts = new Map<string, RateLimitEntry>();
 const pinIpAttempts = new Map<string, RateLimitEntry>();
 const passwordAttempts = new Map<string, RateLimitEntry>();
+const passwordAccountAttempts = new Map<string, RateLimitEntry>();
 const magicKeyAttempts = new Map<string, RateLimitEntry>();
 
 const MAX_ATTEMPTS = 5;
@@ -30,6 +31,7 @@ if (typeof setInterval !== "undefined") {
     cleanup(pinAttempts);
     cleanup(pinIpAttempts);
     cleanup(passwordAttempts);
+    cleanup(passwordAccountAttempts);
     cleanup(magicKeyAttempts);
   }, 10 * 60 * 1000).unref?.();
 }
@@ -206,7 +208,7 @@ export function resetDualPinRateLimit(ip: string, tuteeId?: string): void {
   pinAttempts.delete(studentKey);
 }
 
-// Password Login Rate Limiting
+// Password Login Rate Limiting (Single-key)
 export function checkPasswordRateLimit(key: string): RateLimitResult {
   return checkGenericRateLimit(passwordAttempts, key, MAX_ATTEMPTS, "Too many failed login attempts. Account access temporarily locked for security.");
 }
@@ -217,6 +219,62 @@ export function recordFailedPasswordAttempt(key: string): RateLimitResult {
 
 export function resetPasswordRateLimit(key: string): void {
   passwordAttempts.delete(key);
+}
+
+// Password Login Rate Limiting (Dual-Tier: IP network + Account Identifier)
+export function checkDualPasswordRateLimit(ip: string, identifier?: string): RateLimitResult {
+  const ipCheck = checkGenericRateLimit(
+    passwordAttempts,
+    ip,
+    MAX_ATTEMPTS,
+    "Too many failed login attempts from this network. Access temporarily locked for 15 minutes."
+  );
+  if (!ipCheck.allowed) {
+    return ipCheck;
+  }
+
+  if (identifier) {
+    const accountKey = identifier.toLowerCase().trim();
+    const accountCheck = checkGenericRateLimit(
+      passwordAccountAttempts,
+      accountKey,
+      MAX_ATTEMPTS,
+      `Too many failed login attempts for account "${identifier}". Access temporarily locked for 15 minutes to protect your account.`
+    );
+    if (!accountCheck.allowed) {
+      return accountCheck;
+    }
+    return {
+      allowed: true,
+      remainingAttempts: Math.min(ipCheck.remainingAttempts, accountCheck.remainingAttempts),
+    };
+  }
+
+  return ipCheck;
+}
+
+export function recordFailedDualPasswordAttempt(ip: string, identifier?: string): RateLimitResult {
+  const ipFail = recordGenericFailedAttempt(passwordAttempts, ip, MAX_ATTEMPTS, "login attempt");
+  if (identifier) {
+    const accountKey = identifier.toLowerCase().trim();
+    const accountFail = recordGenericFailedAttempt(
+      passwordAccountAttempts,
+      accountKey,
+      MAX_ATTEMPTS,
+      "login attempt"
+    );
+    if (!accountFail.allowed) {
+      return accountFail;
+    }
+  }
+  return ipFail;
+}
+
+export function resetDualPasswordRateLimit(ip: string, identifier?: string): void {
+  passwordAttempts.delete(ip);
+  if (identifier) {
+    passwordAccountAttempts.delete(identifier.toLowerCase().trim());
+  }
 }
 
 // Magic Key Rate Limiting

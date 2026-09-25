@@ -264,7 +264,10 @@ export async function PATCH(request: Request) {
       const passwordHash = await hashPassword(newPassword);
       await prisma.user.update({
         where: { id: userId },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          tokenVersion: { increment: 1 },
+        },
       });
       clearUserCache(userId);
 
@@ -359,6 +362,10 @@ export async function PATCH(request: Request) {
       const cleanName = studentTargetName.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
       const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
       updateData.magicKey = `STU-${cleanName}-${randomHex}`;
+    }
+
+    if (pin !== undefined || cycleMagicKey) {
+      updateData.tokenVersion = { increment: 1 };
     }
 
     const updatedStudent = await prisma.user.update({

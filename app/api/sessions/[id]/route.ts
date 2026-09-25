@@ -127,20 +127,22 @@ export async function PATCH(
         ? new Date(updates.scheduledEndTime)
         : existing.scheduledEndTime;
 
-      // Conflict validation
-      const conflict = await detectSessionConflict({
-        tutorId: targetTutorId,
-        tuteeId: existing.tuteeId,
-        startTime: newStart,
-        endTime: newEnd,
-        excludeSessionId: existing.id,
-      });
+      // Conflict validation (unless explicitly overridden)
+      if (!updates.allowOverlap) {
+        const conflict = await detectSessionConflict({
+          tutorId: targetTutorId,
+          tuteeId: existing.tuteeId,
+          startTime: newStart,
+          endTime: newEnd,
+          excludeSessionId: existing.id,
+        });
 
-      if (conflict.hasConflict) {
-        return NextResponse.json(
-          { error: conflict.reason, conflict: true },
-          { status: 409 }
-        );
+        if (conflict.hasConflict) {
+          return NextResponse.json(
+            { error: conflict.reason, conflict: true },
+            { status: 409 }
+          );
+        }
       }
 
       updateData.scheduledStartTime = newStart;

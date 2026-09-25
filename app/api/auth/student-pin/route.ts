@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     // PIN is correct, reset rate limit
     resetDualPinRateLimit(ip, tuteeId);
 
-    const token = createAuthToken({ id: student.id, role: student.role });
+    const token = createAuthToken({ id: student.id, role: student.role, tokenVersion: student.tokenVersion });
     const response = NextResponse.json({
       success: true,
       student: {

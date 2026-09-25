@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
     resetMagicKeyRateLimit(ip);
 
-    const token = createAuthToken({ id: student.id, role: student.role });
+    const token = createAuthToken({ id: student.id, role: student.role, tokenVersion: student.tokenVersion });
     const response = NextResponse.json({
       success: true,
       student: {

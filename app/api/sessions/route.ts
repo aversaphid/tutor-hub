@@ -187,6 +187,7 @@ export async function POST(request: Request) {
       tuteeConfirmed,
       repeatWeeks = 1,
       repeatIntervalWeeks = 1,
+      allowOverlap = false,
     } = parseResult.data;
 
     const baseStart = new Date(scheduledStartTime);
@@ -203,24 +204,26 @@ export async function POST(request: Request) {
     });
     const finalTitle = title?.trim() || `${student?.name || "Student"} - Maths Lesson`;
 
-    // 1. Conflict detection engine across all scheduled sessions
-    for (let w = 0; w < weeksToSchedule; w++) {
-      const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
-      const sessionEnd = new Date(sessionStart.getTime() + durationMs);
+    // 1. Conflict detection engine across all scheduled sessions (unless explicitly overridden)
+    if (!allowOverlap) {
+      for (let w = 0; w < weeksToSchedule; w++) {
+        const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
+        const sessionEnd = new Date(sessionStart.getTime() + durationMs);
 
-      const conflict = await detectSessionConflict({
-        tutorId,
-        tuteeId,
-        startTime: sessionStart,
-        endTime: sessionEnd,
-      });
+        const conflict = await detectSessionConflict({
+          tutorId,
+          tuteeId,
+          startTime: sessionStart,
+          endTime: sessionEnd,
+        });
 
-      if (conflict.hasConflict) {
-        const sessionLabel = weeksToSchedule > 1 ? ` (Session ${w + 1} - ${sessionStart.toLocaleDateString([], { month: "short", day: "numeric" })})` : "";
-        return NextResponse.json(
-          { error: `${conflict.reason}${sessionLabel}`, conflict: true },
-          { status: 409 }
-        );
+        if (conflict.hasConflict) {
+          const sessionLabel = weeksToSchedule > 1 ? ` (Session ${w + 1} - ${sessionStart.toLocaleDateString([], { month: "short", day: "numeric" })})` : "";
+          return NextResponse.json(
+            { error: `${conflict.reason}${sessionLabel}`, conflict: true },
+            { status: 409 }
+          );
+        }
       }
     }
 

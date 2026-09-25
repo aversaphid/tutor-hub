@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { X, Calendar, Clock, AlertCircle, Check, CalendarClock } from "lucide-react";
 import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -10,6 +10,7 @@ interface RescheduleModalProps {
   session: any | null;
   onClose: () => void;
   onSuccess: (updatedSession: any) => void;
+  allSessions?: any[];
 }
 
 export default function RescheduleModal({
@@ -17,11 +18,13 @@ export default function RescheduleModal({
   session,
   onClose,
   onSuccess,
+  allSessions = [],
 }: RescheduleModalProps) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [allowOverlap, setAllowOverlap] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,9 +49,38 @@ export default function RescheduleModal({
       setEndTime(`${endHours}:${endMinutes}`);
 
       setNotes(session.notes || "");
+      setAllowOverlap(false);
       setError("");
     }
   }, [session]);
+
+  // Real-time conflict detection across other active sessions
+  const conflictInfo = useMemo(() => {
+    if (!allSessions || allSessions.length === 0 || !date || !startTime || !endTime || !session) return null;
+    const [startH, startM] = startTime.split(":").map(Number);
+    const [endH, endM] = endTime.split(":").map(Number);
+    const [year, month, day] = date.split("-").map(Number);
+    const newStart = new Date(year, month - 1, day, startH, startM, 0, 0);
+    const newEnd = new Date(year, month - 1, day, endH, endM, 0, 0);
+    if (newEnd <= newStart) return null;
+
+    const conflict = allSessions.find((s) => {
+      if (s.id === session.id || s.status === "CANCELLED") return false;
+      const sStart = new Date(s.scheduledStartTime);
+      const sEnd = new Date(s.scheduledEndTime);
+      const overlaps = sStart < newEnd && sEnd > newStart;
+      if (!overlaps) return false;
+      return s.tutorId === session.tutorId || s.tuteeId === session.tuteeId;
+    });
+
+    if (!conflict) return null;
+    const isTutorConflict = conflict.tutorId === session.tutorId;
+    const sStartStr = new Date(conflict.scheduledStartTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const sEndStr = new Date(conflict.scheduledEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return isTutorConflict
+      ? `Tutor ${formatTutorName(conflict.tutor?.name || session.tutor?.name)} is already teaching ${conflict.tutee?.name || "a student"} (${sStartStr} – ${sEndStr}).`
+      : `Student ${conflict.tutee?.name || session.tutee?.name} already has an active lesson with ${formatTutorName(conflict.tutor?.name)} (${sStartStr} – ${sEndStr}).`;
+  }, [allSessions, date, startTime, endTime, session]);
 
   if (!isOpen || !session) return null;
 
@@ -73,6 +105,11 @@ export default function RescheduleModal({
       return;
     }
 
+    if (conflictInfo && !allowOverlap) {
+      setError("Schedule conflict detected. Please pick another time or check 'Allow overlap anyway'.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -84,6 +121,7 @@ export default function RescheduleModal({
           scheduledEndTime: newEndDate.toISOString(),
           status: "SCHEDULED",
           notes: notes.trim() || null,
+          allowOverlap,
         }),
       });
 
@@ -259,6 +297,28 @@ export default function RescheduleModal({
           {session.status === "CANCELLED" && (
             <div className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
               💡 Confirming this will reactivate the lesson to <strong>Scheduled</strong> at the new date and time.
+            </div>
+          )}
+
+          {/* Real-time Conflict Alert Box */}
+          {conflictInfo && (
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Schedule Conflict Detected</span>
+              </div>
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                {conflictInfo}
+              </p>
+              <label className="flex items-center gap-2 pt-1 font-semibold text-[11px] cursor-pointer text-amber-900 dark:text-amber-200 select-none">
+                <input
+                  type="checkbox"
+                  checked={allowOverlap}
+                  onChange={(e) => setAllowOverlap(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <span>Allow overlap anyway (group session / intentional conflict)</span>
+              </label>
             </div>
           )}
 

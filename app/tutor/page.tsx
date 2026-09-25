@@ -10,6 +10,7 @@ import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
+import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import {
   Calendar,
   Users,
@@ -131,6 +132,7 @@ export default function TutorDashboardPage() {
   const [tutorPasswordError, setTutorPasswordError] = useState("");
   const [tutorPasswordSuccess, setTutorPasswordSuccess] = useState("");
   const [isSubmittingTutorPassword, setIsSubmittingTutorPassword] = useState(false);
+  const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
 
   useEffect(() => {
     initTutorData();
@@ -1145,7 +1147,15 @@ export default function TutorDashboardPage() {
                       </select>
                     </div>
 
-                    {/* Export Actions */}
+                    <button
+                      type="button"
+                      onClick={() => setIsCalendarSubOpen(true)}
+                      className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-xl border border-purple-200 dark:border-purple-800 text-xs font-bold transition-colors cursor-pointer"
+                      title="Subscribe your phone or computer to auto-syncing WebCal feed"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-purple-500" />
+                      <span>Live Calendar (WebCal)</span>
+                    </button>
                     <button
                       onClick={handleExportWeekSchedule}
                       className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-colors cursor-pointer"
@@ -1858,15 +1868,26 @@ export default function TutorDashboardPage() {
                   <div className="text-xs text-slate-500 dark:text-slate-400">
                     Download this week&apos;s teaching timetable with student names and start/end times.
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleExportWeekSchedule}
-                    className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700 shrink-0"
-                    title="Export all my lessons for this week to .ics calendar"
-                  >
-                    <Download className="w-3.5 h-3.5 text-[#48A5EE]" />
-                    <span>Export Week (.ics)</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsCalendarSubOpen(true)}
+                      className="py-2 px-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-purple-200 dark:border-purple-800 shrink-0"
+                      title="Subscribe your phone or computer to auto-syncing WebCal feed"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-purple-500" />
+                      <span>Live Calendar (WebCal)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportWeekSchedule}
+                      className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700 shrink-0"
+                      title="Export all my lessons for this week to .ics calendar"
+                    >
+                      <Download className="w-3.5 h-3.5 text-[#48A5EE]" />
+                      <span>Export Week (.ics)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1952,6 +1973,14 @@ export default function TutorDashboardPage() {
           loadLiveSession();
         }}
         onUserSelect={(u) => setCalendarModalUser(u)}
+      />
+
+      {/* Live Calendar Subscription Modal */}
+      <CalendarSubscriptionModal
+        isOpen={isCalendarSubOpen}
+        onClose={() => setIsCalendarSubOpen(false)}
+        title="My Teaching Schedule Feed"
+        subtitle="Subscribe your phone or computer calendar to your teaching schedule. Changes, reschedules, or new bookings sync automatically."
       />
 
       <Footer />

@@ -60,6 +60,7 @@ export interface SessionUser {
   email: string | null;
   role: "HEAD_TUTOR" | "TUTOR" | "TUTEE";
   magicKey: string | null;
+  tokenVersion?: number;
 }
 
 const SECRET =
@@ -70,8 +71,8 @@ const SECRET =
       })()
     : "dev_fallback_session_secret_lb_maths_tuition_hub_32_chars");
 
-// Encode cryptographically signed secure token with expiration
-export function createAuthToken(user: { id: string; role: string }, expiresInSeconds?: number): string {
+// Encode cryptographically signed secure token with expiration and tokenVersion
+export function createAuthToken(user: { id: string; role: string; tokenVersion?: number }, expiresInSeconds?: number): string {
   const now = Date.now();
   const defaultTtlSeconds = user.role === "TUTEE" ? 24 * 3600 : 7 * 24 * 3600;
   const ttlMs = (expiresInSeconds || defaultTtlSeconds) * 1000;
@@ -79,6 +80,7 @@ export function createAuthToken(user: { id: string; role: string }, expiresInSec
   const payload = {
     sub: user.id,
     role: user.role,
+    tv: user.tokenVersion || 1,
     iat: now,
     exp: now + ttlMs,
   };
@@ -87,7 +89,7 @@ export function createAuthToken(user: { id: string; role: string }, expiresInSec
   return `${data}.${signature}`;
 }
 
-export function parseAuthToken(token: string): { sub: string; role: string; exp?: number } | null {
+export function parseAuthToken(token: string): { sub: string; role: string; tv?: number; exp?: number } | null {
   try {
     if (!token || typeof token !== "string") return null;
     const parts = token.split(".");
@@ -144,7 +146,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     const now = Date.now();
     const cached = userCache.get(parsed.sub);
     if (cached && cached.expiresAt > now) {
-      return cached.user;
+      if (parsed.tv !== undefined && cached.user.tokenVersion !== undefined && parsed.tv !== cached.user.tokenVersion) {
+        userCache.delete(parsed.sub);
+      } else {
+        return cached.user;
+      }
     }
 
     const user = await prisma.user.findUnique({
@@ -155,10 +161,17 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         email: true,
         role: true,
         magicKey: true,
+        tokenVersion: true,
       },
     });
 
     if (user) {
+      // If tokenVersion in token doesn't match active DB tokenVersion, token was revoked
+      if (parsed.tv !== undefined && user.tokenVersion !== undefined && parsed.tv !== user.tokenVersion) {
+        userCache.delete(parsed.sub);
+        return null;
+      }
+
       userCache.set(parsed.sub, {
         user,
         expiresAt: now + USER_CACHE_TTL_MS,

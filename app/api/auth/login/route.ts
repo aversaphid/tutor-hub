@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, createAuthToken, setAuthCookie } from "@/lib/auth";
 import {
   getClientIp,
-  checkPasswordRateLimit,
-  recordFailedPasswordAttempt,
-  resetPasswordRateLimit,
+  checkDualPasswordRateLimit,
+  recordFailedDualPasswordAttempt,
+  resetDualPasswordRateLimit,
 } from "@/lib/rate-limiter";
 import { z } from "zod";
 
@@ -19,17 +19,6 @@ const LoginSchema = z.object({
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
-    const rateLimitCheck = checkPasswordRateLimit(ip);
-    if (!rateLimitCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: rateLimitCheck.error,
-          lockedMinutesRemaining: rateLimitCheck.lockedMinutesRemaining,
-        },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
     const parseResult = LoginSchema.safeParse(body);
 
@@ -50,6 +39,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Dual-tier rate limiting check (IP network tier + Account identifier tier)
+    const rateLimitCheck = checkDualPasswordRateLimit(ip, rawIdentifier);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: rateLimitCheck.error,
+          lockedMinutesRemaining: rateLimitCheck.lockedMinutesRemaining,
+        },
+        { status: 429 }
+      );
+    }
+
     const lowerIdentifier = rawIdentifier.toLowerCase();
     const normalizedEmail = lowerIdentifier.includes("@")
       ? lowerIdentifier
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     });
 
     if (!user || !user.passwordHash || (!user.active && user.role !== "HEAD_TUTOR")) {
-      const fail = recordFailedPasswordAttempt(ip);
+      const fail = recordFailedDualPasswordAttempt(ip, rawIdentifier);
       return NextResponse.json(
         { error: "Invalid email or password.", remainingAttempts: fail.remainingAttempts },
         { status: 401 }
@@ -76,17 +77,17 @@ export async function POST(request: Request) {
 
     const isValid = await verifyPassword(password, user.passwordHash);
     if (!isValid) {
-      const fail = recordFailedPasswordAttempt(ip);
+      const fail = recordFailedDualPasswordAttempt(ip, rawIdentifier);
       return NextResponse.json(
         { error: "Invalid email or password.", remainingAttempts: fail.remainingAttempts },
         { status: 401 }
       );
     }
 
-    // Successful login - reset rate limit
-    resetPasswordRateLimit(ip);
+    // Successful login - reset dual rate limit
+    resetDualPasswordRateLimit(ip, rawIdentifier);
 
-    const token = createAuthToken({ id: user.id, role: user.role });
+    const token = createAuthToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
     const response = NextResponse.json({
       success: true,
       user: {

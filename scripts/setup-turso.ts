@@ -45,6 +45,9 @@ async function setup() {
   try {
     await client.execute(`ALTER TABLE "User" ADD COLUMN "tutorPay" REAL;`);
   } catch { }
+  try {
+    await client.execute(`ALTER TABLE "User" ADD COLUMN "tokenVersion" INTEGER DEFAULT 1;`);
+  } catch { }
 
   // 2. Create Session table
   await client.execute(`

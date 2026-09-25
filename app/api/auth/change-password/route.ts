@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, verifyPassword, hashPassword, clearUserCache } from "@/lib/auth";
+import { getCurrentUser, verifyPassword, hashPassword, clearUserCache, createAuthToken, setAuthCookie } from "@/lib/auth";
 import { z } from "zod";
 
 const ChangePasswordSchema = z.object({
@@ -44,17 +44,30 @@ export async function POST(request: Request) {
 
     const newHash = await hashPassword(newPassword);
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: newHash },
+      data: {
+        passwordHash: newHash,
+        tokenVersion: { increment: 1 },
+      },
+      select: { id: true, role: true, tokenVersion: true },
     });
 
     clearUserCache(user.id);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Password changed successfully!",
     });
+
+    const refreshedToken = createAuthToken({
+      id: updatedUser.id,
+      role: updatedUser.role,
+      tokenVersion: updatedUser.tokenVersion,
+    });
+    setAuthCookie(response, refreshedToken, updatedUser.role);
+
+    return response;
   } catch (err) {
     console.error("Change password error:", err);
     return NextResponse.json(

@@ -90,11 +90,12 @@ export const ToggleUserActiveSchema = z.object({
   active: z.boolean().optional(),
 });
 
-// Batch archive sessions by date range
+// Batch archive sessions by date range or tutor
 export const BatchArchiveSessionsSchema = z.object({
   startDate: z.string().datetime({ message: "Invalid ISO start date" }),
   endDate: z.string().datetime({ message: "Invalid ISO end date" }),
   sessionIds: z.array(z.string()).optional(),
+  tutorId: z.string().optional(),
 });
 
 // Admin update user password
@@ -125,6 +126,7 @@ export const CreateSessionSchema = z.object({
   tuteeConfirmed: z.boolean().optional(),
   repeatWeeks: z.number().int().min(1).max(12).optional(),
   repeatIntervalWeeks: z.number().int().min(1).max(4).optional(),
+  allowOverlap: z.boolean().optional(),
 });
 
 // Session update
@@ -144,6 +146,7 @@ export const UpdateSessionSchema = z.object({
   feedbackCovered: z.string().optional().nullable(),
   feedbackRating: z.number().int().min(1).max(5).optional().nullable(),
   feedbackNotes: z.string().optional().nullable(),
+  allowOverlap: z.boolean().optional(),
 });
 
 // Session delay schema

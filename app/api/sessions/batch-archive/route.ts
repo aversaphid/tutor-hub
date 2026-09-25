@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { startDate, endDate, sessionIds } = parseResult.data;
+    const { startDate, endDate, sessionIds, tutorId } = parseResult.data;
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -31,6 +31,10 @@ export async function POST(request: Request) {
       tutorPaid: false,
       status: { not: "CANCELLED" },
     };
+
+    if (tutorId) {
+      where.tutorId = tutorId;
+    }
 
     if (sessionIds && sessionIds.length > 0) {
       where.id = { in: sessionIds };

@@ -23,12 +23,14 @@ import {
   Info,
   BookOpen,
   Send,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import ExamCountdownWidget from "@/components/exam-countdown-widget";
+import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -46,6 +48,7 @@ function StudentLobbyContent() {
   // Formula Sheet & Casio Calculator modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
 
   // Student topic for lesson
@@ -610,10 +613,21 @@ function StudentLobbyContent() {
         {/* Other Upcoming Lessons */}
         {upcomingSessions.length > 0 && (
           <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>Upcoming Maths Lessons</span>
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Upcoming Maths Lessons</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCalendarSubOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer"
+                title="Sync all lessons to Apple Calendar / Google Calendar"
+              >
+                <RefreshCw className="w-3 h-3 text-purple-500" />
+                <span>Sync to Calendar (WebCal)</span>
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {upcomingSessions.map((session) => (
@@ -668,6 +682,15 @@ function StudentLobbyContent() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
+      />
+
+      {/* Live Calendar Subscription Modal */}
+      <CalendarSubscriptionModal
+        isOpen={isCalendarSubOpen}
+        onClose={() => setIsCalendarSubOpen(false)}
+        title="My Maths Lessons Calendar"
+        subtitle="Subscribe your phone, tablet, or computer to your maths lessons. Any timetable changes or rescheduled lessons update automatically."
+        magicKey={magicKey || currentUser?.magicKey}
       />
 
       <Footer />
