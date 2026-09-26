@@ -14,8 +14,33 @@ import {
   Award,
   ArrowUpRight,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { formatCurrency, formatTutorName } from "@/lib/format";
+
+// Calculate standard UK week (Monday 00:00:00 to Sunday 23:59:59.999)
+function getWeekRange(dateInput: Date | string = new Date()): { start: Date; end: Date; label: string } {
+  const d = new Date(dateInput);
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
+
+  const day = validDate.getDay();
+  // Sunday is 0, Monday is 1, Saturday is 6
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(validDate);
+  monday.setDate(validDate.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  const startStr = monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const endStr = sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const label = `${startStr} – ${endStr}`;
+
+  return { start: monday, end: sunday, label };
+}
 
 interface RevenueAnalyticsHubProps {
   sessions: any[];
@@ -28,9 +53,25 @@ export default function RevenueAnalyticsHub({
   tutors,
   students,
 }: RevenueAnalyticsHubProps) {
-  const [timeframe, setTimeframe] = useState<"ALL" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM">("THIS_MONTH");
+  const [timeframe, setTimeframe] = useState<"THIS_WEEK" | "CUSTOM_WEEK" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM" | "ALL">("THIS_WEEK");
   const [customMonth, setCustomMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
+  const [customWeekDate, setCustomWeekDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [selectedTutorId, setSelectedTutorId] = useState<string>("ALL");
+
+  const thisWeekRange = useMemo(() => getWeekRange(new Date()), []);
+  const activeWeekRange = useMemo(() => getWeekRange(customWeekDate), [customWeekDate]);
+
+  const handlePrevWeek = () => {
+    const d = new Date(customWeekDate || new Date());
+    d.setDate(d.getDate() - 7);
+    setCustomWeekDate(d.toISOString().slice(0, 10));
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(customWeekDate || new Date());
+    d.setDate(d.getDate() + 7);
+    setCustomWeekDate(d.toISOString().slice(0, 10));
+  };
 
   // Helper to extract numeric fees
   const getSessionStudentPay = (s: any): number => {
@@ -67,6 +108,16 @@ export default function RevenueAnalyticsHub({
       const date = new Date(s.scheduledStartTime);
       if (isNaN(date.getTime())) return false;
 
+      if (timeframe === "THIS_WEEK") {
+        const { start, end } = thisWeekRange;
+        return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
+      }
+
+      if (timeframe === "CUSTOM_WEEK" && customWeekDate) {
+        const { start, end } = activeWeekRange;
+        return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
+      }
+
       if (timeframe === "THIS_MONTH") {
         return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
       }
@@ -86,7 +137,7 @@ export default function RevenueAnalyticsHub({
 
       return true; // "ALL"
     });
-  }, [sessions, timeframe, customMonth, selectedTutorId]);
+  }, [sessions, timeframe, customMonth, customWeekDate, selectedTutorId, thisWeekRange, activeWeekRange]);
 
   // Aggregate high-level KPIs
   const kpis = useMemo(() => {
@@ -258,6 +309,62 @@ export default function RevenueAnalyticsHub({
       .slice(0, 6);
   }, [sessions, selectedTutorId]);
 
+  // Daily breakdown for the selected week (Monday through Sunday)
+  const weeklyDailyBreakdown = useMemo(() => {
+    if (timeframe !== "THIS_WEEK" && timeframe !== "CUSTOM_WEEK") return [];
+    const range = timeframe === "THIS_WEEK" ? thisWeekRange : activeWeekRange;
+
+    const today = new Date();
+    const days: {
+      key: string;
+      dayName: string;
+      dateStr: string;
+      isToday: boolean;
+      lessons: number;
+      hours: number;
+      revenue: number;
+      profit: number;
+    }[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(range.start);
+      d.setDate(d.getDate() + i);
+      const isToday =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+
+      days.push({
+        key: d.toISOString().slice(0, 10),
+        dayName: d.toLocaleDateString("en-GB", { weekday: "short" }),
+        dateStr: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        isToday,
+        lessons: 0,
+        hours: 0,
+        revenue: 0,
+        profit: 0,
+      });
+    }
+
+    for (const s of filteredCompletedSessions) {
+      const d = new Date(s.scheduledStartTime);
+      if (isNaN(d.getTime())) continue;
+      const sKey = d.toISOString().slice(0, 10);
+      const matched = days.find((day) => day.key === sKey);
+      if (matched) {
+        const rev = getSessionStudentPay(s);
+        const pay = getSessionTutorPay(s);
+        const hrs = getSessionDurationHours(s);
+        matched.lessons += 1;
+        matched.hours += hrs;
+        matched.revenue += rev;
+        matched.profit += rev - pay;
+      }
+    }
+
+    return days;
+  }, [filteredCompletedSessions, timeframe, thisWeekRange, activeWeekRange]);
+
   // CSV Export for financial reporting
   const handleExportFinancialCSV = () => {
     const headers = [
@@ -307,9 +414,15 @@ export default function RevenueAnalyticsHub({
     const csvContent = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
+    const timeframeSlug =
+      timeframe === "THIS_WEEK"
+        ? "this-week"
+        : timeframe === "CUSTOM_WEEK"
+        ? `week-${activeWeekRange.start.toISOString().slice(0, 10)}`
+        : timeframe.toLowerCase().replace(/_/g, "-");
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `lbmaths-revenue-report-${timeframe.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `lbmaths-revenue-report-${timeframeSlug}-${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -335,49 +448,115 @@ export default function RevenueAnalyticsHub({
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Timeframe selector */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+          <div className="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs gap-0.5">
             <button
+              type="button"
+              onClick={() => setTimeframe("THIS_WEEK")}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                timeframe === "THIS_WEEK"
+                  ? "bg-[#48A5EE] text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              This Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimeframe("CUSTOM_WEEK")}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                timeframe === "CUSTOM_WEEK"
+                  ? "bg-[#48A5EE] text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              Week Selector
+            </button>
+            <button
+              type="button"
               onClick={() => setTimeframe("THIS_MONTH")}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === "THIS_MONTH"
                   ? "bg-[#48A5EE] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               This Month
             </button>
             <button
+              type="button"
               onClick={() => setTimeframe("LAST_MONTH")}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === "LAST_MONTH"
                   ? "bg-[#48A5EE] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Last Month
             </button>
             <button
-              onClick={() => setTimeframe("ALL")}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                timeframe === "ALL"
-                  ? "bg-[#48A5EE] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-              }`}
-            >
-              All Time
-            </button>
-            <button
+              type="button"
               onClick={() => setTimeframe("CUSTOM")}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 timeframe === "CUSTOM"
                   ? "bg-[#48A5EE] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Month Picker
             </button>
+            <button
+              type="button"
+              onClick={() => setTimeframe("ALL")}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                timeframe === "ALL"
+                  ? "bg-[#48A5EE] text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              All Time
+            </button>
           </div>
 
+          {/* Week Selector Navigator (when CUSTOM_WEEK is active) */}
+          {timeframe === "CUSTOM_WEEK" && (
+            <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs shadow-xs">
+              <button
+                type="button"
+                onClick={handlePrevWeek}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Previous Week (-7 days)"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <input
+                type="date"
+                value={customWeekDate}
+                onChange={(e) => setCustomWeekDate(e.target.value)}
+                className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-800 dark:text-slate-100 font-bold focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={handleNextWeek}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                title="Next Week (+7 days)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-bold text-[#48A5EE] px-1 whitespace-nowrap hidden sm:inline">
+                {activeWeekRange.label}
+              </span>
+            </div>
+          )}
+
+          {/* This Week Badge Indicator */}
+          {timeframe === "THIS_WEEK" && (
+            <div className="flex items-center gap-1.5 bg-sky-50 dark:bg-sky-950/40 px-3 py-1.5 rounded-xl border border-sky-200 dark:border-sky-800 text-xs text-[#48A5EE] font-bold">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{thisWeekRange.label}</span>
+            </div>
+          )}
+
+          {/* Month Picker Input (when CUSTOM is active) */}
           {timeframe === "CUSTOM" && (
             <input
               type="month"
@@ -513,53 +692,124 @@ export default function RevenueAnalyticsHub({
 
       {/* Month-on-Month Trends & Tutor Breakdown 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Month-on-Month Historical Trend (1 Col) */}
+        {/* Weekly Daily Breakdown OR Month-on-Month Historical Trend (1 Col) */}
         <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#48A5EE]" />
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                Monthly Performance
+                {timeframe === "THIS_WEEK" || timeframe === "CUSTOM_WEEK"
+                  ? "Daily Performance"
+                  : "Monthly Performance"}
               </h3>
             </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Last 6 Months
+            <span className="text-[10px] font-bold text-[#48A5EE] bg-[#48A5EE]/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              {timeframe === "THIS_WEEK"
+                ? thisWeekRange.label
+                : timeframe === "CUSTOM_WEEK"
+                ? activeWeekRange.label
+                : "Last 6 Months"}
             </span>
           </div>
 
-          {monthlyTrends.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">
-              No completed lesson history yet.
-            </div>
+          {(timeframe === "THIS_WEEK" || timeframe === "CUSTOM_WEEK") ? (
+            weeklyDailyBreakdown.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No completed lesson history for this week.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {weeklyDailyBreakdown.map((day) => {
+                  const hasActivity = day.lessons > 0;
+                  return (
+                    <div
+                      key={day.key}
+                      className={`p-3 rounded-2xl border flex items-center justify-between transition-colors ${
+                        day.isToday
+                          ? "bg-[#48A5EE]/10 border-[#48A5EE]/30"
+                          : hasActivity
+                          ? "bg-slate-50 dark:bg-slate-900/40 border-slate-100 dark:border-slate-800"
+                          : "bg-transparent border-transparent opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-[11px] ${
+                            day.isToday
+                              ? "bg-[#48A5EE] text-white"
+                              : hasActivity
+                              ? "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                              : "bg-slate-100 dark:bg-slate-800/60 text-slate-400"
+                          }`}
+                        >
+                          {day.dayName}
+                        </span>
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                            <span>{day.dateStr}</span>
+                            {day.isToday && (
+                              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-full bg-[#48A5EE] text-white">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {hasActivity
+                              ? `${day.lessons} ${day.lessons === 1 ? "lesson" : "lessons"} • ${day.hours.toFixed(1)} hrs`
+                              : "No completed lessons"}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {hasActivity ? formatCurrency(day.revenue) : "—"}
+                        </div>
+                        {hasActivity && (
+                          <div className="text-[11px] font-bold text-[#48A5EE]">
+                            +{formatCurrency(day.profit)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           ) : (
-            <div className="space-y-3">
-              {monthlyTrends.map((m) => {
-                const margin = m.revenue > 0 ? (m.profit / m.revenue) * 100 : 0;
-                return (
-                  <div
-                    key={m.monthKey}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                        {m.label}
+            monthlyTrends.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No completed lesson history yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {monthlyTrends.map((m) => {
+                  const margin = m.revenue > 0 ? (m.profit / m.revenue) * 100 : 0;
+                  return (
+                    <div
+                      key={m.monthKey}
+                      className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          {m.label}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          {m.lessons} lessons • {m.hours.toFixed(1)} hrs
+                        </div>
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {m.lessons} lessons • {m.hours.toFixed(1)} hrs
+                      <div className="text-right">
+                        <div className="text-xs font-black text-slate-900 dark:text-white">
+                          {formatCurrency(m.revenue)}
+                        </div>
+                        <div className="text-[11px] font-bold text-[#48A5EE]">
+                          +{formatCurrency(m.profit)} ({margin.toFixed(0)}%)
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs font-black text-slate-900 dark:text-white">
-                        {formatCurrency(m.revenue)}
-                      </div>
-                      <div className="text-[11px] font-bold text-[#48A5EE]">
-                        +{formatCurrency(m.profit)} ({margin.toFixed(0)}%)
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )
           )}
         </div>
 
