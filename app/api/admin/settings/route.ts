@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { invalidateSettingsCache } from "@/lib/settings-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ export async function PATCH(request: Request) {
         value: String(subwaySurfersEnabled),
       },
     });
+
+    invalidateSettingsCache();
 
     return NextResponse.json({
       success: true,

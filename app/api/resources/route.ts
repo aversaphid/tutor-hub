@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { CreateResourceSchema } from "@/lib/validations";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,31 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({ resources });
+    const etagSeed = resources
+      .map((r) => `${r.id}-${new Date(r.updatedAt).getTime()}`)
+      .join(":");
+    const etag = `"${crypto.createHash("md5").update(etagSeed).digest("hex")}"`;
+
+    const ifNoneMatch = request.headers.get("if-none-match");
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, no-cache, must-revalidate",
+        },
+      });
+    }
+
+    return NextResponse.json(
+      { resources },
+      {
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err) {
     console.error("Fetch resources error:", err);
     return NextResponse.json(

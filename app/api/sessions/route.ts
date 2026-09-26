@@ -9,6 +9,45 @@ import { logSessionAudit } from "@/lib/audit";
 import { sanitizeSessionsForRole } from "@/lib/session-sanitizer";
 import crypto from "crypto";
 
+let lastAutoStartCheck = 0;
+const AUTO_START_INTERVAL_MS = 60_000;
+
+async function checkAndAutoStartSessions() {
+  const nowMs = Date.now();
+  if (nowMs - lastAutoStartCheck < AUTO_START_INTERVAL_MS) {
+    return;
+  }
+  lastAutoStartCheck = nowMs;
+  const now = new Date();
+  try {
+    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
+    await prisma.session.updateMany({
+      where: {
+        status: { in: ["SCHEDULED", "DELAYED"] },
+        scheduledStartTime: { lte: now },
+        scheduledEndTime: { gt: now },
+      },
+      data: {
+        status: "IN_PROGRESS",
+        actualStartTime: now,
+      },
+    });
+
+    // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
+    await prisma.session.updateMany({
+      where: {
+        status: "IN_PROGRESS",
+        scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
+      },
+      data: {
+        status: "COMPLETED",
+      },
+    });
+  } catch (e) {
+    console.error("Auto-start/auto-resolve sessions error in /api/sessions:", e);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -22,34 +61,8 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const activeOnly = searchParams.get("active") === "true";
 
-    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
-    const now = new Date();
-    try {
-      await prisma.session.updateMany({
-        where: {
-          status: { in: ["SCHEDULED", "DELAYED"] },
-          scheduledStartTime: { lte: now },
-          scheduledEndTime: { gt: now },
-        },
-        data: {
-          status: "IN_PROGRESS",
-          actualStartTime: now,
-        },
-      });
-
-      // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
-      await prisma.session.updateMany({
-        where: {
-          status: "IN_PROGRESS",
-          scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
-        },
-        data: {
-          status: "COMPLETED",
-        },
-      });
-    } catch (e) {
-      console.error("Auto-start/auto-resolve sessions error in /api/sessions:", e);
-    }
+    // Auto-start and auto-resolve sessions throttled to at most once every 60 seconds
+    await checkAndAutoStartSessions();
 
     const where: any = {};
 
@@ -130,7 +143,7 @@ export async function GET(request: Request) {
         status: 304,
         headers: {
           ETag: etag,
-          "Cache-Control": "private, no-cache",
+          "Cache-Control": "private, no-cache, must-revalidate",
         },
       });
     }
@@ -139,7 +152,8 @@ export async function GET(request: Request) {
       { sessions: sanitizedSessions },
       {
         headers: {
-          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          ETag: etag,
+          "Cache-Control": "private, no-cache, must-revalidate",
         },
       }
     );

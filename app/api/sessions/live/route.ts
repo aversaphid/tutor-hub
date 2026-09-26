@@ -7,6 +7,45 @@ import { sanitizeSessionForRole } from "@/lib/session-sanitizer";
 
 export const dynamic = "force-dynamic";
 
+let lastLiveAutoStartCheck = 0;
+const LIVE_AUTO_START_INTERVAL_MS = 60_000;
+
+async function checkAndAutoStartSessions() {
+  const nowMs = Date.now();
+  if (nowMs - lastLiveAutoStartCheck < LIVE_AUTO_START_INTERVAL_MS) {
+    return;
+  }
+  lastLiveAutoStartCheck = nowMs;
+  const now = new Date();
+  try {
+    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
+    await prisma.session.updateMany({
+      where: {
+        status: { in: ["SCHEDULED", "DELAYED"] },
+        scheduledStartTime: { lte: now },
+        scheduledEndTime: { gt: now },
+      },
+      data: {
+        status: "IN_PROGRESS",
+        actualStartTime: now,
+      },
+    });
+
+    // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
+    await prisma.session.updateMany({
+      where: {
+        status: "IN_PROGRESS",
+        scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
+      },
+      data: {
+        status: "COMPLETED",
+      },
+    });
+  } catch (e) {
+    console.error("Auto-start/auto-resolve sessions error in /api/sessions/live:", e);
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -22,33 +61,8 @@ export async function GET(request: Request) {
     let session = null;
     const now = new Date();
 
-    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
-    try {
-      await prisma.session.updateMany({
-        where: {
-          status: { in: ["SCHEDULED", "DELAYED"] },
-          scheduledStartTime: { lte: now },
-          scheduledEndTime: { gt: now },
-        },
-        data: {
-          status: "IN_PROGRESS",
-          actualStartTime: now,
-        },
-      });
-
-      // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
-      await prisma.session.updateMany({
-        where: {
-          status: "IN_PROGRESS",
-          scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
-        },
-        data: {
-          status: "COMPLETED",
-        },
-      });
-    } catch (e) {
-      console.error("Auto-start/auto-resolve sessions error in /api/sessions/live:", e);
-    }
+    // Auto-start any scheduled or delayed lessons throttled to once every 60s
+    await checkAndAutoStartSessions();
 
     const isStudent = user.role === "TUTEE";
     const include = {

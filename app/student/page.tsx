@@ -185,14 +185,14 @@ function StudentLobbyContent() {
         return;
       }
 
-      // 8s if a lesson is starting soon or in progress, otherwise 12s
+      // 15s if a lesson is starting soon or in progress, otherwise 40s
       const now = Date.now();
       const isStartingSoonOrLive =
         activeSession &&
         (activeSession.status === "IN_PROGRESS" ||
           new Date(activeSession.scheduledStartTime).getTime() - now < 5 * 60 * 1000);
 
-      const delay = isStartingSoonOrLive ? 8000 : 12000;
+      const delay = isStartingSoonOrLive ? 15000 : 40000;
 
       timer = setTimeout(async () => {
         await loadStudentSessions(currentUser.id);

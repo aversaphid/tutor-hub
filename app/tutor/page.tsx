@@ -191,14 +191,14 @@ export default function TutorDashboardPage() {
       // Don't poll when tab is hidden
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
-      // Poll faster when a lesson is live or starting soon
+      // Poll with balanced interval: 15s when active/soon, 35s when idle
       const now = Date.now();
       const isLiveOrSoon =
         activeLesson &&
         (activeLesson.status === "IN_PROGRESS" ||
           new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
 
-      const delay = isLiveOrSoon ? 6000 : 10000;
+      const delay = isLiveOrSoon ? 15000 : 35000;
 
       pollTimer = setTimeout(async () => {
         await loadMySessions();
@@ -264,7 +264,7 @@ export default function TutorDashboardPage() {
 
   const loadMySessions = async () => {
     try {
-      const res = await fetch(`/api/sessions?_t=${Date.now()}`, { cache: "no-store" });
+      const res = await fetch("/api/sessions");
       if (!res.ok) return;
       const data = await res.json();
       const sessions = data.sessions || [];
