@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseAuthToken } from "@/lib/auth";
+import crypto from "crypto";
 
 function formatDateToICS(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -83,7 +84,54 @@ export async function GET(request: Request) {
       orderBy: { scheduledStartTime: "asc" },
     });
 
-    // 3. Construct RFC 5545 iCalendar stream
+    // 3. ETag & Last-Modified validation (RFC 7232) for fast 304 Not Modified responses
+    const latestUpdateMs = sessions.reduce((max, s) => {
+      const ms = s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
+      return ms > max ? ms : max;
+    }, 0);
+
+    const fingerprint = [
+      user.id,
+      user.role,
+      tutorIdFilter || "all",
+      sessions.length,
+      ...sessions.map((s) => `${s.id}:${s.updatedAt ? new Date(s.updatedAt).getTime() : 0}`),
+    ].join("|");
+
+    const etag = `"${crypto.createHash("sha256").update(fingerprint).digest("hex").slice(0, 24)}"`;
+    const lastModifiedHeader = latestUpdateMs > 0 ? new Date(latestUpdateMs).toUTCString() : new Date().toUTCString();
+
+    const ifNoneMatch = request.headers.get("if-none-match");
+    const ifModifiedSince = request.headers.get("if-modified-since");
+
+    // Check ETag match
+    const etagMatches = ifNoneMatch && (
+      ifNoneMatch === etag ||
+      ifNoneMatch === `W/${etag}` ||
+      ifNoneMatch.replace(/^W\//, "") === etag
+    );
+
+    // Check If-Modified-Since
+    let notModifiedSince = false;
+    if (ifModifiedSince && latestUpdateMs > 0) {
+      const clientTime = new Date(ifModifiedSince).getTime();
+      if (!isNaN(clientTime) && Math.floor(clientTime / 1000) >= Math.floor(latestUpdateMs / 1000)) {
+        notModifiedSince = true;
+      }
+    }
+
+    if (etagMatches || notModifiedSince) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          "ETag": etag,
+          "Last-Modified": lastModifiedHeader,
+          "Cache-Control": "private, no-cache, must-revalidate",
+        },
+      });
+    }
+
+    // 4. Construct RFC 5545 iCalendar stream
     const now = new Date();
     const formattedStamp = formatDateToICS(now);
     const calendarName =
@@ -156,8 +204,8 @@ export async function GET(request: Request) {
       "X-WR-TIMEZONE:Europe/London",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
-      "X-PUBLISHED-TTL:PT1H",
+      "REFRESH-INTERVAL;VALUE=DURATION:PT15M",
+      "X-PUBLISHED-TTL:PT15M",
       ...vEvents,
       "END:VCALENDAR",
     ].join("\r\n");
@@ -167,7 +215,9 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
         "Content-Disposition": `inline; filename="lb-maths-calendar.ics"`,
-        "Cache-Control": "public, max-age=1800, stale-while-revalidate=3600",
+        "ETag": etag,
+        "Last-Modified": lastModifiedHeader,
+        "Cache-Control": "private, no-cache, must-revalidate",
       },
     });
   } catch (err) {
