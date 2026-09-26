@@ -90,6 +90,11 @@ export async function POST(
       details: detailText,
     });
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSION_DELAYED", sessionId: id });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: updated,

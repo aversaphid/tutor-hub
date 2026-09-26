@@ -171,7 +171,38 @@ function StudentLobbyContent() {
     } catch { }
   };
 
-  // Smart real-time sync: pause completely when tab is hidden, sync immediately when tab is focused
+  // Real-time Server-Sent Events (SSE) listener: instant session and topic synchronization
+  useEffect(() => {
+    if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
+
+    let es: EventSource | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const connectSSE = () => {
+      try {
+        es = new EventSource("/api/events");
+        es.addEventListener("session-update", () => {
+          loadStudentSessions(currentUser.id);
+        });
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          retryTimeout = setTimeout(connectSSE, 10000);
+        };
+      } catch {
+        // Fallback to polling
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      if (es) es.close();
+    };
+  }, [currentUser?.id]);
+
+  // Background fallback sync (SSE pushes real-time changes; polling acts as low-frequency safety net)
   useEffect(() => {
     if (!currentUser?.id) return;
 
@@ -185,14 +216,14 @@ function StudentLobbyContent() {
         return;
       }
 
-      // 15s if a lesson is starting soon or in progress, otherwise 40s
+      // Relaxed interval: 20s if a lesson is starting soon or in progress, otherwise 60s
       const now = Date.now();
       const isStartingSoonOrLive =
         activeSession &&
         (activeSession.status === "IN_PROGRESS" ||
           new Date(activeSession.scheduledStartTime).getTime() - now < 5 * 60 * 1000);
 
-      const delay = isStartingSoonOrLive ? 15000 : 40000;
+      const delay = isStartingSoonOrLive ? 20000 : 60000;
 
       timer = setTimeout(async () => {
         await loadStudentSessions(currentUser.id);

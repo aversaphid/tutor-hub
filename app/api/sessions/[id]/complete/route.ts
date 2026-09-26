@@ -107,6 +107,11 @@ export async function POST(
         : `Lesson completed by Tutor ${user.name}. Rating: ${feedbackRating}/5 stars. Covered: "${feedbackCovered}".`,
     });
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSION_COMPLETED", sessionId: id });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: updated,

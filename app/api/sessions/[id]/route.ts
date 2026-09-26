@@ -259,6 +259,11 @@ export async function PATCH(
       details: auditDetails,
     });
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSION_UPDATED", sessionId: id });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: sanitizeSessionForRole(updated, user.role),
@@ -301,6 +306,11 @@ export async function DELETE(
     // Delete associated audit logs first
     await prisma.auditLog.deleteMany({ where: { sessionId: id } });
     await prisma.session.delete({ where: { id } });
+
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSION_DELETED", sessionId: id });
+    } catch {}
 
     return NextResponse.json({ success: true, message: "Lesson deleted successfully." });
   } catch (err) {

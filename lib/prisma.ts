@@ -27,6 +27,11 @@ function createPrismaClient() {
     const libsql = createClient({
       url: tursoUrl,
       authToken: tursoAuthToken,
+      fetch: (input: any, init: any) =>
+        fetch(input, {
+          ...init,
+          keepalive: true,
+        }),
     });
     const adapter = new PrismaLibSQL(libsql);
     return new PrismaClient({

@@ -180,7 +180,38 @@ export default function TutorDashboardPage() {
     }
   }, [currentTime, activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
-  // Smart polling: refresh the active lesson so the tutor sees studentTopic updates in real time
+  // Real-time Server-Sent Events (SSE) listener: instant sync with zero polling overhead
+  useEffect(() => {
+    if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
+
+    let es: EventSource | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const connectSSE = () => {
+      try {
+        es = new EventSource("/api/events");
+        es.addEventListener("session-update", () => {
+          loadMySessions();
+        });
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          retryTimeout = setTimeout(connectSSE, 10000);
+        };
+      } catch {
+        // Graceful fallback to background polling
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      if (es) es.close();
+    };
+  }, [currentUser?.id]);
+
+  // Background fallback sync (SSE handles real-time updates instantly; polling is a low-frequency safety net)
   useEffect(() => {
     if (!currentUser?.id) return;
 
@@ -191,14 +222,14 @@ export default function TutorDashboardPage() {
       // Don't poll when tab is hidden
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
-      // Poll with balanced interval: 15s when active/soon, 35s when idle
+      // Relaxed interval: 20s when active/soon, 60s when idle
       const now = Date.now();
       const isLiveOrSoon =
         activeLesson &&
         (activeLesson.status === "IN_PROGRESS" ||
           new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
 
-      const delay = isLiveOrSoon ? 15000 : 35000;
+      const delay = isLiveOrSoon ? 20000 : 60000;
 
       pollTimer = setTimeout(async () => {
         await loadMySessions();

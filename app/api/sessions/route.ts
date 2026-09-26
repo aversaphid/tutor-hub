@@ -280,6 +280,11 @@ export async function POST(request: Request) {
       createdSessions.push(session);
     }
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSIONS_CREATED" });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: createdSessions[0],

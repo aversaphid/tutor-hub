@@ -51,6 +51,11 @@ export async function POST(
         : `Tutor started session at ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
     });
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "SESSION_STARTED", sessionId: id });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: updated,

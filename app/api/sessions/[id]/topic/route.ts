@@ -42,6 +42,11 @@ export async function PATCH(
       data: { studentTopic: parseResult.data.studentTopic || null },
     });
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({ type: "TOPIC_UPDATED", sessionId: id });
+    } catch {}
+
     return NextResponse.json({ success: true, studentTopic: updated.studentTopic });
   } catch (err) {
     console.error("Topic PATCH error:", err);
