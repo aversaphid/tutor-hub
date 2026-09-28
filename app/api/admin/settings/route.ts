@@ -56,6 +56,14 @@ export async function PATCH(request: Request) {
 
     invalidateSettingsCache();
 
+    try {
+      const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+      broadcastSessionUpdate({
+        type: "SETTINGS_UPDATED",
+        timestamp: Date.now(),
+      });
+    } catch {}
+
     return NextResponse.json({
       success: true,
       subwaySurfersEnabled: updated.value === "true",

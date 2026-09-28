@@ -69,6 +69,33 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
 
     fetchSettings();
 
+    // Real-time Server-Sent Events (SSE) listener for platform-wide settings changes
+    let es: EventSource | null = null;
+    let sseRetryTimer: NodeJS.Timeout | null = null;
+
+    const connectSSE = () => {
+      try {
+        if (typeof window !== "undefined" && "EventSource" in window) {
+          es = new EventSource("/api/events");
+          es.addEventListener("session-update", (e: any) => {
+            try {
+              const payload = JSON.parse(e.data);
+              if (payload.type === "SETTINGS_UPDATED") {
+                fetchSettings();
+              }
+            } catch {}
+          });
+          es.onerror = () => {
+            es?.close();
+            es = null;
+            sseRetryTimer = setTimeout(connectSSE, 15000);
+          };
+        }
+      } catch {}
+    };
+
+    connectSSE();
+
     // Listen to real-time local updates from admin panel
     const handleSettingsUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<{ subwaySurfersEnabled?: boolean }>;
@@ -78,7 +105,11 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     };
 
     window.addEventListener("th_settings_updated", handleSettingsUpdated);
-    return () => window.removeEventListener("th_settings_updated", handleSettingsUpdated);
+    return () => {
+      if (sseRetryTimer) clearTimeout(sseRetryTimer);
+      if (es) es.close();
+      window.removeEventListener("th_settings_updated", handleSettingsUpdated);
+    };
   }, []);
 
   // Synchronize CSS classes and attributes to DOM

@@ -557,8 +557,8 @@ export default function AdminPage() {
         setSubwaySurfersEnabled(data.subwaySurfersEnabled);
         setSettingsMessage(
           data.subwaySurfersEnabled
-            ? "Subway Surfers easter egg enabled across the platform."
-            : "Subway Surfers easter egg completely hidden from the platform."
+            ? "Subway Surfers mode is now active and playing across the platform."
+            : "Subway Surfers mode has been disabled and hidden from the platform."
         );
         // Broadcast to local window for instantaneous update
         window.dispatchEvent(
@@ -567,10 +567,11 @@ export default function AdminPage() {
           })
         );
       } else {
-        setSettingsMessage("Failed to update settings. Please try again.");
+        const errData = await res.json().catch(() => ({}));
+        setSettingsMessage(errData.error || "Failed to update settings. Please try again.");
       }
-    } catch {
-      setSettingsMessage("Network error updating settings.");
+    } catch (err: any) {
+      setSettingsMessage(err.message || "Network error updating settings.");
     } finally {
       setIsUpdatingSettings(false);
     }

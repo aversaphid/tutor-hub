@@ -1,14 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Minus, Maximize2, Sparkles } from "lucide-react";
 import { useAccessibility } from "@/lib/accessibility";
 
 export default function SubwaySurfersPlayer() {
   const { preferences, updatePreferences, isSubwaySurfersFeatureEnabled } = useAccessibility();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  if (!isSubwaySurfersFeatureEnabled || !preferences.subwaySurfers) return null;
+  // When admin enables Subway Surfers, un-dismiss so the player appears for all users
+  useEffect(() => {
+    if (isSubwaySurfersFeatureEnabled) {
+      setIsDismissed(false);
+    }
+  }, [isSubwaySurfersFeatureEnabled]);
+
+  // If the admin has completely disabled Subway Surfers on the platform, hide it immediately
+  if (!isSubwaySurfersFeatureEnabled) return null;
+
+  // Display if:
+  // 1. Enabled globally by admin and not closed by user this session, OR
+  // 2. Explicitly enabled by the user in their accessibility preferences
+  const shouldShow = (isSubwaySurfersFeatureEnabled && !isDismissed) || preferences.subwaySurfers;
+  if (!shouldShow) return null;
 
   return (
     <div
@@ -49,7 +64,10 @@ export default function SubwaySurfersPlayer() {
           </button>
           <button
             type="button"
-            onClick={() => updatePreferences({ subwaySurfers: false })}
+            onClick={() => {
+              setIsDismissed(true);
+              updatePreferences({ subwaySurfers: false });
+            }}
             className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors cursor-pointer"
             title="Close Subway Surfers"
             aria-label="Close Subway Surfers"

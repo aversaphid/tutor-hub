@@ -25,17 +25,20 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api") && MUTATING_METHODS.has(request.method)) {
     const origin = request.headers.get("origin");
     const referer = request.headers.get("referer");
-    const host = request.headers.get("host") || request.headers.get("x-forwarded-host");
+    const hostHeader = request.headers.get("host");
+    const forwardedHost = request.headers.get("x-forwarded-host");
+
+    const matchesAllowedHost = (hostname: string) => {
+      if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) return true;
+      if (hostHeader && (hostname === hostHeader || hostHeader.startsWith(hostname + ":") || hostname.startsWith(hostHeader.split(":")[0]))) return true;
+      if (forwardedHost && (hostname === forwardedHost || forwardedHost.startsWith(hostname + ":") || hostname.startsWith(forwardedHost.split(":")[0]))) return true;
+      return false;
+    };
 
     if (origin) {
       try {
         const originUrl = new URL(origin);
-        if (
-          host &&
-          originUrl.host !== host &&
-          !originUrl.host.includes("localhost") &&
-          !originUrl.host.includes("127.0.0.1")
-        ) {
+        if (!matchesAllowedHost(originUrl.host)) {
           return applySecurityHeaders(
             NextResponse.json(
               { error: "Forbidden: Cross-site request rejected (Origin mismatch)." },
@@ -54,12 +57,7 @@ export function proxy(request: NextRequest) {
     } else if (referer) {
       try {
         const refererUrl = new URL(referer);
-        if (
-          host &&
-          refererUrl.host !== host &&
-          !refererUrl.host.includes("localhost") &&
-          !refererUrl.host.includes("127.0.0.1")
-        ) {
+        if (!matchesAllowedHost(refererUrl.host)) {
           return applySecurityHeaders(
             NextResponse.json(
               { error: "Forbidden: Cross-site request rejected (Referer mismatch)." },

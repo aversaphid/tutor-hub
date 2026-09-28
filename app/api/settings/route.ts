@@ -15,7 +15,7 @@ export async function GET() {
         { subwaySurfersEnabled: cached },
         {
           headers: {
-            "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
           },
         }
       );
@@ -32,7 +32,7 @@ export async function GET() {
       { subwaySurfersEnabled: enabled },
       {
         headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       }
     );
