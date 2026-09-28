@@ -19,6 +19,7 @@ export function registerSubscriber(subscriber: SSESubscriber): () => void {
 export function broadcastSessionUpdate(payload: {
   type: string;
   sessionId?: string;
+  status?: string;
   timestamp?: number;
 }) {
   if (subscribers.size === 0) return;

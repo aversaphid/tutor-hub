@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
@@ -439,15 +439,56 @@ export default function AdminPage() {
     };
   }, []);
 
-  // When an active lesson hits its start time, automatically sync with server to pick up IN_PROGRESS status
+  // In-flight guard to prevent duplicate concurrent data refreshes
+  const isRefreshingRef = useRef(false);
+
+  // When an active lesson is upcoming, schedule a single precision timer to sync at exact start time
   useEffect(() => {
-    if (!activeLesson || activeLesson.status === "IN_PROGRESS") return;
+    if (!activeLesson || (activeLesson.status !== "SCHEDULED" && activeLesson.status !== "DELAYED")) return;
     const startMs = new Date(activeLesson.scheduledStartTime).getTime();
     const endMs = new Date(activeLesson.scheduledEndTime).getTime();
-    if (currentTime >= startMs && currentTime < endMs) {
+    const now = Date.now();
+
+    if (now >= endMs) return;
+
+    // Calculate delay until start time with a 500ms grace buffer
+    const delay = Math.max(0, startMs - now) + 500;
+
+    const timer = setTimeout(() => {
       refreshAllData();
-    }
-  }, [currentTime, activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
+
+  // Real-time Server-Sent Events (SSE) listener: instant session synchronization with zero polling
+  useEffect(() => {
+    if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
+
+    let es: EventSource | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const connectSSE = () => {
+      try {
+        es = new EventSource("/api/events");
+        es.addEventListener("session-update", () => {
+          refreshAllData();
+        });
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          retryTimeout = setTimeout(connectSSE, 10000);
+        };
+      } catch {}
+    };
+
+    connectSSE();
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      if (es) es.close();
+    };
+  }, [currentUser?.id]);
 
   const initAdminData = async () => {
     setLoading(true);
@@ -491,6 +532,8 @@ export default function AdminPage() {
   };
 
   const refreshAllData = async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
       const nowTs = Date.now();
       const [sessRes, usersRes, settingsRes] = await Promise.all([
@@ -540,7 +583,9 @@ export default function AdminPage() {
       if (auditLogsLoaded) {
         await loadAuditLogs(true);
       }
-    } catch { }
+    } catch { } finally {
+      isRefreshingRef.current = false;
+    }
   };
 
   const handleToggleSubwaySurfers = async (enabled: boolean) => {

@@ -10,7 +10,7 @@ import { sanitizeSessionsForRole } from "@/lib/session-sanitizer";
 import crypto from "crypto";
 
 let lastAutoStartCheck = 0;
-const AUTO_START_INTERVAL_MS = 60_000;
+const AUTO_START_INTERVAL_MS = 10_000;
 
 async function checkAndAutoStartSessions() {
   const nowMs = Date.now();
@@ -21,7 +21,7 @@ async function checkAndAutoStartSessions() {
   const now = new Date();
   try {
     // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
-    await prisma.session.updateMany({
+    const started = await prisma.session.updateMany({
       where: {
         status: { in: ["SCHEDULED", "DELAYED"] },
         scheduledStartTime: { lte: now },
@@ -33,8 +33,19 @@ async function checkAndAutoStartSessions() {
       },
     });
 
+    if (started.count > 0) {
+      try {
+        const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+        broadcastSessionUpdate({
+          type: "STATUS_UPDATED",
+          status: "IN_PROGRESS",
+          timestamp: Date.now(),
+        });
+      } catch {}
+    }
+
     // Auto-resolve abandoned/zombie sessions (>3 hours past scheduledEndTime still marked IN_PROGRESS)
-    await prisma.session.updateMany({
+    const resolved = await prisma.session.updateMany({
       where: {
         status: "IN_PROGRESS",
         scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
@@ -43,6 +54,17 @@ async function checkAndAutoStartSessions() {
         status: "COMPLETED",
       },
     });
+
+    if (resolved.count > 0) {
+      try {
+        const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
+        broadcastSessionUpdate({
+          type: "STATUS_UPDATED",
+          status: "COMPLETED",
+          timestamp: Date.now(),
+        });
+      } catch {}
+    }
   } catch (e) {
     console.error("Auto-start/auto-resolve sessions error in /api/sessions:", e);
   }

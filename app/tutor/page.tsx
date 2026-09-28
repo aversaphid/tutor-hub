@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
@@ -170,15 +170,27 @@ export default function TutorDashboardPage() {
     };
   }, []);
 
-  // When a lesson hits its start time, automatically sync with server to pick up IN_PROGRESS status
+  // In-flight guard to prevent duplicate concurrent session refreshes
+  const isLoadingSessionsRef = useRef(false);
+
+  // When an active lesson is upcoming, schedule a single precision timer to sync at exact start time
   useEffect(() => {
-    if (!activeLesson || activeLesson.status === "IN_PROGRESS") return;
+    if (!activeLesson || (activeLesson.status !== "SCHEDULED" && activeLesson.status !== "DELAYED")) return;
     const startMs = new Date(activeLesson.scheduledStartTime).getTime();
     const endMs = new Date(activeLesson.scheduledEndTime).getTime();
-    if (currentTime >= startMs && currentTime < endMs) {
+    const now = Date.now();
+
+    if (now >= endMs) return;
+
+    // Calculate delay until start time with a 500ms grace buffer
+    const delay = Math.max(0, startMs - now) + 500;
+
+    const timer = setTimeout(() => {
       loadMySessions();
-    }
-  }, [currentTime, activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
   // Real-time Server-Sent Events (SSE) listener: instant sync with zero polling overhead
   useEffect(() => {
@@ -294,6 +306,8 @@ export default function TutorDashboardPage() {
   };
 
   const loadMySessions = async () => {
+    if (isLoadingSessionsRef.current) return;
+    isLoadingSessionsRef.current = true;
     try {
       const res = await fetch("/api/sessions");
       if (!res.ok) return;
@@ -322,6 +336,8 @@ export default function TutorDashboardPage() {
       }
     } catch (err) {
       console.error("Error loading sessions:", err);
+    } finally {
+      isLoadingSessionsRef.current = false;
     }
   };
 
