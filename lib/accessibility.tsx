@@ -42,7 +42,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
   const [preferences, setPreferences] = useState<AccessibilityPreferences>(DEFAULT_PREFERENCES);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [readingGuideY, setReadingGuideY] = useState<number>(-100);
-  const [isSubwaySurfersFeatureEnabled, setSubwaySurfersFeatureEnabled] = useState(true);
+  const [isSubwaySurfersFeatureEnabled, setSubwaySurfersFeatureEnabled] = useState(false);
 
   // Initialize from localStorage on mount and fetch public settings
   useEffect(() => {

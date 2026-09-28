@@ -88,7 +88,7 @@ export default function AdminPage() {
   const activeTutors = useMemo(() => tutors.filter((t) => t.active !== false), [tutors]);
 
   // System Settings state
-  const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(true);
+  const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(false);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
@@ -557,8 +557,8 @@ export default function AdminPage() {
         setSubwaySurfersEnabled(data.subwaySurfersEnabled);
         setSettingsMessage(
           data.subwaySurfersEnabled
-            ? "Subway Surfers mode is now active and playing across the platform."
-            : "Subway Surfers mode has been disabled and hidden from the platform."
+            ? "Subway Surfers option is now enabled in the accessibility menu."
+            : "Subway Surfers option has been hidden from the accessibility menu."
         );
         // Broadcast to local window for instantaneous update
         window.dispatchEvent(
