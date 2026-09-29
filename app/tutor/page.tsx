@@ -1030,6 +1030,15 @@ export default function TutorDashboardPage() {
                     >
                       +10m Delay
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDelayModal(10, activeLesson)}
+                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      title="Custom delay duration or add explanation for student"
+                    >
+                      <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>Custom / Reason...</span>
+                    </button>
                     {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
                       <button
                         type="button"
@@ -1784,8 +1793,20 @@ export default function TutorDashboardPage() {
                                           : "bg-[#48A5EE]/15 text-[#48A5EE]"
                                       }`}
                                   >
-                                    {isRowLive ? "IN_PROGRESS" : s.status}
+                                    {isRowLive
+                                      ? "IN_PROGRESS"
+                                      : s.status === "DELAYED" && s.delayMinutes
+                                      ? `DELAYED (+${s.delayMinutes}m)`
+                                      : s.status}
                                   </span>
+                                  {s.delayReason && (
+                                    <div
+                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[110px] mx-auto mt-0.5"
+                                      title={s.delayReason}
+                                    >
+                                      {s.delayReason}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="px-3 py-3">
                                   <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -1816,12 +1837,12 @@ export default function TutorDashboardPage() {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleOpenDelayModal(5, s)}
+                                      onClick={() => handleOpenDelayModal(10, s)}
                                       className="w-full px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800 whitespace-nowrap"
-                                      title="Delay this lesson (+5m, +10m, or with reason)"
+                                      title="Delay this lesson (+5m, +10m, custom mins, or with reason)"
                                     >
                                       <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                                      <span>+ Delay</span>
+                                      <span>{s.status === "DELAYED" ? `Delayed (+${s.delayMinutes}m)` : "+ Delay / Reason"}</span>
                                     </button>
                                     {s.delayMinutes > 0 && (
                                       <button

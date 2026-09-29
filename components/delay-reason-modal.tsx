@@ -32,11 +32,13 @@ export default function DelayReasonModal({
   currentDelayMinutes = 0,
   isSubmitting = false,
 }: DelayReasonModalProps) {
+  const [delayMinutes, setDelayMinutes] = useState<number>(minutes || 10);
   const [reason, setReason] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
+      setDelayMinutes(minutes && minutes > 0 ? minutes : 10);
       setReason("");
       setTimeout(() => {
         inputRef.current?.focus();
@@ -69,11 +71,13 @@ export default function DelayReasonModal({
 
   const handleDelayWithReason = () => {
     const trimmed = reason.trim();
-    onConfirm(minutes, trimmed || undefined);
+    const effectiveMins = Math.max(1, delayMinutes || 5);
+    onConfirm(effectiveMins, trimmed || undefined);
   };
 
   const handleDelayWithoutReason = () => {
-    onConfirm(minutes, undefined);
+    const effectiveMins = Math.max(1, delayMinutes || 5);
+    onConfirm(effectiveMins, undefined);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -110,8 +114,8 @@ export default function DelayReasonModal({
                 >
                   Delay Lesson
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
-                  +{minutes} mins
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                  +{delayMinutes} mins
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -134,6 +138,57 @@ export default function DelayReasonModal({
 
         {/* Form Body */}
         <form onSubmit={handleFormSubmit} className="space-y-4">
+          {/* Minutes Selector */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+              <span>Delay Duration</span>
+              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                +{delayMinutes} mins
+              </span>
+            </label>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[5, 10, 15, 20, 30, 45].map((presetMins) => (
+                <button
+                  key={presetMins}
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setDelayMinutes(presetMins)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                    delayMinutes === presetMins
+                      ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                      : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  +{presetMins}m
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Minutes Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Custom duration:</span>
+              <div className="relative w-28">
+                <input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={delayMinutes || ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setDelayMinutes(isNaN(val) ? 0 : Math.max(1, Math.min(180, val)));
+                  }}
+                  disabled={isSubmitting}
+                  placeholder="Minutes"
+                  className="w-full px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 pr-10 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 pointer-events-none">
+                  min
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label
               htmlFor="delay-reason-input"
@@ -206,17 +261,17 @@ export default function DelayReasonModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || delayMinutes <= 0}
                 onClick={handleDelayWithoutReason}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <FastForward className="w-3.5 h-3.5 text-slate-500" />
-                <span>Delay without reason</span>
+                <span>Delay without reason (+{delayMinutes}m)</span>
               </button>
 
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || delayMinutes <= 0}
                 onClick={handleDelayWithReason}
                 className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
                   reason.trim()
@@ -226,7 +281,7 @@ export default function DelayReasonModal({
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>
-                  {reason.trim() ? "Delay with reason" : "Delay (enter reason)"}
+                  {reason.trim() ? `Delay with reason (+${delayMinutes}m)` : `Delay (+${delayMinutes}m)`}
                 </span>
               </button>
             </div>

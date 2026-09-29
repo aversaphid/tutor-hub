@@ -53,6 +53,7 @@ import {
   FileJson,
   Info,
   RotateCcw,
+  FastForward,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -152,10 +153,11 @@ export default function AdminPage() {
   const [delayModal, setDelayModal] = useState<{
     isOpen: boolean;
     minutes: number;
+    sessionId?: string;
     studentName?: string;
   }>({
     isOpen: false,
-    minutes: 5,
+    minutes: 10,
   });
   const [isSubmittingDelay, setIsSubmittingDelay] = useState(false);
 
@@ -1486,20 +1488,23 @@ export default function AdminPage() {
   };
 
   // Delay Lesson Handlers
-  const handleOpenDelayModal = (minutes: number) => {
-    if (!activeLesson) return;
+  const handleOpenDelayModal = (minutes: number, targetSession?: any) => {
+    const s = targetSession || activeLesson;
+    if (!s) return;
     setDelayModal({
       isOpen: true,
       minutes,
-      studentName: activeLesson?.tutee?.name,
+      sessionId: s.id,
+      studentName: s.tutee?.name,
     });
   };
 
   const handleConfirmDelay = async (minutes: number, reason?: string) => {
-    if (!activeLesson) return;
+    const targetId = delayModal.sessionId || activeLesson?.id;
+    if (!targetId) return;
     setIsSubmittingDelay(true);
     try {
-      const res = await fetch(`/api/sessions/${activeLesson.id}/delay`, {
+      const res = await fetch(`/api/sessions/${targetId}/delay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1515,8 +1520,10 @@ export default function AdminPage() {
       playDelayAlertChime();
       const reasonMsg = reason?.trim() ? ` (${reason.trim()})` : "";
       setActionMessage(`Lesson delayed by ${minutes}m${reasonMsg}.`);
-      setDelayModal({ isOpen: false, minutes: 5 });
-      setActiveLesson(data.session);
+      setDelayModal({ isOpen: false, minutes: 10 });
+      if (activeLesson && activeLesson.id === targetId) {
+        setActiveLesson(data.session);
+      }
       await refreshAllData();
       setTimeout(() => setActionMessage(""), 4000);
     } catch {
@@ -1555,7 +1562,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleDelay = (minutes: number) => handleOpenDelayModal(minutes);
+  const handleDelay = (minutes: number, targetSession?: any) => handleOpenDelayModal(minutes, targetSession);
 
   // Open Complete / Review Lesson Feedback Modal
   const openCompleteModal = (session: any) => {
@@ -1952,255 +1959,293 @@ export default function AdminPage() {
         {/* NEXT / ACTIVE SCHEDULED MEETING DECK (With visible PIN and Magic Link) */}
         {activeLesson && (
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border-2 border-[#48A5EE]/40 shadow-sm space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+            {/* 1. Header: Details on left, PIN & Magic Link card on right */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${isAdminLessonLive
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                      isAdminLessonLive
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                         : activeLesson.status === "DELAYED"
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                      }`}
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                    }`}
                   >
                     ● {isAdminLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                   </span>
-                  {activeLesson.delayMinutes > 0 && (
-                    <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold">
-                      (+{activeLesson.delayMinutes}m delay)
+
+                  <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
-                  )}
-                  {activeLesson.status === "DELAYED" && activeLesson.delayReason && (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
-                      Reason: {activeLesson.delayReason}
-                    </span>
-                  )}
+                    <span>&bull;</span>
+                    <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    {new Date(activeLesson.scheduledStartTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    –{" "}
+                    {new Date(activeLesson.scheduledEndTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
 
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100 mt-1">
                   {activeLesson.title}
                 </h3>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong> &bull;{" "}
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>{" "}
-                  &bull;{" "}
-                  {new Date(activeLesson.scheduledStartTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  –{" "}
-                  {new Date(activeLesson.scheduledEndTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong> &bull; Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
                 </p>
-
-                {/* VISIBLE STUDENT PIN & MAGIC LINK FOR THIS SCHEDULED MEETING */}
-                <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-                  <span className="font-semibold text-slate-600 dark:text-slate-400">
-                    Student: <strong className="text-slate-800 dark:text-slate-100">{activeLesson.tutee?.name}</strong>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px]">
-                    PIN: {activeLesson.tutee?.pin || "----"}
-                  </span>
-                  <button
-                    onClick={() => copyMagicLink(activeLesson.tutee?.magicKey)}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer"
-                  >
-                    {copiedKey === activeLesson.tutee?.magicKey ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-600" />
-                        <span className="text-emerald-700">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copy Magic Link</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleCycleMagicLink(activeLesson.tutee?.id, activeLesson.tutee?.name)}
-                    disabled={cyclingStudentId === activeLesson.tutee?.id}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-bold text-[11px] transition-colors cursor-pointer border border-amber-200 dark:border-amber-800"
-                    title="Cycle Magic Link (generate new link, invalidate old)"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${cyclingStudentId === activeLesson.tutee?.id ? "animate-spin" : ""}`} />
-                    <span>Cycle Link</span>
-                  </button>
-                </div>
 
                 {/* STUDENT TOPIC FOR TODAY */}
                 {activeLesson.studentTopic && (
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
                     <BookOpen className="w-3.5 h-3.5 shrink-0" />
                     <span>Student&apos;s topic: {activeLesson.studentTopic}</span>
                   </div>
                 )}
+              </div>
 
-                {/* PERSONAL REMINDER & ATTENDANCE CONFIRMATION TOGGLES */}
-                <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                  {/* Reminder Badge/Button */}
-                  {activeLesson.adminReminder ? (
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shrink-0">
-                      <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                      <span className="font-semibold">Reminder: {activeLesson.adminReminder}</span>
-                      <button
-                        onClick={() => {
-                          setReminderModalSession(activeLesson);
-                          setEditReminderText(activeLesson.adminReminder || "");
-                        }}
-                        className="ml-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                    </div>
+              {/* VISIBLE STUDENT PIN & MAGIC LINK FOR THIS SCHEDULED MEETING */}
+              <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shrink-0 self-start sm:self-auto">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
+                  <strong className="text-xs font-mono font-extrabold text-slate-800 dark:text-slate-100">
+                    {activeLesson.tutee?.pin || "----"}
+                  </strong>
+                </div>
+
+                <button
+                  onClick={() => copyMagicLink(activeLesson.tutee?.magicKey)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs transition-colors cursor-pointer"
+                  title="1-Click Copy Magic Link"
+                >
+                  {copiedKey === activeLesson.tutee?.magicKey ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700">Copied!</span>
+                    </>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setReminderModalSession(activeLesson);
-                        setEditReminderText("");
-                      }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
-                    >
-                      <Bell className="w-3.5 h-3.5 text-[#48A5EE]" />
-                      <span>+ Add Reminder</span>
-                    </button>
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Link</span>
+                    </>
                   )}
+                </button>
+                <button
+                  onClick={() => handleCycleMagicLink(activeLesson.tutee?.id, activeLesson.tutee?.name)}
+                  disabled={cyclingStudentId === activeLesson.tutee?.id}
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 text-slate-600 dark:text-slate-300 hover:text-amber-800 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                  title="Cycle Magic Link (generate new link, invalidate old)"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${cyclingStudentId === activeLesson.tutee?.id ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+            </div>
 
-                  {/* Attendance Confirmation Group (kept together on one line) */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Tutor Confirmation Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleConfirmation(activeLesson.id, "tutor", Boolean(activeLesson.tutorConfirmed))}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${activeLesson.tutorConfirmed
-                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                        }`}
-                      title="Click to toggle Tutor Confirmation"
-                    >
-                      {activeLesson.tutorConfirmed ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span>Tutor: Confirmed ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>Tutor: Pending</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Student Confirmation Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => handleToggleConfirmation(activeLesson.id, "tutee", Boolean(activeLesson.tuteeConfirmed))}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${activeLesson.tuteeConfirmed
-                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
-                        }`}
-                      title="Click to toggle Student Confirmation"
-                    >
-                      {activeLesson.tuteeConfirmed ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span>Student: Confirmed ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>Student: Pending</span>
-                        </>
-                      )}
-                    </button>
+            {/* 2. DEDICATED DELAY NOTICE BANNER (Clean horizontal banner when delayed) */}
+            {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-300 font-semibold min-w-0">
+                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div className="space-y-0.5">
+                    <span className="font-bold">
+                      Lesson start delayed by {activeLesson.delayMinutes} minutes.
+                    </span>
+                    {activeLesson.delayReason && (
+                      <p className="text-amber-700 dark:text-amber-300/90 text-[11px] font-medium break-words">
+                        Reason: {activeLesson.delayReason}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {!isAdminLessonLive && (
-                  <button
-                    onClick={handleStartNow}
-                    className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Start Lesson Now</span>
-                  </button>
-                )}
-
                 <button
-                  onClick={() => handleDelay(5)}
-                  className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                  title="Delay lesson by 5 minutes"
+                  type="button"
+                  onClick={() => handleResetStartTime(activeLesson)}
+                  disabled={isResettingStartTime}
+                  className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto shrink-0 disabled:opacity-50"
+                  title={`Reset start time back to original schedule (removes ${activeLesson.delayMinutes}m delay)`}
                 >
-                  +5m Delay
-                </button>
-                <button
-                  onClick={() => handleDelay(10)}
-                  className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                  title="Delay lesson by 10 minutes"
-                >
-                  +10m Delay
-                </button>
-                {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
-                  <button
-                    type="button"
-                    onClick={() => handleResetStartTime(activeLesson)}
-                    disabled={isResettingStartTime}
-                    className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                    title={`Reset start time back to original schedule (removes ${activeLesson.delayMinutes}m delay)`}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Reset Start Time</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => openCompleteModal(activeLesson)}
-                  className="py-2 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
-                  title="Mark lesson completed and optionally add personal rating, topics & notes"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
-                  <span>Mark Done / Review</span>
-                </button>
-
-                <button
-                  onClick={() => handleOpenReschedule(activeLesson)}
-                  className="py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer flex items-center gap-1"
-                  title="Reschedule this lesson"
-                >
-                  <CalendarClock className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Reschedule</span>
-                </button>
-
-                <button
-                  onClick={() => handleCancelSession(activeLesson)}
-                  className="py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-xs border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer flex items-center gap-1"
-                  title="Cancel this lesson"
-                >
-                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Cancel</span>
-                </button>
-
-                <button
-                  onClick={() => handleOpenSessionAudit(activeLesson)}
-                  className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1"
-                  title="View lesson history & audit trail"
-                >
-                  <History className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Audit</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Reset Start Time</span>
                 </button>
               </div>
+            )}
+
+            {/* 3. PERSONAL REMINDER & ATTENDANCE CONFIRMATION TOGGLES */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              {/* Reminder Badge/Button */}
+              {activeLesson.adminReminder ? (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shrink-0">
+                  <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="font-semibold">Reminder: {activeLesson.adminReminder}</span>
+                  <button
+                    onClick={() => {
+                      setReminderModalSession(activeLesson);
+                      setEditReminderText(activeLesson.adminReminder || "");
+                    }}
+                    className="ml-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setReminderModalSession(activeLesson);
+                    setEditReminderText("");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
+                >
+                  <Bell className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span>+ Add Reminder</span>
+                </button>
+              )}
+
+              {/* Attendance Confirmation Group (kept together on one line) */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Tutor Confirmation Toggle */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleConfirmation(activeLesson.id, "tutor", Boolean(activeLesson.tutorConfirmed))}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
+                    activeLesson.tutorConfirmed
+                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                  title="Click to toggle Tutor Confirmation"
+                >
+                  {activeLesson.tutorConfirmed ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Tutor: Confirmed ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Tutor: Pending</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Student Confirmation Toggle */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleConfirmation(activeLesson.id, "tutee", Boolean(activeLesson.tuteeConfirmed))}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border whitespace-nowrap ${
+                    activeLesson.tuteeConfirmed
+                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                  title="Click to toggle Student Confirmation"
+                >
+                  {activeLesson.tuteeConfirmed ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Student: Confirmed ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Student: Pending</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* 4. DEDICATED FULL-WIDTH ACTION BUTTONS TOOLBAR */}
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {!isAdminLessonLive && (
+                <button
+                  onClick={handleStartNow}
+                  className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>Start Lesson Now</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => handleDelay(5)}
+                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+                title="Delay lesson by 5 minutes"
+              >
+                +5m Delay
+              </button>
+              <button
+                onClick={() => handleDelay(10)}
+                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+                title="Delay lesson by 10 minutes"
+              >
+                +10m Delay
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenDelayModal(10, activeLesson)}
+                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Custom delay duration or add explanation for student"
+              >
+                <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Custom / Reason...</span>
+              </button>
+              {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
+                <button
+                  type="button"
+                  onClick={() => handleResetStartTime(activeLesson)}
+                  disabled={isResettingStartTime}
+                  className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  title={`Reset start time back to original schedule (removes ${activeLesson.delayMinutes}m delay)`}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Reset Start Time</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => openCompleteModal(activeLesson)}
+                className="py-2 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+                title="Mark lesson completed and optionally add personal rating, topics & notes"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
+                <span>Mark Done / Review</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenReschedule(activeLesson)}
+                className="py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer flex items-center gap-1"
+                title="Reschedule this lesson"
+              >
+                <CalendarClock className="w-3.5 h-3.5 text-purple-500" />
+                <span>Reschedule</span>
+              </button>
+
+              <button
+                onClick={() => handleCancelSession(activeLesson)}
+                className="py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-xs border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer flex items-center gap-1"
+                title="Cancel this lesson"
+              >
+                <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                <span>Cancel</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenSessionAudit(activeLesson)}
+                className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1"
+                title="View lesson history & audit trail"
+              >
+                <History className="w-3.5 h-3.5 text-slate-500" />
+                <span>Audit</span>
+              </button>
             </div>
 
             {/* Quick Teams Link input */}
@@ -2676,6 +2721,7 @@ export default function AdminPage() {
                               <th className="px-3 py-3">Date &amp; Time</th>
                               <th className="px-2 py-3 text-center">Status</th>
                               <th className="px-3 py-3 text-center">Attendance</th>
+                              <th className="px-3 py-3 text-center">Delay</th>
                               <th className="px-3 py-3">PIN &amp; Link</th>
                               <th className="px-3 py-3 text-center">Reschedule / Repeat</th>
                               <th className="px-3 py-3 text-center">Cancel / Delete</th>
@@ -2773,8 +2819,20 @@ export default function AdminPage() {
                                           : "bg-[#48A5EE]/15 text-[#48A5EE]"
                                       }`}
                                   >
-                                    {isRowLive ? "IN_PROGRESS" : s.status}
+                                    {isRowLive
+                                      ? "IN_PROGRESS"
+                                      : s.status === "DELAYED" && s.delayMinutes
+                                      ? `DELAYED (+${s.delayMinutes}m)`
+                                      : s.status}
                                   </span>
+                                  {s.delayReason && (
+                                    <div
+                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[110px] mx-auto mt-0.5"
+                                      title={s.delayReason}
+                                    >
+                                      {s.delayReason}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="px-3 py-3">
                                   {/* Confirmation Toggles */}
@@ -2818,6 +2876,36 @@ export default function AdminPage() {
                                       </span>
                                       <span>{s.tuteeConfirmed ? "✓" : "—"}</span>
                                     </button>
+                                  </div>
+                                </td>
+                                {/* Delay & Reason Column */}
+                                <td className="px-3 py-3 text-center whitespace-nowrap">
+                                  <div className="flex flex-col items-center gap-1 min-w-[90px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDelayModal(s.delayMinutes || 10, s)}
+                                      className={`w-full px-2 py-1 rounded-lg font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border ${
+                                        s.delayMinutes && s.delayMinutes > 0
+                                          ? "bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                                          : "bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                      }`}
+                                      title={s.delayMinutes && s.delayMinutes > 0 ? `Change delay (currently +${s.delayMinutes}m)` : "Add custom delay or reason"}
+                                    >
+                                      <FastForward className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                      <span>{s.delayMinutes && s.delayMinutes > 0 ? `+${s.delayMinutes}m Edit` : "+ Delay"}</span>
+                                    </button>
+                                    {s.delayMinutes && s.delayMinutes > 0 ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetStartTime(s)}
+                                        disabled={isResettingStartTime}
+                                        className="w-full px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-slate-200 dark:border-slate-700"
+                                        title="Reset start time to original scheduled time"
+                                      >
+                                        <RotateCcw className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                                        <span>Reset</span>
+                                      </button>
+                                    ) : null}
                                   </div>
                                 </td>
                                 <td className="px-3 py-3">
@@ -6028,9 +6116,17 @@ export default function AdminPage() {
         isOpen={delayModal.isOpen}
         minutes={delayModal.minutes}
         studentName={delayModal.studentName}
-        currentDelayMinutes={activeLesson?.delayMinutes || 0}
+        currentDelayMinutes={
+          (delayModal.sessionId === activeLesson?.id
+            ? activeLesson?.delayMinutes
+            : sessions.find((s) => s.id === delayModal.sessionId)?.delayMinutes) || 0
+        }
         onReset={() => {
-          if (activeLesson) handleResetStartTime(activeLesson);
+          const s =
+            delayModal.sessionId === activeLesson?.id
+              ? activeLesson
+              : sessions.find((s) => s.id === delayModal.sessionId);
+          if (s) handleResetStartTime(s);
         }}
         onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDelay}
