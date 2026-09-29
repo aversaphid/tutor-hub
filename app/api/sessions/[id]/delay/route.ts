@@ -46,36 +46,20 @@ export async function POST(
     }
 
     const { delayMinutes, reason } = parseResult.data;
-    const now = new Date();
-    const nowMs = now.getTime();
 
-    // Calculate new start time:
-    // If the lesson is scheduled or in progress, delaying by delayMinutes extends from scheduled start.
-    // E.g., if scheduled start is 5:00 PM, and 2 mins have elapsed (now is 5:02 PM),
-    // delaying by 5 minutes results in 5:05 PM (which is 3 mins from the moment clicked).
-    // If scheduledStartTime + delayMinutes is already in the past (e.g., 7 mins elapsed and delayed by 5 mins),
-    // the new start time is set to now + delayMinutes so it is always in the future.
-    const scheduledStartMs = session.scheduledStartTime.getTime();
-    const prospectiveStartMs = scheduledStartMs + delayMinutes * 60 * 1000;
+    // Calculate new start time by adding delayMinutes directly to the intended scheduled start time
+    const currentStart = new Date(session.scheduledStartTime);
+    currentStart.setSeconds(0, 0);
 
-    let newStart: Date;
-    let addedDelay: number;
-
-    if (prospectiveStartMs > nowMs) {
-      newStart = new Date(prospectiveStartMs);
-      addedDelay = delayMinutes;
-    } else {
-      newStart = new Date(nowMs + delayMinutes * 60 * 1000);
-      addedDelay = Math.max(
-        delayMinutes,
-        Math.ceil((newStart.getTime() - scheduledStartMs) / (60 * 1000))
-      );
-    }
+    const newStart = new Date(currentStart.getTime() + delayMinutes * 60 * 1000);
+    newStart.setSeconds(0, 0);
 
     const durationMs =
       session.scheduledEndTime.getTime() - session.scheduledStartTime.getTime();
     const newEnd = new Date(newStart.getTime() + durationMs);
-    const newDelayTotal = session.delayMinutes + addedDelay;
+    newEnd.setSeconds(0, 0);
+
+    const newDelayTotal = session.delayMinutes + delayMinutes;
 
     const updated = await prisma.session.update({
       where: { id },

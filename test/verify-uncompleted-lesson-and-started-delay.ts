@@ -84,50 +84,40 @@ async function run() {
   console.log("✓ UNCOMPLETED PAST LESSON correctly detected as Lesson A for the alert banner");
 
   console.log("\n--- Testing Delay Calculation for Ongoing Lesson ---");
-  // Case: Lesson started at 5:00 PM. At 5:02 PM (2 minutes after start), tutor delays by 5 minutes.
-  // Requirement: New start time is 5:05 PM, which is 3 minutes from the time the delay button is clicked (5:02 PM).
+  // The delay should ALWAYS be added to the intended start time (session.scheduledStartTime),
+  // not onto the arbitrary timestamp when the user clicks the button.
+  // Example 1: Lesson intended start is 5:00:00 PM. Tutor clicks "+5m Delay" at 5:02:30 PM.
+  // New start time is 5:05:00 PM (5 mins from intended start time, 2.5 mins from click).
   const start5pm = new Date("2026-09-29T17:00:00.000Z");
-  const clickAt502pm = new Date("2026-09-29T17:02:00.000Z");
+  const clickAt50230pm = new Date("2026-09-29T17:02:30.123Z");
   const delayMinutes = 5;
 
-  const scheduledStartMs = start5pm.getTime();
-  const prospectiveStartMs = scheduledStartMs + delayMinutes * 60 * 1000;
-  const nowClickMs = clickAt502pm.getTime();
+  const currentStart1 = new Date(start5pm);
+  currentStart1.setSeconds(0, 0);
+  const newStart1 = new Date(currentStart1.getTime() + delayMinutes * 60 * 1000);
+  newStart1.setSeconds(0, 0);
 
-  let newStart: Date;
-  if (prospectiveStartMs > nowClickMs) {
-    newStart = new Date(prospectiveStartMs);
-  } else {
-    newStart = new Date(nowClickMs + delayMinutes * 60 * 1000);
-  }
+  console.log(`Intended start: ${start5pm.toISOString()}`);
+  console.log(`Clicked at: ${clickAt50230pm.toISOString()}`);
+  console.log(`New start: ${newStart1.toISOString()}`);
 
-  const minutesFromClick = (newStart.getTime() - clickAt502pm.getTime()) / (60 * 1000);
-  console.log(`Original start: ${start5pm.toISOString()}`);
-  console.log(`Delay clicked at: ${clickAt502pm.toISOString()}`);
-  console.log(`New start: ${newStart.toISOString()}`);
-  console.log(`Minutes from click to new start: ${minutesFromClick}m`);
+  if (newStart1.toISOString() !== "2026-09-29T17:05:00.000Z") {
+    throw new Error(`Expected new start time to be 2026-09-29T17:05:00.000Z, got ${newStart1.toISOString()}`);
+  }
+  console.log("✓ DELAY FROM INTENDED START: Correctly set to 5:05:00 PM (clean minute boundary)");
 
-  if (minutesFromClick !== 3) {
-    throw new Error(`Expected new start time to be 3 minutes from click, got ${minutesFromClick}m`);
-  }
-  console.log("✓ DELAY 2 MINS AFTER START: Correctly set to 3 minutes from click (5:05 PM)");
+  // Example 2: Lesson intended start was 5:45:00 PM. Tutor clicks "+5m Delay" at 5:45:32 PM.
+  // New start must be 5:50:00 PM (NOT 5:50:32 PM!).
+  const start545pm = new Date("2026-09-29T17:45:00.000Z");
+  const currentStart2 = new Date(start545pm);
+  currentStart2.setSeconds(0, 0);
+  const newStart2 = new Date(currentStart2.getTime() + delayMinutes * 60 * 1000);
+  newStart2.setSeconds(0, 0);
 
-  // Case: Lesson started at 5:00 PM. At 5:07 PM (7 minutes after start), tutor delays by 5 minutes.
-  // Since 5:00 + 5m = 5:05 PM is in the past, new start is 5:07 + 5m = 5:12 PM (5 minutes from click).
-  const clickAt507pm = new Date("2026-09-29T17:07:00.000Z");
-  const nowClickMs2 = clickAt507pm.getTime();
-  let newStart2: Date;
-  if (prospectiveStartMs > nowClickMs2) {
-    newStart2 = new Date(prospectiveStartMs);
-  } else {
-    newStart2 = new Date(nowClickMs2 + delayMinutes * 60 * 1000);
+  if (newStart2.toISOString() !== "2026-09-29T17:50:00.000Z") {
+    throw new Error(`Expected new start time to be 2026-09-29T17:50:00.000Z, got ${newStart2.toISOString()}`);
   }
-  const minutesFromClick2 = (newStart2.getTime() - clickAt507pm.getTime()) / (60 * 1000);
-  console.log(`New start when clicked at 5:07 PM: ${newStart2.toISOString()} (${minutesFromClick2}m from click)`);
-  if (minutesFromClick2 !== 5) {
-    throw new Error(`Expected new start time to be 5 minutes from click, got ${minutesFromClick2}m`);
-  }
-  console.log("✓ DELAY PAST WINDOW: Correctly falls forward to 5 minutes from click (5:12 PM)");
+  console.log("✓ DELAY ON SECOND OFFSET: Correctly set to 5:50:00 PM (not 5:50:32 PM)");
 
   console.log("\n--- Testing Database Delay Integration ---");
   // Create a real DB session in IN_PROGRESS state to test that DB allows delay and updates properly
@@ -151,28 +141,20 @@ async function run() {
     console.log("Created test session:", testSession.id, "status:", testSession.status);
 
     // Apply the exact delay update logic from the route
-    const now = new Date();
-    const nowMsReal = now.getTime();
-    const sStartMs = testSession.scheduledStartTime.getTime();
-    const pStartMs = sStartMs + 5 * 60 * 1000;
+    const currentStart = new Date(testSession.scheduledStartTime);
+    currentStart.setSeconds(0, 0);
 
-    let computedStart: Date;
-    let addedDel: number;
-    if (pStartMs > nowMsReal) {
-      computedStart = new Date(pStartMs);
-      addedDel = 5;
-    } else {
-      computedStart = new Date(nowMsReal + 5 * 60 * 1000);
-      addedDel = Math.max(5, Math.ceil((computedStart.getTime() - sStartMs) / 60000));
-    }
+    const computedStart = new Date(currentStart.getTime() + 5 * 60 * 1000);
+    computedStart.setSeconds(0, 0);
 
     const duration = testSession.scheduledEndTime.getTime() - testSession.scheduledStartTime.getTime();
     const computedEnd = new Date(computedStart.getTime() + duration);
+    computedEnd.setSeconds(0, 0);
 
     const updated = await prisma.session.update({
       where: { id: testSession.id },
       data: {
-        delayMinutes: testSession.delayMinutes + addedDel,
+        delayMinutes: testSession.delayMinutes + 5,
         delayReason: "Tutor running slightly behind",
         scheduledStartTime: computedStart,
         scheduledEndTime: computedEnd,
