@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, verifyPassword, hashPassword, clearUserCache, createAuthToken, setAuthCookie } from "@/lib/auth";
+import { checkPasswordRateLimit, recordFailedPasswordAttempt, resetPasswordRateLimit } from "@/lib/rate-limiter";
 import { z } from "zod";
 
 const ChangePasswordSchema = z.object({
@@ -34,13 +35,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
+    const rateLimitKey = `pwd-change:${user.id}`;
+    const rateCheck = checkPasswordRateLimit(rateLimitKey);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: rateCheck.error || "Too many failed attempts. Please wait 15 minutes." },
+        { status: 429 }
+      );
+    }
+
     const isMatch = await verifyPassword(currentPassword, dbUser.passwordHash);
     if (!isMatch) {
+      const fail = recordFailedPasswordAttempt(rateLimitKey);
       return NextResponse.json(
-        { error: "Incorrect current password. Please try again." },
+        { error: fail.error || "Incorrect current password. Please try again." },
         { status: 400 }
       );
     }
+
+    resetPasswordRateLimit(rateLimitKey);
 
     const newHash = await hashPassword(newPassword);
 

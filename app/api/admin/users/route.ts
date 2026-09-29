@@ -187,7 +187,8 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, user: newUser }, { status: 201 });
+    const { passwordHash: _ph, ...safeNewUser } = newUser;
+    return NextResponse.json({ success: true, user: safeNewUser }, { status: 201 });
   } catch (err) {
     console.error("Admin create user error:", err);
     return NextResponse.json({ error: "Failed to create user." }, { status: 500 });
@@ -226,9 +227,10 @@ export async function PATCH(request: Request) {
         data: { active: newActive },
       });
       clearUserCache(targetId);
+      const { passwordHash: _ph, ...safeUpdated } = updated;
       return NextResponse.json({
         success: true,
-        user: updated,
+        user: safeUpdated,
         message:
           targetUser.role === "TUTEE" && !newActive
             ? `${targetUser.name} is now Inactive (On Break / Holiday).`
