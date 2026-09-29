@@ -21,13 +21,6 @@ export async function POST(
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
 
-    if (session.status === "IN_PROGRESS") {
-      return NextResponse.json(
-        { error: "Cannot delay a lesson that has already started." },
-        { status: 400 }
-      );
-    }
-
     if (session.status === "COMPLETED" || session.status === "CANCELLED") {
       return NextResponse.json(
         { error: "Cannot delay a lesson that is already completed or cancelled." },
@@ -53,15 +46,36 @@ export async function POST(
     }
 
     const { delayMinutes, reason } = parseResult.data;
+    const now = new Date();
+    const nowMs = now.getTime();
 
-    // Shift start and end times by the delay
-    const newDelayTotal = session.delayMinutes + delayMinutes;
-    const newStart = new Date(
-      session.scheduledStartTime.getTime() + delayMinutes * 60 * 1000
-    );
-    const newEnd = new Date(
-      session.scheduledEndTime.getTime() + delayMinutes * 60 * 1000
-    );
+    // Calculate new start time:
+    // If the lesson is scheduled or in progress, delaying by delayMinutes extends from scheduled start.
+    // E.g., if scheduled start is 5:00 PM, and 2 mins have elapsed (now is 5:02 PM),
+    // delaying by 5 minutes results in 5:05 PM (which is 3 mins from the moment clicked).
+    // If scheduledStartTime + delayMinutes is already in the past (e.g., 7 mins elapsed and delayed by 5 mins),
+    // the new start time is set to now + delayMinutes so it is always in the future.
+    const scheduledStartMs = session.scheduledStartTime.getTime();
+    const prospectiveStartMs = scheduledStartMs + delayMinutes * 60 * 1000;
+
+    let newStart: Date;
+    let addedDelay: number;
+
+    if (prospectiveStartMs > nowMs) {
+      newStart = new Date(prospectiveStartMs);
+      addedDelay = delayMinutes;
+    } else {
+      newStart = new Date(nowMs + delayMinutes * 60 * 1000);
+      addedDelay = Math.max(
+        delayMinutes,
+        Math.ceil((newStart.getTime() - scheduledStartMs) / (60 * 1000))
+      );
+    }
+
+    const durationMs =
+      session.scheduledEndTime.getTime() - session.scheduledStartTime.getTime();
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    const newDelayTotal = session.delayMinutes + addedDelay;
 
     const updated = await prisma.session.update({
       where: { id },
@@ -71,6 +85,7 @@ export async function POST(
         scheduledStartTime: newStart,
         scheduledEndTime: newEnd,
         status: "DELAYED",
+        actualStartTime: null,
       },
       include: {
         tutor: { select: { name: true } },

@@ -31,6 +31,7 @@ import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import ExamCountdownWidget from "@/components/exam-countdown-widget";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
+import { resolveActiveSession } from "@/lib/session-utils";
 
 function StudentLobbyContent() {
   const searchParams = useSearchParams();
@@ -137,17 +138,7 @@ function StudentLobbyContent() {
       const sessions: any[] = data.sessions || [];
 
       const now = Date.now();
-      const live =
-        sessions.find(
-          (s) =>
-            s.status === "IN_PROGRESS" &&
-            new Date(s.scheduledEndTime).getTime() > now - 2 * 3600 * 1000
-        ) ||
-        sessions.find(
-          (s) =>
-            (s.status === "DELAYED" || s.status === "SCHEDULED") &&
-            new Date(s.scheduledEndTime).getTime() > now
-        );
+      const live = resolveActiveSession(sessions, now);
       setActiveSession(live || null);
       // Pre-fill topic input with whatever the student previously saved
       if (live?.studentTopic) setTopicInput(live.studentTopic);

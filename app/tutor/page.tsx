@@ -55,6 +55,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
+import { resolveActiveSession } from "@/lib/session-utils";
 
 export default function TutorDashboardPage() {
   const router = useRouter();
@@ -134,15 +135,30 @@ export default function TutorDashboardPage() {
     }).length;
   }, [mySessions, currentTime]);
 
+  // Uncompleted previous lessons that ended in the past but were never marked completed
+  const uncompletedPastLessons = useMemo(() => {
+    const now = currentTime;
+    return mySessions.filter(
+      (s: any) =>
+        s.status === "IN_PROGRESS" &&
+        new Date(s.scheduledEndTime).getTime() <= now
+    );
+  }, [mySessions, currentTime]);
+
   // The next upcoming scheduled or delayed lesson after the active/live lesson
   const nextLesson = useMemo(() => {
     const now = currentTime;
+    if (!activeLesson) return null;
+    const activeStartMs = new Date(activeLesson.scheduledStartTime).getTime();
+
     const upcoming = mySessions
       .filter((s: any) => {
-        if (s.status !== "SCHEDULED" && s.status !== "DELAYED") return false;
+        if (s.status === "COMPLETED" || s.status === "CANCELLED") return false;
+        if (s.id === activeLesson.id) return false;
         const endMs = new Date(s.scheduledEndTime).getTime();
+        const startMs = new Date(s.scheduledStartTime).getTime();
         if (endMs <= now) return false;
-        if (activeLesson && s.id === activeLesson.id) return false;
+        if (startMs < activeStartMs) return false;
         return true;
       })
       .sort(
@@ -152,7 +168,7 @@ export default function TutorDashboardPage() {
       );
 
     return upcoming[0] || null;
-  }, [mySessions, activeLesson?.id, currentTime]);
+  }, [mySessions, activeLesson?.id, activeLesson?.scheduledStartTime, currentTime]);
 
   // Keep nextTeamsUrlInput in sync when nextLesson changes
   useEffect(() => {
@@ -348,18 +364,7 @@ export default function TutorDashboardPage() {
       setMySessions(sessions);
 
       // Derive active lesson without issuing a duplicate network call
-      const now = Date.now();
-      const live =
-        sessions.find(
-          (s: any) =>
-            s.status === "IN_PROGRESS" &&
-            new Date(s.scheduledEndTime).getTime() > now - 2 * 3600 * 1000
-        ) ||
-        sessions.find(
-          (s: any) =>
-            (s.status === "DELAYED" || s.status === "SCHEDULED") &&
-            new Date(s.scheduledEndTime).getTime() > now
-        );
+      const live = resolveActiveSession(sessions, Date.now());
       if (live) {
         setActiveLesson(live);
         setTeamsUrlInput(live.teamsMeetingUrl || "");
@@ -382,12 +387,7 @@ export default function TutorDashboardPage() {
         setActiveLesson(data.session);
         setTeamsUrlInput(data.session.teamsMeetingUrl || "");
       } else {
-        const now = Date.now();
-        const fallbackActive = mySessions.find(
-          (s) =>
-            s.status === "IN_PROGRESS" &&
-            new Date(s.scheduledEndTime).getTime() > now - 2 * 3600 * 1000
-        );
+        const fallbackActive = resolveActiveSession(mySessions, Date.now());
         if (fallbackActive) {
           setActiveLesson(fallbackActive);
           setTeamsUrlInput(fallbackActive.teamsMeetingUrl || "");
@@ -808,6 +808,37 @@ export default function TutorDashboardPage() {
         {/* TAB 1: NEXT MEETING & LIVE CONTROLS */}
         {activeTab === "active" && (
           <div className="space-y-6">
+            {/* Alert banner for previous uncompleted lessons */}
+            {uncompletedPastLessons.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                      Uncompleted Previous Lesson{uncompletedPastLessons.length > 1 ? `s (${uncompletedPastLessons.length})` : ""}
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <strong>{uncompletedPastLessons[0].title}</strong> with <strong className="font-semibold">{uncompletedPastLessons[0].tutee?.name}</strong> (scheduled end was {new Date(uncompletedPastLessons[0].scheduledEndTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}) has not been marked as complete.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      setSessionToComplete(uncompletedPastLessons[0]);
+                      setIsCompletionModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Complete Lesson &amp; Report</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {activeLesson ? (
               <>
                 <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 shadow-sm space-y-6 transition-colors">
@@ -944,31 +975,31 @@ export default function TutorDashboardPage() {
                 {/* Real-time Session Action Triggers */}
                 <div className="flex flex-wrap items-center gap-3 pt-2">
                   {!isLessonLive && (
-                    <>
-                      <button
-                        onClick={handleStartLessonNow}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-                      >
-                        <Play className="w-4 h-4 fill-white" />
-                        <span>Start Lesson Now (Play Chime)</span>
-                      </button>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleDelayLesson(5)}
-                          className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
-                        >
-                          +5m Delay
-                        </button>
-                        <button
-                          onClick={() => handleDelayLesson(10)}
-                          className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
-                        >
-                          +10m Delay
-                        </button>
-                      </div>
-                    </>
+                    <button
+                      onClick={handleStartLessonNow}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                    >
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Start Lesson Now (Play Chime)</span>
+                    </button>
                   )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDelayLesson(5)}
+                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
+                      title="Delay this lesson by 5 minutes"
+                    >
+                      +5m Delay
+                    </button>
+                    <button
+                      onClick={() => handleDelayLesson(10)}
+                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
+                      title="Delay this lesson by 10 minutes"
+                    >
+                      +10m Delay
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => handleCancelSession(activeLesson)}
@@ -1727,17 +1758,15 @@ export default function TutorDashboardPage() {
                                       <CheckCircle2 className="w-3 h-3" />
                                       <span>Complete</span>
                                     </button>
-                                    {!isRowLive && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenDelayModal(5, s)}
-                                        className="w-full px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800 whitespace-nowrap"
-                                        title="Delay this upcoming lesson (+5m, +10m, or with reason)"
-                                      >
-                                        <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                                        <span>+ Delay</span>
-                                      </button>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDelayModal(5, s)}
+                                      className="w-full px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800 whitespace-nowrap"
+                                      title="Delay this lesson (+5m, +10m, or with reason)"
+                                    >
+                                      <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                      <span>+ Delay</span>
+                                    </button>
                                     <button
                                       onClick={() => handleCancelSession(s)}
                                       className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"

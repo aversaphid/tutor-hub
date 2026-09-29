@@ -123,15 +123,16 @@ export async function GET(request: Request) {
         include,
       });
     } else {
-      // Priority 1: Any lesson currently IN_PROGRESS whose end time hasn't long passed (within 2h)
+      // Priority 1: Any lesson currently in its active scheduled window (start <= now && now < end)
       session = await prisma.session.findFirst({
         where: {
           ...baseWhere,
-          status: "IN_PROGRESS",
-          scheduledEndTime: { gt: new Date(Date.now() - 2 * 3600 * 1000) },
+          status: { notIn: ["COMPLETED", "CANCELLED"] },
+          scheduledStartTime: { lte: now },
+          scheduledEndTime: { gt: now },
         },
         include,
-        orderBy: { scheduledStartTime: "asc" },
+        orderBy: { scheduledStartTime: "desc" },
       });
 
       // Priority 2: Next upcoming scheduled/delayed lesson whose end time hasn't passed
@@ -144,6 +145,19 @@ export async function GET(request: Request) {
           },
           include,
           orderBy: { scheduledStartTime: "asc" },
+        });
+      }
+
+      // Priority 3: Fallback to recent uncompleted IN_PROGRESS lesson whose end time passed within 2h
+      if (!session) {
+        session = await prisma.session.findFirst({
+          where: {
+            ...baseWhere,
+            status: "IN_PROGRESS",
+            scheduledEndTime: { gt: new Date(Date.now() - 2 * 3600 * 1000) },
+          },
+          include,
+          orderBy: { scheduledStartTime: "desc" },
         });
       }
     }

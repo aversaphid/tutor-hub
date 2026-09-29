@@ -69,6 +69,7 @@ import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
 import { useRouter } from "next/navigation";
+import { resolveActiveSession } from "@/lib/session-utils";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -547,18 +548,7 @@ export default function AdminPage() {
         const list: any[] = d.sessions || [];
         setSessions(list);
 
-        const now = Date.now();
-        const current =
-          list.find(
-            (s) =>
-              s.status === "IN_PROGRESS" &&
-              new Date(s.scheduledEndTime).getTime() > now - 2 * 3600 * 1000
-          ) ||
-          list.find(
-            (s) =>
-              (s.status === "SCHEDULED" || s.status === "DELAYED") &&
-              new Date(s.scheduledEndTime).getTime() > now
-          );
+        const current = resolveActiveSession(list, Date.now());
 
         if (current) {
           setActiveLesson(current);
@@ -2109,29 +2099,29 @@ export default function AdminPage() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {!isAdminLessonLive && (
-                  <>
-                    <button
-                      onClick={handleStartNow}
-                      className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-white" />
-                      <span>Start Lesson Now</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleDelay(5)}
-                      className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                    >
-                      +5m Delay
-                    </button>
-                    <button
-                      onClick={() => handleDelay(10)}
-                      className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                    >
-                      +10m Delay
-                    </button>
-                  </>
+                  <button
+                    onClick={handleStartNow}
+                    className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Start Lesson Now</span>
+                  </button>
                 )}
+
+                <button
+                  onClick={() => handleDelay(5)}
+                  className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+                  title="Delay lesson by 5 minutes"
+                >
+                  +5m Delay
+                </button>
+                <button
+                  onClick={() => handleDelay(10)}
+                  className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+                  title="Delay lesson by 10 minutes"
+                >
+                  +10m Delay
+                </button>
 
                 <button
                   onClick={() => openCompleteModal(activeLesson)}
