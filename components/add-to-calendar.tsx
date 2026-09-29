@@ -26,9 +26,10 @@ interface AddToCalendarProps {
     tutee?: { name: string } | null;
   };
   compact?: boolean;
+  label?: string;
 }
 
-export default function AddToCalendar({ session, compact = false }: AddToCalendarProps) {
+export default function AddToCalendar({ session, compact = false, label }: AddToCalendarProps) {
   const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -101,7 +102,7 @@ export default function AddToCalendar({ session, compact = false }: AddToCalenda
         title="Add lesson to your calendar"
       >
         <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-        <span>Add to Calendar</span>
+        <span>{label || (compact ? "Add to Calendar" : "Add to Calendar")}</span>
       </button>
 
       {/* Centered Modal: Completely immune to table container overflow / scroll clipping */}

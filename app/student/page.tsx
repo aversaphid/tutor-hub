@@ -24,12 +24,14 @@ import {
   BookOpen,
   Send,
   RefreshCw,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
-import ExamCountdownWidget from "@/components/exam-countdown-widget";
+import ExamCountdownModal from "@/components/exam-countdown-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import SharedResourcesModal from "@/components/shared-resources-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
@@ -47,9 +49,10 @@ function StudentLobbyContent() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
 
-  // Formula Sheet, Casio Calculator & Shared Resources modal state
+  // Formula Sheet, Casio Calculator, Exam Countdown & Shared Resources modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isExamCountdownOpen, setIsExamCountdownOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
@@ -302,103 +305,83 @@ function StudentLobbyContent() {
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
       <Navbar user={currentUser} />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Welcome Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
+        {/* Welcome Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <div className="space-y-0.5">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Student Room Verified</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100">
+                Welcome, {currentUser?.name || "Student"}!
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
+                <UserCheck className="w-3 h-3" />
+                <span>Verified</span>
+              </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100">
-              Welcome, {currentUser?.name || "Student"}!
-            </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Your live lesson lobby. The countdown and Teams room update in real time.
+              Your live maths lesson lobby. Meeting room &amp; countdown update in real time.
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="self-start sm:self-auto text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Switch Student</span>
-          </Link>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Link
+              href="/"
+              className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Switch Student</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Cancelled Lessons Notice Banner */}
+        {/* Cancelled Lessons Notice Banner (if any) */}
         {cancelledSessions.filter((s) => !dismissedCancelledIds.includes(s.id)).length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {cancelledSessions
               .filter((s) => !dismissedCancelledIds.includes(s.id))
               .map((session) => (
                 <div
                   key={session.id}
-                  className="p-4 sm:p-5 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm space-y-3 transition-colors"
+                  className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex items-start justify-between gap-3 text-xs"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-2xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-bold">
-                        <XCircle className="w-5 h-5" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-rose-800 dark:text-rose-300">
-                            Lesson Cancelled by Tutor
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-200/70 dark:bg-rose-900 text-rose-800 dark:text-rose-200 font-bold">
-                            Notice
-                          </span>
-                        </div>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                          {session.title || "Maths Lesson"} scheduled for{" "}
-                          <strong>
-                            {new Date(session.scheduledStartTime).toLocaleDateString([], {
-                              weekday: "long",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </strong>{" "}
-                          at{" "}
-                          <strong>
-                            {new Date(session.scheduledStartTime).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </strong>
-                        </p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Tutor: <strong>{formatTutorName(session.tutor?.name)}</strong>
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 font-bold">
+                      <XCircle className="w-4 h-4" />
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setDismissedCancelledIds((prev) => [...prev, session.id])}
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer"
-                      title="Dismiss cancellation notice"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-rose-800 dark:text-rose-300">
+                          Lesson Cancelled by Tutor: {session.title || "Maths Lesson"}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {new Date(session.scheduledStartTime).toLocaleDateString([], {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}{" "}
+                          at{" "}
+                          {new Date(session.scheduledStartTime).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      {session.notes && (
+                        <p className="text-slate-600 dark:text-slate-300 mt-0.5">
+                          Reason: {session.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  {session.notes ? (
-                    <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-rose-100 dark:border-rose-900/40 text-xs space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
-                        <Info className="w-3.5 h-3.5" />
-                        <span>Reason for Cancellation:</span>
-                      </div>
-                      <p className="text-slate-700 dark:text-slate-200 leading-relaxed font-medium pl-5">
-                        {session.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 pl-12">
-                      Your tutor cancelled this lesson. If you have any questions or wish to reschedule, feel free to email them.
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setDismissedCancelledIds((prev) => [...prev, session.id])}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors cursor-pointer shrink-0"
+                    title="Dismiss cancellation notice"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
           </div>
@@ -406,42 +389,32 @@ function StudentLobbyContent() {
 
         {/* Live Lesson Section */}
         {activeSession ? (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-                <span>
-                  Lesson Scheduled for{" "}
-                  <strong className="text-slate-700 dark:text-slate-200">
-                    {new Date(activeSession.scheduledStartTime).toLocaleDateString([], {
-                      weekday: "long",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </strong>{" "}
-                  at{" "}
-                  <strong className="text-slate-700 dark:text-slate-200">
-                    {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </strong>
-                </span>
-              </span>
-              <div className="flex items-center gap-2">
+          <div className="space-y-3">
+            {/* Top Toolbar: All study tabs strictly on ONE line */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
                 <button
                   type="button"
-                  onClick={() => setIsCalculatorOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
-                  title="Open Casio fx-83GTX Scientific Calculator"
+                  onClick={() => setIsExamCountdownOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                  title="Open Official GCSE & A-Level Maths Exam Countdown & Timetables"
                 >
-                  <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
-                  <span>Casio fx-83GTX</span>
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Exam Countdown</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsResourcesOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                  title="Open Shared Resources & Revision Library"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Shared Resources</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsFormulaSheetOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors cursor-pointer"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
                   title="Open GCSE & A-Level Maths Formula Sheet"
                 >
                   <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
@@ -449,304 +422,351 @@ function StudentLobbyContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsResourcesOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-xs transition-colors cursor-pointer"
-                  title="Open Shared Resources & Revision Library"
+                  onClick={() => setIsCalculatorOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                  title="Open Casio fx-83GTX Scientific Calculator"
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                  <span>Shared Resources</span>
+                  <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+                  <span>Casio fx-83GTX</span>
                 </button>
-                <AddToCalendar session={activeSession} />
+                <div className="shrink-0">
+                  <AddToCalendar session={activeSession} label="Add to Personal Calendar" />
+                </div>
               </div>
+
+              {/* Scheduled date/time tag on far right */}
+              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0 ml-auto whitespace-nowrap">
+                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>
+                  {new Date(activeSession.scheduledStartTime).toLocaleDateString([], {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}{" "}
+                  at{" "}
+                  {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </span>
             </div>
 
-            {/* Countdown Box */}
-            <CountdownTimer
-              initialSession={activeSession}
-              onStatusChange={(updated) => {
-                setActiveSession(updated);
-                if (currentUser?.id) {
-                  loadStudentSessions(currentUser.id);
-                }
-              }}
-            />
+            {/* 2-Column Responsive Dashboard Grid (Fits comfortably without scrolling!) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+              {/* Left Column (7 cols): Live Countdown Timer & InPrivate Teams Meeting Room */}
+              <div className="lg:col-span-7 space-y-3.5">
+                <CountdownTimer
+                  initialSession={activeSession}
+                  onStatusChange={(updated) => {
+                    setActiveSession(updated);
+                    if (currentUser?.id) {
+                      loadStudentSessions(currentUser.id);
+                    }
+                  }}
+                />
 
-            {/* Topic for Today's Lesson */}
-            {(activeSession.status === "SCHEDULED" || activeSession.status === "DELAYED" || activeSession.status === "IN_PROGRESS") && (
-              <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 transition-colors">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center shrink-0">
-                    <BookOpen className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">What would you like to cover today?</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Your tutor can see this as soon as you save it.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    id="student-topic-input"
-                    type="text"
-                    value={topicInput}
-                    onChange={(e) => setTopicInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveTopic()}
-                    placeholder="e.g. Quadratics, Trigonometry, Past paper Q5..."
-                    maxLength={300}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveTopic}
-                    disabled={isSavingTopic}
-                    className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                  >
-                    {topicSaved ? (
-                      <><Check className="w-3.5 h-3.5" /><span>Saved!</span></>
-                    ) : (
-                      <><Send className="w-3.5 h-3.5" /><span>{isSavingTopic ? "Saving..." : "Save"}</span></>
+                <TeamsLauncher
+                  meetingUrl={activeSession.teamsMeetingUrl}
+                  isUnlocked={isMeetingUnlocked}
+                  sessionTitle={activeSession.title}
+                  tutorName={formatTutorName(activeSession.tutor?.name || "Tutor")}
+                  unlockEarlyMinutes={unlockEarlyMinutes}
+                />
+
+                {/* Status if Lesson Completed */}
+                {activeSession.status === "COMPLETED" && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-1.5 transition-colors">
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Lesson Completed</span>
+                    </span>
+                    {activeSession.feedbackCovered && (
+                      <p className="text-xs text-slate-700 dark:text-slate-200">
+                        <strong>Covered:</strong> {activeSession.feedbackCovered}
+                      </p>
                     )}
-                  </button>
-                </div>
-                {activeSession.studentTopic && (
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-1">
-                    Currently saved: <span className="font-semibold text-slate-700 dark:text-slate-300">{activeSession.studentTopic}</span>
-                  </p>
+                    {activeSession.feedbackNotes && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        <strong>Tutor Notes:</strong> {activeSession.feedbackNotes}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
 
-            {/* InPrivate Teams Launcher */}
-            <TeamsLauncher
-              meetingUrl={activeSession.teamsMeetingUrl}
-              isUnlocked={isMeetingUnlocked}
-              sessionTitle={activeSession.title}
-              tutorName={formatTutorName(activeSession.tutor?.name || "Tutor")}
-              unlockEarlyMinutes={unlockEarlyMinutes}
-            />
-
-            {/* Tutor Contact Info & Email */}
-            {activeSession.tutor && (
-              <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center font-bold">
-                    <Mail className="w-4 h-4" />
+              {/* Right Column (5 cols): What to Cover Today, Tutor Contact, & Upcoming Lessons */}
+              <div className="lg:col-span-5 space-y-3.5">
+                {/* Topic for Today's Lesson */}
+                {(activeSession.status === "SCHEDULED" ||
+                  activeSession.status === "DELAYED" ||
+                  activeSession.status === "IN_PROGRESS") && (
+                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center shrink-0">
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          What would you like to cover today?
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Your tutor sees this instantly.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        id="student-topic-input"
+                        type="text"
+                        value={topicInput}
+                        onChange={(e) => setTopicInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveTopic()}
+                        placeholder="e.g. Quadratics, Past paper Q5..."
+                        maxLength={300}
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveTopic}
+                        disabled={isSavingTopic}
+                        className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {topicSaved ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            <span>Saved!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3 h-3" />
+                            <span>{isSavingTopic ? "..." : "Save"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {activeSession.studentTopic && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-0.5">
+                        Current:{" "}
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {activeSession.studentTopic}
+                        </span>
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                      <span>Tutor: {formatTutorName(activeSession.tutor.name)}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                        LB Maths Tuition
+                )}
+
+                {/* Tutor Contact Info & Email */}
+                {activeSession.tutor && (
+                  <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3 transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center font-bold shrink-0">
+                        <Mail className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                          Tutor: {formatTutorName(activeSession.tutor.name)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {getTutorEmail(activeSession.tutor.name)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={`mailto:${getTutorEmail(activeSession.tutor.name)}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs transition-colors"
+                        title="Email tutor"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Email</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(getTutorEmail(activeSession.tutor?.name));
+                          setCopiedTutorEmail(true);
+                          setTimeout(() => setCopiedTutorEmail(false), 2000);
+                        }}
+                        className="p-1 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        title="Copy email"
+                      >
+                        {copiedTutorEmail ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lesson Notes & Reschedule Reason (if present) */}
+                {activeSession.notes && (
+                  <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 space-y-1 shadow-sm transition-colors text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-blue-900 dark:text-blue-300">
+                      <Info className="w-3.5 h-3.5 text-[#48A5EE]" />
+                      <span>Note from Tutor:</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-200 leading-snug pl-5">
+                      {activeSession.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Other Upcoming Lessons in Right Column */}
+                {upcomingSessions.length > 0 && (
+                  <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Upcoming Lessons ({upcomingSessions.length})</span>
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsCalendarSubOpen(true)}
+                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>Sync</span>
+                      </button>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Need to get in touch before your lesson? Email your tutor directly.
+
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                      {upcomingSessions.map((session) => (
+                        <div
+                          key={session.id}
+                          className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {session.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {new Date(session.scheduledStartTime).toLocaleDateString([], {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              })}{" "}
+                              &bull;{" "}
+                              {new Date(session.scheduledStartTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                          <AddToCalendar session={session} compact />
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <a
-                    href={`mailto:${getTutorEmail(activeSession.tutor.name)}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>{getTutorEmail(activeSession.tutor.name)}</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(getTutorEmail(activeSession.tutor?.name));
-                      setCopiedTutorEmail(true);
-                      setTimeout(() => setCopiedTutorEmail(false), 2000);
-                    }}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    title="Copy tutor email"
-                  >
-                    {copiedTutorEmail ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Status if Lesson Completed */}
-            {activeSession.status === "COMPLETED" && (
-              <div className="p-5 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-2 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Lesson Completed</span>
-                  </span>
-                </div>
-                {activeSession.feedbackCovered && (
-                  <p className="text-xs text-slate-700 dark:text-slate-200">
-                    <strong>Covered:</strong> {activeSession.feedbackCovered}
-                  </p>
-                )}
-                {activeSession.feedbackNotes && (
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    <strong>Tutor Notes:</strong> {activeSession.feedbackNotes}
-                  </p>
                 )}
               </div>
-            )}
-
-            {/* Lesson Notes & Reschedule Reason */}
-            {activeSession.notes && (
-              <div className="p-4 sm:p-5 rounded-3xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 space-y-1.5 shadow-sm transition-colors">
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-300">
-                  <Info className="w-4 h-4 text-[#48A5EE]" />
-                  <span>Tutor Note &amp; Reschedule Reason</span>
-                </div>
-                <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium pl-6">
-                  {activeSession.notes}
-                </p>
-              </div>
-            )}
+            </div>
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-4 shadow-sm transition-colors">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mx-auto">
-              <Calendar className="w-8 h-8" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-10 text-center space-y-4 shadow-sm transition-colors">
+            <div className="w-14 h-14 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mx-auto">
+              <Calendar className="w-7 h-7" />
             </div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-              No Lesson Scheduled Right Now
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-              When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
-            </p>
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                No Lesson Scheduled Right Now
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
+              </p>
+            </div>
+            <div className="pt-2 flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
               <button
                 type="button"
-                onClick={() => setIsCalculatorOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] text-xs font-bold transition-colors cursor-pointer"
+                onClick={() => setIsExamCountdownOpen(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
               >
-                <Calculator className="w-4 h-4" />
-                <span>Casio fx-83GTX Calculator</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFormulaSheetOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
-              >
-                <FileText className="w-4 h-4 text-[#48A5EE]" />
-                <span>Formula Sheet</span>
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Exam Countdown</span>
               </button>
               <button
                 type="button"
                 onClick={() => setIsResourcesOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors cursor-pointer border border-purple-200 dark:border-purple-800"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
               >
-                <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                 <span>Shared Resources</span>
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Official Maths Exam Countdown Clocks & Revision Milestones */}
-        <ExamCountdownWidget
-          onOpenCalculator={() => setIsCalculatorOpen(true)}
-          onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
-          onOpenResources={() => setIsResourcesOpen(true)}
-          studentName={currentUser?.name}
-        />
-
-        {/* Shared Resources & Revision Library Banner */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-blue-50/40 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-blue-950/20 border border-purple-200/80 dark:border-purple-900/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 font-bold shadow-2xs">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
-                  Shared Resource Library
-                </h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-200/70 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-bold">
-                  Revision Links &amp; Tools
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-                Browse past papers, topic worksheets, exam specifications, formulas, and online tools shared by your tutors.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsResourcesOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 self-start sm:self-center"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Browse Resources</span>
-          </button>
-        </div>
-
-        {/* Other Upcoming Lessons */}
-        {upcomingSessions.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-                <span>Upcoming Maths Lessons</span>
-              </h3>
+              <button
+                type="button"
+                onClick={() => setIsFormulaSheetOpen(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Formula Sheet</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCalculatorOpen(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Casio fx-83GTX</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setIsCalendarSubOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer"
-                title="Sync all lessons to Apple Calendar / Google Calendar"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#48A5EE] bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 border border-[#48A5EE]/30 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
               >
-                <RefreshCw className="w-3 h-3 text-purple-500" />
-                <span>Sync to Calendar (WebCal)</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sync to Calendar</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {upcomingSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 dark:text-slate-100">{session.title}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
-                      {new Date(session.scheduledStartTime).toLocaleDateString([], {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                    <span>Tutor: {formatTutorName(session.tutor?.name || "Tutor")}</span>
-                    <a
-                      href={`mailto:${getTutorEmail(session.tutor?.name)}`}
-                      className="text-[#48A5EE] hover:underline text-[11px] font-semibold"
+            {/* Upcoming sessions if any */}
+            {upcomingSessions.length > 0 && (
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-left space-y-2">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  Future Scheduled Lessons ({upcomingSessions.length})
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {upcomingSessions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2 text-xs"
                     >
-                      {getTutorEmail(session.tutor?.name)}
-                    </a>
-                  </div>
-                  {session.notes && (
-                    <div className="p-2.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5">
-                      <span className="font-bold text-[#48A5EE] flex items-center gap-1">
-                        <Info className="w-3 h-3" /> Note from Tutor:
-                      </span>
-                      <p className="leading-snug pl-4">{session.notes}</p>
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-100">{s.title}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}{" "}
+                          &bull;{" "}
+                          {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <AddToCalendar session={s} compact />
                     </div>
-                  )}
-                  <div className="pt-1 flex justify-end">
-                    <AddToCalendar session={session} compact />
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </main>
+
+      {/* Official Maths Exam Countdown Modal */}
+      <ExamCountdownModal
+        isOpen={isExamCountdownOpen}
+        onClose={() => setIsExamCountdownOpen(false)}
+        studentName={currentUser?.name}
+        onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
+        onOpenResources={() => setIsResourcesOpen(true)}
+      />
 
       {/* Maths Formula Sheet Modal */}
       <FormulaSheetModal
