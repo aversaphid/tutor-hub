@@ -31,6 +31,7 @@ import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import ExamCountdownWidget from "@/components/exam-countdown-widget";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
+import SharedResourcesModal from "@/components/shared-resources-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
 
 function StudentLobbyContent() {
@@ -46,9 +47,10 @@ function StudentLobbyContent() {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState("");
 
-  // Formula Sheet & Casio Calculator modal state
+  // Formula Sheet, Casio Calculator & Shared Resources modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
 
@@ -97,7 +99,10 @@ function StudentLobbyContent() {
             setLoading(false);
             return;
           }
-          setCurrentUser(data.student);
+          setCurrentUser({
+            ...data.student,
+            role: "TUTEE",
+          });
           await loadStudentSessions(data.student.id);
           setLoading(false);
           return;
@@ -442,6 +447,15 @@ function StudentLobbyContent() {
                   <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
                   <span>Formula Sheet</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsResourcesOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-xs transition-colors cursor-pointer"
+                  title="Open Shared Resources & Revision Library"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Shared Resources</span>
+                </button>
                 <AddToCalendar session={activeSession} />
               </div>
             </div>
@@ -621,6 +635,14 @@ function StudentLobbyContent() {
                 <FileText className="w-4 h-4 text-[#48A5EE]" />
                 <span>Formula Sheet</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setIsResourcesOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors cursor-pointer border border-purple-200 dark:border-purple-800"
+              >
+                <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Shared Resources</span>
+              </button>
             </div>
           </div>
         )}
@@ -629,8 +651,40 @@ function StudentLobbyContent() {
         <ExamCountdownWidget
           onOpenCalculator={() => setIsCalculatorOpen(true)}
           onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
+          onOpenResources={() => setIsResourcesOpen(true)}
           studentName={currentUser?.name}
         />
+
+        {/* Shared Resources & Revision Library Banner */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-blue-50/40 dark:from-purple-950/30 dark:via-indigo-950/20 dark:to-blue-950/20 border border-purple-200/80 dark:border-purple-900/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 font-bold shadow-2xs">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Shared Resource Library
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-200/70 dark:bg-purple-900 text-purple-800 dark:text-purple-200 font-bold">
+                  Revision Links &amp; Tools
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Browse past papers, topic worksheets, exam specifications, formulas, and online tools shared by your tutors.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsResourcesOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer shrink-0 self-start sm:self-center"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Browse Resources</span>
+          </button>
+        </div>
 
         {/* Other Upcoming Lessons */}
         {upcomingSessions.length > 0 && (
@@ -713,6 +767,18 @@ function StudentLobbyContent() {
         title="My Maths Lessons Calendar"
         subtitle="Subscribe your phone, tablet, or computer to your maths lessons. Any timetable changes or rescheduled lessons update automatically."
         magicKey={magicKey || currentUser?.magicKey}
+      />
+
+      {/* Shared Resources & Revision Library Modal */}
+      <SharedResourcesModal
+        isOpen={isResourcesOpen}
+        onClose={() => setIsResourcesOpen(false)}
+        currentUser={{
+          id: currentUser?.id || "",
+          name: currentUser?.name || "Student",
+          role: "TUTEE",
+          magicKey: magicKey || currentUser?.magicKey,
+        }}
       />
 
       <Footer />

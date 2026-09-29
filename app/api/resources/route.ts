@@ -17,11 +17,25 @@ function sanitizeUrl(rawUrl: string): string {
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || (user.role !== "HEAD_TUTOR" && user.role !== "TUTOR")) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const { searchParams } = new URL(request.url);
+    const key = searchParams.get("key");
+
+    let isAuthorized =
+      !!user &&
+      (user.role === "HEAD_TUTOR" || user.role === "TUTOR" || user.role === "TUTEE");
+
+    if (!isAuthorized && key) {
+      const student = await prisma.user.findUnique({
+        where: { magicKey: key, active: true, role: "TUTEE" },
+      });
+      if (student) {
+        isAuthorized = true;
+      }
     }
 
-    const { searchParams } = new URL(request.url);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
     const category = searchParams.get("category");
     const query = searchParams.get("q")?.trim().toLowerCase();
 

@@ -42,7 +42,9 @@ interface SharedResourcesHubProps {
     id: string;
     name: string;
     role: "HEAD_TUTOR" | "TUTOR" | "TUTEE";
+    magicKey?: string | null;
   };
+  hideHeaderBanner?: boolean;
 }
 
 const PRESET_CATEGORIES = [
@@ -94,7 +96,10 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
   },
 };
 
-export default function SharedResourcesHub({ currentUser }: SharedResourcesHubProps) {
+export default function SharedResourcesHub({
+  currentUser,
+  hideHeaderBanner = false,
+}: SharedResourcesHubProps) {
   const [resources, setResources] = useState<ResourceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,13 +125,16 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
 
   useEffect(() => {
     loadResources();
-  }, []);
+  }, [currentUser?.magicKey]);
 
   const loadResources = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/resources");
+      const url = currentUser?.magicKey
+        ? `/api/resources?key=${encodeURIComponent(currentUser.magicKey)}`
+        : "/api/resources";
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error("Failed to load resources");
       }
@@ -167,6 +175,7 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
 
   const handleSaveResource = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser.role === "TUTEE") return;
     setFormError("");
 
     if (!formTitle.trim()) {
@@ -233,6 +242,7 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
   };
 
   const handleDeleteResource = async (item: ResourceItem) => {
+    if (currentUser.role === "TUTEE") return;
     if (!confirm(`Are you sure you want to remove "${item.title}" from the shared library?`)) {
       return;
     }
@@ -325,32 +335,36 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
       )}
 
       {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-sm transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] text-xs font-bold">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Collective Tutor Hub</span>
+      {!hideHeaderBanner && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-sm transition-colors">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] text-xs font-bold">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Collective Tutor Hub</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+                Shared Resource Library
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
+                A shared repository of useful links, past papers, worksheets, formulas, and online tools
+                accessible to all tutors, students, and administrators.
+              </p>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100">
-              Shared Resource Library
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
-              A shared repository of useful links, past papers, worksheets, formulas, and online tools
-              accessible to all tutors and administrators.
-            </p>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleOpenAddModal}
-            className="px-5 py-2.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0 self-start sm:self-center"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Resource Link</span>
-          </button>
+            {currentUser.role !== "TUTEE" && (
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="px-5 py-2.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0 self-start sm:self-center"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Resource Link</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search, Category Filter & Sorting Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 transition-colors">
@@ -462,6 +476,8 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
               {searchTerm || selectedCategory !== "All"
                 ? "Try searching for something else or reset your category filters."
+                : currentUser.role === "TUTEE"
+                ? "Your tutors will share past paper links, online calculators, formula sheets, and revision tools here."
                 : "Add useful past paper links, online calculators, formula sheets, and teaching tools to build up the team's library."}
             </p>
           </div>
@@ -476,7 +492,7 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
             >
               Clear Filters
             </button>
-          ) : (
+          ) : currentUser.role !== "TUTEE" ? (
             <button
               type="button"
               onClick={handleOpenAddModal}
@@ -485,13 +501,14 @@ export default function SharedResourcesHub({ currentUser }: SharedResourcesHubPr
               <Plus className="w-4 h-4" />
               <span>Add the First Resource</span>
             </button>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredResources.map((item) => {
             const canManage =
-              currentUser.role === "HEAD_TUTOR" || currentUser.id === item.createdById;
+              currentUser.role !== "TUTEE" &&
+              (currentUser.role === "HEAD_TUTOR" || currentUser.id === item.createdById);
             const categoryStyle =
               CATEGORY_COLORS[item.category] || CATEGORY_COLORS.General;
             const domain = getDomain(item.url);

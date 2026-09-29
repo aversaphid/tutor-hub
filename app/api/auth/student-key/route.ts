@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       student: {
         id: student.id,
         name: student.name,
+        role: student.role,
         magicKey: student.magicKey,
       },
     });

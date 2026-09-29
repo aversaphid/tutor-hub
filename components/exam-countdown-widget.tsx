@@ -14,6 +14,7 @@ import {
   Zap,
   Download,
   ExternalLink,
+  BookOpen,
 } from "lucide-react";
 import { downloadICS, getGoogleCalendarUrl, CalendarEvent } from "@/lib/calendar";
 import { useAccessibility } from "@/lib/accessibility";
@@ -34,6 +35,7 @@ export interface ExamPaper {
 interface ExamCountdownWidgetProps {
   onOpenCalculator?: () => void;
   onOpenFormulaSheet?: () => void;
+  onOpenResources?: () => void;
   studentName?: string;
 }
 
@@ -170,6 +172,7 @@ const STORAGE_KEY = "lb_maths_student_exam_countdown_v3";
 export default function ExamCountdownWidget({
   onOpenCalculator,
   onOpenFormulaSheet,
+  onOpenResources,
   studentName = "Student",
 }: ExamCountdownWidgetProps) {
   const { preferences } = useAccessibility();
@@ -472,6 +475,17 @@ export default function ExamCountdownWidget({
                 >
                   <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
                   <span>Formula Sheet</span>
+                </button>
+              )}
+              {onOpenResources && (
+                <button
+                  type="button"
+                  onClick={onOpenResources}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-[11px] font-bold text-purple-700 dark:text-purple-300 transition-colors shadow-2xs cursor-pointer"
+                  title="Open Shared Resources & Past Papers"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Resources</span>
                 </button>
               )}
             </div>
