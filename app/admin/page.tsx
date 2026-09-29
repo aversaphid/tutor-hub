@@ -52,6 +52,7 @@ import {
   TrendingUp,
   FileJson,
   Info,
+  RotateCcw,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -1525,6 +1526,35 @@ export default function AdminPage() {
     }
   };
 
+  const [isResettingStartTime, setIsResettingStartTime] = useState(false);
+
+  const handleResetStartTime = async (sessionToReset?: any) => {
+    const s = sessionToReset || activeLesson;
+    if (!s) return;
+    const delayInfo = s.delayMinutes > 0 ? ` (removes ${s.delayMinutes}m delay)` : "";
+    if (!confirm(`Reset start time for "${s.title}" back to original schedule${delayInfo}?`)) return;
+
+    setIsResettingStartTime(true);
+    try {
+      const res = await fetch(`/api/sessions/${s.id}/reset-start`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to reset start time.");
+        return;
+      }
+      setActionMessage(data.message || "Start time reset to original schedule.");
+      setDelayModal((prev) => ({ ...prev, isOpen: false }));
+      await refreshAllData();
+      setTimeout(() => setActionMessage(""), 4000);
+    } catch {
+      alert("Network error while resetting start time.");
+    } finally {
+      setIsResettingStartTime(false);
+    }
+  };
+
   const handleDelay = (minutes: number) => handleOpenDelayModal(minutes);
 
   // Open Complete / Review Lesson Feedback Modal
@@ -2122,6 +2152,18 @@ export default function AdminPage() {
                 >
                   +10m Delay
                 </button>
+                {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
+                  <button
+                    type="button"
+                    onClick={() => handleResetStartTime(activeLesson)}
+                    disabled={isResettingStartTime}
+                    className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    title={`Reset start time back to original schedule (removes ${activeLesson.delayMinutes}m delay)`}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Reset Start Time</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => openCompleteModal(activeLesson)}
@@ -5986,6 +6028,10 @@ export default function AdminPage() {
         isOpen={delayModal.isOpen}
         minutes={delayModal.minutes}
         studentName={delayModal.studentName}
+        currentDelayMinutes={activeLesson?.delayMinutes || 0}
+        onReset={() => {
+          if (activeLesson) handleResetStartTime(activeLesson);
+        }}
         onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDelay}
         isSubmitting={isSubmittingDelay}

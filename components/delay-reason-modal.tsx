@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Clock, MessageSquare, FastForward, X, Sparkles } from "lucide-react";
+import { Clock, MessageSquare, FastForward, X, Sparkles, RotateCcw } from "lucide-react";
 
 interface DelayReasonModalProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface DelayReasonModalProps {
   studentName?: string;
   onClose: () => void;
   onConfirm: (minutes: number, reason?: string) => Promise<void> | void;
+  onReset?: () => Promise<void> | void;
+  currentDelayMinutes?: number;
   isSubmitting?: boolean;
 }
 
@@ -26,6 +28,8 @@ export default function DelayReasonModal({
   studentName,
   onClose,
   onConfirm,
+  onReset,
+  currentDelayMinutes = 0,
   isSubmitting = false,
 }: DelayReasonModalProps) {
   const [reason, setReason] = useState("");
@@ -226,6 +230,21 @@ export default function DelayReasonModal({
                 </span>
               </button>
             </div>
+
+            {onReset && (
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={onReset}
+                className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-slate-700"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>
+                  Reset to Original Start Time
+                  {currentDelayMinutes > 0 ? ` (undo +${currentDelayMinutes}m)` : ""}
+                </span>
+              </button>
+            )}
 
             <button
               type="button"

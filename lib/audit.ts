@@ -10,6 +10,7 @@ export type AuditAction =
   | "REPORT_EDITED"
   | "REMINDER_UPDATED"
   | "CONFIRMATION_UPDATED"
+  | "START_TIME_RESET"
   | "CANCELLED";
 
 export interface LogAuditParams {

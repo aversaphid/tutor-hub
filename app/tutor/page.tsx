@@ -46,6 +46,7 @@ import {
   BookOpen,
   Palmtree,
   FastForward,
+  RotateCcw,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -541,6 +542,36 @@ export default function TutorDashboardPage() {
   // Backwards compatible alias
   const handleDelayLesson = (mins: number, targetSession?: any) => handleOpenDelayModal(mins, targetSession);
 
+  const [isResettingStartTime, setIsResettingStartTime] = useState(false);
+
+  const handleResetStartTime = async (targetSession?: any) => {
+    const s = targetSession || activeLesson;
+    if (!s) return;
+    const delayInfo = s.delayMinutes > 0 ? ` (removes ${s.delayMinutes}m delay)` : "";
+    if (!confirm(`Reset start time for "${s.title}" back to original schedule${delayInfo}?`)) return;
+
+    setIsResettingStartTime(true);
+    try {
+      const res = await fetch(`/api/sessions/${s.id}/reset-start`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to reset start time.");
+        return;
+      }
+      setActionMessage(data.message || "Start time reset to original schedule.");
+      setDelayModal((prev) => ({ ...prev, isOpen: false }));
+      loadLiveSession();
+      loadMySessions();
+      setTimeout(() => setActionMessage(""), 4000);
+    } catch {
+      alert("Network error while resetting start time.");
+    } finally {
+      setIsResettingStartTime(false);
+    }
+  };
+
   const handleCompleteLesson = async () => {
     if (!activeLesson) return;
     if (!confirm("Are you sure you want to mark this lesson as completed?")) return;
@@ -999,6 +1030,18 @@ export default function TutorDashboardPage() {
                     >
                       +10m Delay
                     </button>
+                    {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
+                      <button
+                        type="button"
+                        onClick={() => handleResetStartTime(activeLesson)}
+                        disabled={isResettingStartTime}
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        title={`Reset start time back to original schedule (removes ${activeLesson.delayMinutes}m delay)`}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                        <span>Reset Start Time</span>
+                      </button>
+                    )}
                   </div>
 
                   <button
@@ -1220,6 +1263,19 @@ export default function TutorDashboardPage() {
                         <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                         <span>Custom / Reason...</span>
                       </button>
+
+                      {(nextLesson.delayMinutes > 0 || nextLesson.status === "DELAYED") && (
+                        <button
+                          type="button"
+                          onClick={() => handleResetStartTime(nextLesson)}
+                          disabled={isResettingStartTime}
+                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                          title={`Reset start time back to original schedule (removes ${nextLesson.delayMinutes}m delay)`}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          <span>Reset Start</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Start Lesson Early */}
@@ -1767,6 +1823,17 @@ export default function TutorDashboardPage() {
                                       <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                                       <span>+ Delay</span>
                                     </button>
+                                    {s.delayMinutes > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetStartTime(s)}
+                                        className="w-full px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                                        title={`Reset start time back to original schedule (removes ${s.delayMinutes}m delay)`}
+                                      >
+                                        <RotateCcw className="w-2.5 h-2.5 text-slate-500" />
+                                        <span>Reset Start</span>
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => handleCancelSession(s)}
                                       className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"
@@ -2357,6 +2424,18 @@ export default function TutorDashboardPage() {
         isOpen={delayModal.isOpen}
         minutes={delayModal.minutes}
         studentName={delayModal.studentName}
+        currentDelayMinutes={
+          (delayModal.sessionId === activeLesson?.id
+            ? activeLesson?.delayMinutes
+            : mySessions.find((s) => s.id === delayModal.sessionId)?.delayMinutes) || 0
+        }
+        onReset={() => {
+          const s =
+            delayModal.sessionId === activeLesson?.id
+              ? activeLesson
+              : mySessions.find((s) => s.id === delayModal.sessionId);
+          if (s) handleResetStartTime(s);
+        }}
         onClose={() => setDelayModal((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDelay}
         isSubmitting={isSubmittingDelay}
