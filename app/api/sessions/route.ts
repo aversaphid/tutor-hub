@@ -142,6 +142,8 @@ export async function GET(request: Request) {
             // Only expose PIN and magicKey to Tutors/Admins, and restrict studentPay strictly to Head Admin
             pin: !isStudent,
             magicKey: !isStudent,
+            pinLockedUntil: !isStudent,
+            failedPinAttempts: !isStudent,
             assignedTutorId: true,
             studentPay: user.role === "HEAD_TUTOR",
             tutorPay: !isStudent,

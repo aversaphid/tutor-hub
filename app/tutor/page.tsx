@@ -47,6 +47,9 @@ import {
   Palmtree,
   FastForward,
   RotateCcw,
+  ShieldAlert,
+  Unlock,
+  Loader2,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -97,6 +100,10 @@ export default function TutorDashboardPage() {
 
   // Copied Key State
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Student PIN Lock Reset State
+  const [unlockingStudentId, setUnlockingStudentId] = useState<string | null>(null);
+  const [pinResetSuccessMessage, setPinResetSuccessMessage] = useState("");
 
   // Tutor Completion Modal
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
@@ -471,6 +478,45 @@ export default function TutorDashboardPage() {
       alert("Network error updating Teams URL");
     } finally {
       setIsUpdatingNextTeams(false);
+    }
+  };
+
+  const handleResetPinLock = async (student: any) => {
+    if (!student?.id) return;
+    setUnlockingStudentId(student.id);
+    try {
+      const res = await fetch(`/api/students/${student.id}/reset-pin`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPinResetSuccessMessage(data.message || `PIN lock reset for ${student.name}`);
+        setTimeout(() => setPinResetSuccessMessage(""), 4000);
+        // Immediately update state locally
+        setAssignedStudents((prev) =>
+          prev.map((s) =>
+            s.id === student.id
+              ? { ...s, pinLockedUntil: null, failedPinAttempts: 0 }
+              : s
+          )
+        );
+        setActiveLesson((prev: any) => {
+          if (prev?.tutee?.id === student.id) {
+            return {
+              ...prev,
+              tutee: { ...prev.tutee, pinLockedUntil: null, failedPinAttempts: 0 },
+            };
+          }
+          return prev;
+        });
+        loadAssignedStudents();
+      } else {
+        alert(data.error || "Failed to reset PIN lock.");
+      }
+    } catch {
+      alert("Network error resetting PIN lock.");
+    } finally {
+      setUnlockingStudentId(null);
     }
   };
 
@@ -929,13 +975,30 @@ export default function TutorDashboardPage() {
 
                   {/* VISIBLE PIN & MAGIC LINK FOR NEXT MEETING */}
                   <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                      <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                      <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
-                      <strong className="text-xs font-mono font-extrabold text-slate-800 dark:text-slate-100">
-                        {activeLesson.tutee?.pin || "----"}
-                      </strong>
-                    </div>
+                    {/* Visible PIN or Locked Warning */}
+                    {activeLesson.tutee?.pinLockedUntil && new Date(activeLesson.tutee.pinLockedUntil).getTime() > Date.now() ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold shadow-2xs">
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-600 animate-pulse shrink-0" />
+                        <span>PIN Locked ({Math.max(1, Math.ceil((new Date(activeLesson.tutee.pinLockedUntil).getTime() - Date.now()) / 60000))}m)</span>
+                        <button
+                          onClick={() => handleResetPinLock(activeLesson.tutee)}
+                          disabled={unlockingStudentId === activeLesson.tutee?.id}
+                          className="ml-1 px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          title="Reset student PIN lock"
+                        >
+                          <Unlock className="w-3 h-3" />
+                          <span>{unlockingStudentId === activeLesson.tutee?.id ? "Unlocking..." : "Unlock"}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
+                        <strong className="text-xs font-mono font-extrabold text-slate-800 dark:text-slate-100">
+                          {activeLesson.tutee?.pin || "----"}
+                        </strong>
+                      </div>
+                    )}
 
                     <button
                       onClick={() =>
@@ -1363,6 +1426,61 @@ export default function TutorDashboardPage() {
               </span>
             </div>
 
+            {/* PIN Reset Success Toast / Message */}
+            {pinResetSuccessMessage && (
+              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{pinResetSuccessMessage}</span>
+              </div>
+            )}
+
+            {/* Alert Banner for any Locked Students */}
+            {(() => {
+              const lockedStudents = assignedStudents.filter(
+                (s) => s.pinLockedUntil && new Date(s.pinLockedUntil).getTime() > Date.now()
+              );
+              if (lockedStudents.length === 0) return null;
+              return (
+                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
+                    <div>
+                      <p className="font-bold text-rose-800 dark:text-rose-200">
+                        {lockedStudents.length} student{lockedStudents.length > 1 ? "s" : ""} locked out due to incorrect PIN guesses:
+                      </p>
+                      <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80">
+                        {lockedStudents.map((s) => s.name).join(", ")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {lockedStudents.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleResetPinLock(s)}
+                        disabled={unlockingStudentId === s.id}
+                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                        title={`Reset PIN lock for ${s.name}`}
+                      >
+                        {unlockingStudentId === s.id ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Unlocking...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-3.5 h-3.5" />
+                            <span>Unlock {s.name.split(" ")[0]}</span>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Student Search Box */}
             {assignedStudents.length > 0 && (
               <div className="relative">
@@ -1409,14 +1527,30 @@ export default function TutorDashboardPage() {
                       (student.email || "").toLowerCase().includes(q)
                     );
                   })
-                  .map((student) => (
+                  .map((student) => {
+                    const isLocked = Boolean(
+                      student.pinLockedUntil && new Date(student.pinLockedUntil).getTime() > Date.now()
+                    );
+                    const lockMinutes = isLocked
+                      ? Math.max(1, Math.ceil((new Date(student.pinLockedUntil).getTime() - Date.now()) / 60000))
+                      : 0;
+
+                    return (
                     <div
                       key={student.id}
                       className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="space-y-0.5">
-                        <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
-                          {student.name}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                            {student.name}
+                          </span>
+                          {isLocked && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
+                              <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span>PIN Locked ({lockMinutes}m remaining)</span>
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                           {student.email ? <span>{student.email}</span> : <span>Student Profile</span>}
@@ -1456,6 +1590,29 @@ export default function TutorDashboardPage() {
                           </button>
                         </div>
 
+                        {/* Unlock PIN Button (prominently shown if locked) */}
+                        {isLocked && (
+                          <button
+                            type="button"
+                            onClick={() => handleResetPinLock(student)}
+                            disabled={unlockingStudentId === student.id}
+                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                            title={`Reset PIN lock for ${student.name}`}
+                          >
+                            {unlockingStudentId === student.id ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Unlocking...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Unlock className="w-3.5 h-3.5" />
+                                <span>Unlock PIN</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+
                         {/* 1-Click Copy Magic Link */}
                         <button
                           onClick={() => handleCopyLink(`stu-magic-${student.id}`, student.magicKey)}
@@ -1476,7 +1633,8 @@ export default function TutorDashboardPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
             )}
           </div>

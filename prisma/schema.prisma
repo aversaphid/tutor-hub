@@ -44,6 +44,10 @@ model User {
   studentPay      Float?
   tutorPay        Float?
 
+  // Student PIN Security Lockout
+  pinLockedUntil    DateTime?
+  failedPinAttempts Int       @default(0)
+
   tutorSessions Session[] @relation("TutorSessions")
   tuteeSessions Session[] @relation("TuteeSessions")
   unavailabilities TutorUnavailability[] @relation("TutorUnavailability")

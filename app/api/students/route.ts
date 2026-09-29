@@ -18,6 +18,8 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        pinLockedUntil: true,
+        failedPinAttempts: true,
       },
       orderBy: {
         name: "asc",

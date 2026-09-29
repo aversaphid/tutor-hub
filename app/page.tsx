@@ -13,16 +13,32 @@ export default function HomePage() {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [lockedMinutes, setLockedMinutes] = useState<number | null>(null);
+  const [rememberedStudent, setRememberedStudent] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const storedId = localStorage.getItem("lb_student_id");
+      const storedName = localStorage.getItem("lb_student_name");
+      if (storedId && storedName) {
+        setRememberedStudent({ id: storedId, name: storedName });
+      }
+    } catch { }
+  }, []);
 
   const submitPin = React.useCallback(async (completedPin: string) => {
     setLoading(true);
     setError("");
 
     try {
+      const payload: { pin: string; tuteeId?: string } = { pin: completedPin };
+      if (rememberedStudent?.id) {
+        payload.tuteeId = rememberedStudent.id;
+      }
+
       const res = await fetch("/api/auth/student-pin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: completedPin }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -36,6 +52,14 @@ export default function HomePage() {
         return;
       }
 
+      // Success: remember student profile on this device
+      if (data.student?.id && data.student?.name) {
+        try {
+          localStorage.setItem("lb_student_id", data.student.id);
+          localStorage.setItem("lb_student_name", data.student.name);
+        } catch { }
+      }
+
       // Success: navigate to student portal
       router.push("/student");
     } catch {
@@ -44,7 +68,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, rememberedStudent]);
 
   const handleDigit = React.useCallback((digit: string) => {
     if (loading || lockedMinutes) return;
@@ -130,6 +154,30 @@ export default function HomePage() {
             <span>Student PIN Login</span>
           </div>
 
+          {/* Remembered Student Banner (if present) */}
+          {rememberedStudent && (
+            <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 text-xs">
+              <span className="text-slate-600 dark:text-slate-300">
+                Logging in as <strong className="text-slate-800 dark:text-slate-100">{rememberedStudent.name}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.removeItem("lb_student_id");
+                    localStorage.removeItem("lb_student_name");
+                  } catch { }
+                  setRememberedStudent(null);
+                  setError("");
+                  setLockedMinutes(null);
+                }}
+                className="text-[#48A5EE] hover:underline font-bold text-[11px] cursor-pointer"
+              >
+                Switch
+              </button>
+            </div>
+          )}
+
           {/* 4 PIN Dots */}
           <div className="flex justify-center items-center gap-3.5 sm:gap-4 py-2">
             {[0, 1, 2, 3].map((index) => {
@@ -158,7 +206,7 @@ export default function HomePage() {
             <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5">
               <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" />
               <span>
-                Account locked for {lockedMinutes} minute{lockedMinutes > 1 ? "s" : ""} due to repeated failed attempts.
+                Account PIN locked for {lockedMinutes} minute{lockedMinutes > 1 ? "s" : ""} due to repeated failed attempts. Please contact your tutor or admin to unlock it.
               </span>
             </div>
           ) : error ? (

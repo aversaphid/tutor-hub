@@ -33,11 +33,13 @@ export async function GET() {
           assignedTutorId: true,
           studentPay: true,
           tutorPay: true,
+          pinLockedUntil: true,
+          failedPinAttempts: true,
           assignedTutor: {
             select: { id: true, name: true, email: true },
           },
           assignedStudents: {
-            select: { id: true, name: true, pin: true, magicKey: true },
+            select: { id: true, name: true, pin: true, magicKey: true, pinLockedUntil: true, failedPinAttempts: true },
           },
           _count: {
             select: {
@@ -67,6 +69,8 @@ export async function GET() {
             assignedTutorId: true,
             pin: true,
             magicKey: true,
+            pinLockedUntil: true,
+            failedPinAttempts: true,
             createdAt: true,
           },
         },

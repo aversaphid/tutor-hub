@@ -12,6 +12,8 @@ import {
   ExprItem,
 } from "../lib/casio-math-engine";
 
+export type CasioTheme = "black" | "pink" | "cyan";
+
 interface CasioCalculatorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -217,6 +219,142 @@ export default function CasioCalculatorModal({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [hasCalculated, setHasCalculated] = useState(false);
   const [optnMessage, setOptnMessage] = useState<string | null>(null);
+
+  // Authenticated real-life Casio color editions: Black (standard), Pink (fx-83GTX Pink), Cyan (fx-83GTX Blue)
+  const [theme, setTheme] = useState<CasioTheme>("black");
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("casio_calculator_theme") as CasioTheme;
+      if (savedTheme === "black" || savedTheme === "pink" || savedTheme === "cyan") {
+        setTheme(savedTheme);
+      }
+    } catch {}
+  }, []);
+
+  const handleSetTheme = (newTheme: CasioTheme) => {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem("casio_calculator_theme", newTheme);
+    } catch {}
+  };
+
+  const isLightShell = theme === "pink" || theme === "cyan";
+
+  const themeStyles = useMemo(() => {
+    if (theme === "pink") {
+      return {
+        chassis: "bg-linear-to-b from-[#f9a8d4] via-[#f472b6] to-[#ec4899] border-[#fbcfe8]",
+        cradle: "border-[#f472b6]/70",
+        acrylic: "bg-linear-to-b from-[#ffffff] to-[#fff1f2] border-[#fbcfe8]",
+        brandCasio: "text-slate-800",
+        brandModel: "text-slate-700",
+        brandModelAccent: "text-[#db2777] font-extrabold",
+        brandClasswiz: "text-[#db2777]",
+        chevronTexture: `
+          repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 2px, transparent 2px, transparent 6px),
+          repeating-linear-gradient(-45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 2px, transparent 2px, transparent 6px)
+        `,
+        roundButton: "bg-linear-to-b from-white to-[#fce7f3] hover:from-white hover:to-[#fbcfe8] text-slate-700 border-pink-300 shadow-sm",
+        roundButtonInner: "border-pink-300/60",
+        funcKey: "bg-white/95 hover:bg-white border-pink-200 text-slate-800 shadow-xs",
+        numKey: "bg-white hover:bg-pink-50/60 text-slate-900 border-t border-white shadow-[0_3px_0_#be185d]",
+        opKey: "bg-[#fdf2f8] hover:bg-[#fce7f3] text-slate-900 border-t border-pink-100 shadow-[0_3px_0_#9d174d]",
+        delAcKey: "bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 border-t border-amber-200 shadow-[0_3px_0_#92400e]",
+        labelShift: "text-[#a16207]",
+        labelAlpha: "text-[#be185d]",
+        labelNeutral: "text-slate-700",
+        chinAccent: "bg-pink-300/80",
+        rockerBezelBorder: ["#fbcfe8", "#f472b6", "#be185d"],
+        rockerBezelCavity: ["#fdf2f8", "#fce7f3"],
+        rockerTopFacetLeft: ["#ffffff", "#f8fafc", "#e2e8f0"],
+        rockerTopFacetRight: ["#f1f5f9", "#e2e8f0", "#cbd5e1"],
+        rockerBotFacetLeft: ["#ffffff", "#f1f5f9", "#e2e8f0"],
+        rockerBotFacetRight: ["#e2e8f0", "#cbd5e1", "#94a3b8"],
+        rockerLeft: ["#ffffff", "#f1f5f9", "#cbd5e1"],
+        rockerRight: ["#f8fafc", "#e2e8f0", "#cbd5e1"],
+        rockerCenter: ["#ffffff", "#f1f5f9", "#e2e8f0"],
+        rockerStroke: "#cbd5e1",
+        rockerStrokeRight: "#94a3b8",
+        rockerArrow: "#64748b",
+      };
+    }
+
+    if (theme === "cyan") {
+      return {
+        chassis: "bg-linear-to-b from-[#38bdf8] via-[#0ea5e9] to-[#0284c7] border-[#bae6fd]",
+        cradle: "border-[#38bdf8]/70",
+        acrylic: "bg-linear-to-b from-[#ffffff] to-[#f0f9ff] border-[#bae6fd]",
+        brandCasio: "text-slate-800",
+        brandModel: "text-slate-700",
+        brandModelAccent: "text-[#0284c7] font-extrabold",
+        brandClasswiz: "text-[#0284c7]",
+        chevronTexture: `
+          repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 2px, transparent 2px, transparent 6px),
+          repeating-linear-gradient(-45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 2px, transparent 2px, transparent 6px)
+        `,
+        roundButton: "bg-linear-to-b from-white to-[#e0f2fe] hover:from-white hover:to-[#bae6fd] text-slate-700 border-sky-300 shadow-sm",
+        roundButtonInner: "border-sky-300/60",
+        funcKey: "bg-white/95 hover:bg-white border-sky-200 text-slate-800 shadow-xs",
+        numKey: "bg-white hover:bg-sky-50/60 text-slate-900 border-t border-white shadow-[0_3px_0_#0284c7]",
+        opKey: "bg-[#f0f9ff] hover:bg-[#e0f2fe] text-slate-900 border-t border-sky-100 shadow-[0_3px_0_#0369a1]",
+        delAcKey: "bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 border-t border-amber-200 shadow-[0_3px_0_#92400e]",
+        labelShift: "text-[#a16207]",
+        labelAlpha: "text-[#0369a1]",
+        labelNeutral: "text-slate-700",
+        chinAccent: "bg-sky-300/80",
+        rockerBezelBorder: ["#bae6fd", "#38bdf8", "#0369a1"],
+        rockerBezelCavity: ["#f0f9ff", "#e0f2fe"],
+        rockerTopFacetLeft: ["#ffffff", "#f8fafc", "#e2e8f0"],
+        rockerTopFacetRight: ["#f1f5f9", "#e2e8f0", "#cbd5e1"],
+        rockerBotFacetLeft: ["#ffffff", "#f1f5f9", "#e2e8f0"],
+        rockerBotFacetRight: ["#e2e8f0", "#cbd5e1", "#94a3b8"],
+        rockerLeft: ["#ffffff", "#f1f5f9", "#cbd5e1"],
+        rockerRight: ["#f8fafc", "#e2e8f0", "#cbd5e1"],
+        rockerCenter: ["#ffffff", "#f1f5f9", "#e2e8f0"],
+        rockerStroke: "#cbd5e1",
+        rockerStrokeRight: "#94a3b8",
+        rockerArrow: "#64748b",
+      };
+    }
+
+    // Default: Classic Black Edition
+    return {
+      chassis: "bg-[#161c24] border-[#242e3d]",
+      cradle: "border-[#1e2735]",
+      acrylic: "bg-[#0f1318] border-[#2c3746]",
+      brandCasio: "text-slate-100",
+      brandModel: "text-slate-200",
+      brandModelAccent: "text-white font-extrabold",
+      brandClasswiz: "${themeStyles.labelAlpha}",
+      chevronTexture: `
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 6px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 6px)
+      `,
+      roundButton: "bg-linear-to-b from-[#323946] to-[#1d222b] hover:from-[#3c4453] hover:to-[#222833] text-slate-300 border-slate-600",
+      roundButtonInner: "border-white/20",
+      funcKey: "bg-[#242a35] hover:bg-[#2e3644] border-slate-600/80 text-slate-100 shadow-xs",
+      numKey: "bg-[#272e3a] hover:bg-[#313948] text-white border-t border-white/20 shadow-[0_3px_0_#0d1117]",
+      opKey: "bg-[#1e242e] hover:bg-[#28303d] text-slate-100 border-t border-white/10 shadow-[0_3px_0_#0a0e14]",
+      delAcKey: "bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 border-t border-amber-200 shadow-[0_3px_0_#92400e]",
+      labelShift: "${themeStyles.labelShift}",
+      labelAlpha: "${themeStyles.labelAlpha}",
+      labelNeutral: "text-slate-300",
+      chinAccent: "bg-slate-700",
+      rockerBezelBorder: ["#3d4a5c", "#222b37", "#10151c"],
+      rockerBezelCavity: ["#080b0f", "#040608"],
+      rockerTopFacetLeft: ["#3e4a5d", "#252f3d", "#171d26"],
+      rockerTopFacetRight: ["#283342", "#1b222d", "#10151c"],
+      rockerBotFacetLeft: ["#354152", "#212a36", "#141a22"],
+      rockerBotFacetRight: ["#242d3a", "#181e27", "#0e1218"],
+      rockerLeft: ["#3a475a", "#252f3e", "#131921"],
+      rockerRight: ["#2c3645", "#1e2633", "#11161d"],
+      rockerCenter: ["#273241", "#151b24", "#0d1117"],
+      rockerStroke: "#475569",
+      rockerStrokeRight: "#334155",
+      rockerArrow: "rgba(255,255,255,0.75)",
+    };
+  }, [theme]);
 
   // Synchronized refs to eliminate stale closure drops
   const itemsRef = useRef(items);
@@ -2214,6 +2352,43 @@ export default function CasioCalculatorModal({
                 +
               </button>
             </div>
+
+            {/* Real-Life Casio Color Edition Switcher */}
+            <div className="inline-flex items-center gap-1 bg-slate-800/90 border border-slate-700/60 rounded-full p-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => handleSetTheme("black")}
+                className={`w-4 h-4 rounded-full bg-[#161c24] border-2 transition-all cursor-pointer ${
+                  theme === "black"
+                    ? "border-amber-400 scale-110 ring-1 ring-amber-400/50 shadow-xs"
+                    : "border-slate-600 hover:scale-105 opacity-60 hover:opacity-100"
+                }`}
+                title="Classic Black Edition (fx-83GT X)"
+                aria-label="Classic Black Edition"
+              />
+              <button
+                type="button"
+                onClick={() => handleSetTheme("pink")}
+                className={`w-4 h-4 rounded-full bg-[#f472b6] border-2 transition-all cursor-pointer ${
+                  theme === "pink"
+                    ? "border-white scale-110 ring-1 ring-pink-300 shadow-xs"
+                    : "border-pink-300/60 hover:scale-105 opacity-60 hover:opacity-100"
+                }`}
+                title="Pastel Pink Edition (fx-83GT X Pink)"
+                aria-label="Pastel Pink Edition"
+              />
+              <button
+                type="button"
+                onClick={() => handleSetTheme("cyan")}
+                className={`w-4 h-4 rounded-full bg-[#38bdf8] border-2 transition-all cursor-pointer ${
+                  theme === "cyan"
+                    ? "border-white scale-110 ring-1 ring-sky-300 shadow-xs"
+                    : "border-sky-300/60 hover:scale-105 opacity-60 hover:opacity-100"
+                }`}
+                title="Vibrant Cyan Edition (fx-83GT X Blue)"
+                aria-label="Vibrant Cyan Edition"
+              />
+            </div>
           </div>
 
           <button
@@ -2230,7 +2405,7 @@ export default function CasioCalculatorModal({
         {/* REAL CASIO FX-83GT X CLASSWIZ EXACT HARDWARE REPLICA        */}
         {/* ============================================================ */}
         <div
-          className="relative w-[345px] sm:w-[375px] rounded-[36px] bg-[#161c24] p-3 sm:p-3.5 text-slate-100 flex flex-col items-center select-none border-4 border-[#242e3d] shrink-0"
+          className={`relative w-[345px] sm:w-[375px] rounded-[36px] ${themeStyles.chassis} p-3 sm:p-3.5 text-slate-100 flex flex-col items-center select-none border-4 shrink-0 transition-colors duration-300`}
           style={{
             boxShadow: `
               0 30px 70px -10px rgba(0,0,0,0.95),
@@ -2241,30 +2416,30 @@ export default function CasioCalculatorModal({
           }}
         >
           {/* External Hard Shell Cradle Lip */}
-          <div className="absolute -inset-1 rounded-[38px] border-2 border-[#1e2735] pointer-events-none -z-10 shadow-2xl" />
+          <div className={`absolute -inset-1 rounded-[38px] border-2 ${themeStyles.cradle} pointer-events-none -z-10 shadow-2xl transition-colors duration-300`} />
 
           {/* ============================================================ */}
           {/* ACRYLIC DISPLAY WINDOW WITH CASIO & CLASSWIZ BRANDING       */}
           {/* ============================================================ */}
           <div
-            className="w-full rounded-2xl bg-[#0f1318] p-2.5 pb-2 border border-[#2c3746] relative shadow-lg overflow-hidden mb-2 shrink-0"
+            className={`w-full rounded-2xl ${themeStyles.acrylic} p-2.5 pb-2 border relative shadow-lg overflow-hidden mb-2 shrink-0 transition-colors duration-300`}
             style={{
               boxShadow: "inset 0 1px 2px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.6)",
             }}
           >
             {/* Top Brand Header */}
             <div className="flex items-center justify-between px-1 pb-1">
-              <span className="font-extrabold tracking-widest text-sm text-slate-100 font-sans">
+              <span className={`font-extrabold tracking-widest text-sm ${themeStyles.brandCasio} font-sans`}>
                 CASIO
               </span>
-              <span className="text-xs font-black tracking-tight text-slate-200 font-sans">
-                fx-83GT <span className="text-white font-extrabold">X</span>
+              <span className={`text-xs font-black tracking-tight ${themeStyles.brandModel} font-sans`}>
+                fx-83GT <span className={themeStyles.brandModelAccent}>X</span>
               </span>
             </div>
 
-            {/* Neon Pink CLASSWIZ Brand Logo */}
+            {/* CLASSWIZ Brand Logo */}
             <div className="text-center py-0.5">
-              <span className="text-[11px] font-black uppercase text-[#fb7185] tracking-[0.25em] font-sans drop-shadow-xs">
+              <span className={`text-[11px] font-black uppercase ${themeStyles.brandClasswiz} tracking-[0.25em] font-sans drop-shadow-xs`}>
                 CLASSWIZ
               </span>
             </div>
@@ -2333,10 +2508,7 @@ export default function CasioCalculatorModal({
           <div
             className="w-full pt-1 pb-1 px-1 rounded-2xl relative"
             style={{
-              backgroundImage: `
-                repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 6px),
-                repeating-linear-gradient(-45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 2px, transparent 2px, transparent 6px)
-              `,
+              backgroundImage: themeStyles.chevronTexture,
             }}
           >
             {/* ============================================================ */}
@@ -2357,7 +2529,7 @@ export default function CasioCalculatorModal({
               <div className="col-span-1 flex flex-col justify-between items-center h-[76px]">
                 {/* SHIFT */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7.5px] font-black text-[#eab308] leading-none mb-0.5 tracking-tight">
+                  <span className={`text-[7.5px] font-black ${themeStyles.labelShift} leading-none mb-0.5 tracking-tight`}>
                     SHIFT
                   </span>
                   <button
@@ -2365,20 +2537,20 @@ export default function CasioCalculatorModal({
                     className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full border border-slate-600 transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95 ${
                       isShiftActive
                         ? "bg-[#eab308] text-slate-950 border-amber-300 ring-2 ring-amber-400"
-                        : "bg-linear-to-b from-[#323946] to-[#1d222b] text-slate-300 hover:from-[#3c4453] hover:to-[#222833]"
+                        : themeStyles.roundButton
                     }`}
                     title="Shift"
                   >
-                    <div className="w-4 h-4 rounded-full border border-white/20" />
+                    <div className={`w-4 h-4 rounded-full border ${themeStyles.roundButtonInner}`} />
                   </button>
                 </div>
 
                 {/* OPTN (pushed to the side, directly above ■/■) */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7px] font-black text-[#eab308] h-2 leading-none">QR</span>
+                  <span className={`text-[7px] font-black ${themeStyles.labelShift} h-2 leading-none`}>QR</span>
                   <button
                     onClick={() => handleButton("OPTN")}
-                    className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[11px] font-black"
+                    className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[11px] font-black`}
                     title="Options / Quick Info"
                   >
                     OPTN
@@ -2390,7 +2562,7 @@ export default function CasioCalculatorModal({
               <div className="col-span-1 flex flex-col justify-between items-center h-[76px]">
                 {/* ALPHA */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7.5px] font-black text-[#fb7185] leading-none mb-0.5 tracking-tight">
+                  <span className={`text-[7.5px] font-black ${themeStyles.labelAlpha} leading-none mb-0.5 tracking-tight`}>
                     ALPHA
                   </span>
                   <button
@@ -2398,20 +2570,20 @@ export default function CasioCalculatorModal({
                     className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full border border-slate-600 transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95 ${
                       isAlphaActive
                         ? "bg-[#fb7185] text-white border-rose-400 ring-2 ring-rose-400"
-                        : "bg-linear-to-b from-[#323946] to-[#1d222b] text-slate-300 hover:from-[#3c4453] hover:to-[#222833]"
+                        : themeStyles.roundButton
                     }`}
                     title="Alpha"
                   >
-                    <div className="w-4 h-4 rounded-full border border-white/20" />
+                    <div className={`w-4 h-4 rounded-full border ${themeStyles.roundButtonInner}`} />
                   </button>
                 </div>
 
                 {/* x³ (pushed to the side, directly above √■) */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7px] font-black text-[#fb7185] h-2 leading-none">:</span>
+                  <span className={`text-[7px] font-black ${themeStyles.labelAlpha} h-2 leading-none`}>:</span>
                   <button
                     onClick={() => handleButton("CUBE")}
-                    className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[11px] font-bold"
+                    className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[11px] font-bold`}
                     title="Cube x³"
                   >
                     x³
@@ -2428,64 +2600,64 @@ export default function CasioCalculatorModal({
                   <defs>
                     {/* Bezel Outer Stroke Gradient */}
                     <linearGradient id="casioRockerBezelBorder" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#3d4a5c" />
-                      <stop offset="50%" stopColor="#222b37" />
-                      <stop offset="100%" stopColor="#10151c" />
+                      <stop offset="0%" stopColor={themeStyles.rockerBezelBorder[0]} />
+                      <stop offset="50%" stopColor={themeStyles.rockerBezelBorder[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerBezelBorder[2]} />
                     </linearGradient>
 
                     {/* Bezel Inner Cavity Gradient */}
                     <radialGradient id="casioRockerBezelCavity" cx="50%" cy="50%" r="50%">
-                      <stop offset="60%" stopColor="#080b0f" />
-                      <stop offset="100%" stopColor="#040608" />
+                      <stop offset="60%" stopColor={themeStyles.rockerBezelCavity[0]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerBezelCavity[1]} />
                     </radialGradient>
 
                     {/* Top Button - Left Facet Highlight */}
                     <linearGradient id="casioTopFacetLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#3e4a5d" />
-                      <stop offset="60%" stopColor="#252f3d" />
-                      <stop offset="100%" stopColor="#171d26" />
+                      <stop offset="0%" stopColor={themeStyles.rockerTopFacetLeft[0]} />
+                      <stop offset="60%" stopColor={themeStyles.rockerTopFacetLeft[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerTopFacetLeft[2]} />
                     </linearGradient>
 
                     {/* Top Button - Right Facet Shaded */}
                     <linearGradient id="casioTopFacetRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#283342" />
-                      <stop offset="60%" stopColor="#1b222d" />
-                      <stop offset="100%" stopColor="#10151c" />
+                      <stop offset="0%" stopColor={themeStyles.rockerTopFacetRight[0]} />
+                      <stop offset="60%" stopColor={themeStyles.rockerTopFacetRight[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerTopFacetRight[2]} />
                     </linearGradient>
 
                     {/* Bottom Button - Left Facet */}
                     <linearGradient id="casioBotFacetLeft" x1="0%" y1="100%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#354152" />
-                      <stop offset="60%" stopColor="#212a36" />
-                      <stop offset="100%" stopColor="#141a22" />
+                      <stop offset="0%" stopColor={themeStyles.rockerBotFacetLeft[0]} />
+                      <stop offset="60%" stopColor={themeStyles.rockerBotFacetLeft[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerBotFacetLeft[2]} />
                     </linearGradient>
 
                     {/* Bottom Button - Right Facet */}
                     <linearGradient id="casioBotFacetRight" x1="0%" y1="100%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#242d3a" />
-                      <stop offset="60%" stopColor="#181e27" />
-                      <stop offset="100%" stopColor="#0e1218" />
+                      <stop offset="0%" stopColor={themeStyles.rockerBotFacetRight[0]} />
+                      <stop offset="60%" stopColor={themeStyles.rockerBotFacetRight[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerBotFacetRight[2]} />
                     </linearGradient>
 
                     {/* Left Button Gradient */}
                     <linearGradient id="casioLeftButtonGrad" x1="0%" y1="30%" x2="100%" y2="70%">
-                      <stop offset="0%" stopColor="#3a475a" />
-                      <stop offset="40%" stopColor="#252f3e" />
-                      <stop offset="100%" stopColor="#131921" />
+                      <stop offset="0%" stopColor={themeStyles.rockerLeft[0]} />
+                      <stop offset="40%" stopColor={themeStyles.rockerLeft[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerLeft[2]} />
                     </linearGradient>
 
                     {/* Right Button Gradient */}
                     <linearGradient id="casioRightButtonGrad" x1="100%" y1="30%" x2="0%" y2="70%">
-                      <stop offset="0%" stopColor="#2c3645" />
-                      <stop offset="40%" stopColor="#1e2633" />
-                      <stop offset="100%" stopColor="#11161d" />
+                      <stop offset="0%" stopColor={themeStyles.rockerRight[0]} />
+                      <stop offset="40%" stopColor={themeStyles.rockerRight[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerRight[2]} />
                     </linearGradient>
 
                     {/* Center Hub Dish Gradient */}
                     <radialGradient id="casioCenterHubGrad" cx="45%" cy="40%" r="55%">
-                      <stop offset="0%" stopColor="#273241" />
-                      <stop offset="60%" stopColor="#151b24" />
-                      <stop offset="100%" stopColor="#0d1117" />
+                      <stop offset="0%" stopColor={themeStyles.rockerCenter[0]} />
+                      <stop offset="60%" stopColor={themeStyles.rockerCenter[1]} />
+                      <stop offset="100%" stopColor={themeStyles.rockerCenter[2]} />
                     </radialGradient>
                   </defs>
 
@@ -2565,7 +2737,7 @@ export default function CasioCalculatorModal({
                       strokeWidth="0.6"
                     />
                     {/* Molded Triangle Arrow */}
-                    <polygon points="27,42 33,38 33,46" fill="rgba(255,255,255,0.75)" />
+                    <polygon points="27,42 33,38 33,46" fill={themeStyles.rockerArrow} />
                   </g>
 
                   {/* 5. Right Button (RIGHT) - Rounded Wing */}
@@ -2582,7 +2754,7 @@ export default function CasioCalculatorModal({
                       strokeWidth="0.6"
                     />
                     {/* Molded Triangle Arrow */}
-                    <polygon points="103,42 97,38 97,46" fill="rgba(255,255,255,0.75)" />
+                    <polygon points="103,42 97,38 97,46" fill={themeStyles.rockerArrow} />
                   </g>
 
                   {/* 6. Central Concave Dish Hub */}
@@ -2617,23 +2789,23 @@ export default function CasioCalculatorModal({
                 <div className="flex flex-col items-center w-full">
                   <div className="flex items-center gap-0.5 text-[7px] leading-none mb-0.5">
                     <span className="text-slate-300 font-bold">MENU</span>
-                    <span className="text-[#eab308] font-black">SETUP</span>
+                    <span className={`${themeStyles.labelShift} font-black`}>SETUP</span>
                   </div>
                   <button
                     onClick={() => handleButton("MODE_TOGGLE")}
-                    className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-linear-to-b from-[#323946] to-[#1d222b] hover:from-[#3c4453] hover:to-[#222833] border border-slate-600 transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95"
+                    className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full ${themeStyles.roundButton} transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95`}
                     title="Menu / Angle Mode"
                   >
-                    <div className="w-4 h-4 rounded-full border border-white/20" />
+                    <div className={`w-4 h-4 rounded-full border ${themeStyles.roundButtonInner}`} />
                   </button>
                 </div>
 
                 {/* Abs (pushed to the side, directly above log) */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7px] font-black text-[#eab308] h-2 leading-none">Abs</span>
+                  <span className={`text-[7px] font-black ${themeStyles.labelShift} h-2 leading-none`}>Abs</span>
                   <button
                     onClick={() => handleButton("ABS")}
-                    className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[11px] font-bold"
+                    className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[11px] font-bold`}
                     title="Absolute Value Abs(x)"
                   >
                     Abs
@@ -2650,19 +2822,19 @@ export default function CasioCalculatorModal({
                   </span>
                   <button
                     onClick={() => handleButton("ON")}
-                    className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-linear-to-b from-[#323946] to-[#1d222b] hover:from-[#3c4453] hover:to-[#222833] border border-slate-600 transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95"
+                    className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full ${themeStyles.roundButton} transition-all cursor-pointer shadow-md flex items-center justify-center active:scale-95`}
                     title="Power ON / Reset"
                   >
-                    <div className="w-4 h-4 rounded-full border border-white/20" />
+                    <div className={`w-4 h-4 rounded-full border ${themeStyles.roundButtonInner}`} />
                   </button>
                 </div>
 
                 {/* log_■■ (pushed to the side, directly above ln) */}
                 <div className="flex flex-col items-center w-full">
-                  <span className="text-[7px] font-black text-[#eab308] h-2 leading-none">log_a</span>
+                  <span className={`text-[7px] font-black ${themeStyles.labelShift} h-2 leading-none`}>log_a</span>
                   <button
                     onClick={() => handleButton("LOG_BASE")}
-                    className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[10px] font-black"
+                    className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[10px] font-black`}
                     title="Logarithm with custom base"
                   >
                     log_■■
@@ -2680,14 +2852,14 @@ export default function CasioCalculatorModal({
                 <button
                   type="button"
                   onClick={() => handleButton("MIXED_FRAC")}
-                  className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center hover:underline cursor-pointer"
+                  className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center hover:underline cursor-pointer`}
                   title="Mixed Fraction (■ ■/■)"
                 >
                   ■■/■
                 </button>
                 <button
                   onClick={() => handleButton(isShiftActive ? "MIXED_FRAC" : "FRAC")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Vertical Fraction (■/■, Shift: ■■/■)"
                 >
                   {isShiftActive ? "■■/■" : "■/■"}
@@ -2696,10 +2868,10 @@ export default function CasioCalculatorModal({
 
               {/* √■ (Overbar encompasses!) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">³√■</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>³√■</span>
                 <button
                   onClick={() => handleButton("SQRT")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Square Root (Overbar encompasses, use ▶ to exit)"
                 >
                   {isShiftActive ? "³√" : "√■"}
@@ -2708,10 +2880,10 @@ export default function CasioCalculatorModal({
 
               {/* x² */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">i</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>i</span>
                 <button
                   onClick={() => handleButton("SQUARE")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Square x²"
                 >
                   {isShiftActive ? "x³" : "x²"}
@@ -2720,10 +2892,10 @@ export default function CasioCalculatorModal({
 
               {/* x^■ (Superscript box, use ▶ to drop to baseline) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">■√■</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>■√■</span>
                 <button
                   onClick={() => handleButton("POWER")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Power x^■ (use ▶ to drop to baseline)"
                 >
                   x^■
@@ -2735,14 +2907,14 @@ export default function CasioCalculatorModal({
                 <button
                   type="button"
                   onClick={() => handleButton("POW_10")}
-                  className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center hover:underline cursor-pointer"
+                  className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center hover:underline cursor-pointer`}
                   title="10 to a power (10^■)"
                 >
                   10^■
                 </button>
                 <button
                   onClick={() => handleButton(isShiftActive ? "POW_10" : "LOG")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Logarithm (Shift: 10^■)"
                 >
                   {isShiftActive ? "10^■" : "log"}
@@ -2751,10 +2923,10 @@ export default function CasioCalculatorModal({
 
               {/* ln */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">e^■</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>e^■</span>
                 <button
                   onClick={() => handleButton("LN")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Natural Logarithm (ln)"
                 >
                   {isShiftActive ? "e^" : "ln"}
@@ -2768,10 +2940,10 @@ export default function CasioCalculatorModal({
             <div className="grid grid-cols-6 gap-1 mb-1.5 text-[11px] font-bold">
               {/* (-) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#fb7185] h-2.5 flex items-center">A</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelAlpha} h-2.5 flex items-center`}>A</span>
                 <button
                   onClick={() => handleButton("NEG")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Negation (−)"
                 >
                   (−)
@@ -2780,10 +2952,10 @@ export default function CasioCalculatorModal({
 
               {/* ° ' " */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">FACT</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>FACT</span>
                 <button
                   onClick={() => handleButton("DMS")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Degrees, Minutes, Seconds"
                 >
                   ° ' "
@@ -2792,10 +2964,10 @@ export default function CasioCalculatorModal({
 
               {/* x⁻¹ */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">x!</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>x!</span>
                 <button
                   onClick={() => handleButton("INV")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Reciprocal x⁻¹ (Shift: x!)"
                 >
                   {isShiftActive ? "x!" : "x⁻¹"}
@@ -2804,10 +2976,10 @@ export default function CasioCalculatorModal({
 
               {/* sin */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">sin⁻¹</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>sin⁻¹</span>
                 <button
                   onClick={() => handleButton("SIN")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Sine (Shift: sin⁻¹)"
                 >
                   {isShiftActive ? "sin⁻¹" : "sin"}
@@ -2816,10 +2988,10 @@ export default function CasioCalculatorModal({
 
               {/* cos */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">cos⁻¹</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>cos⁻¹</span>
                 <button
                   onClick={() => handleButton("COS")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Cosine (Shift: cos⁻¹)"
                 >
                   {isShiftActive ? "cos⁻¹" : "cos"}
@@ -2828,10 +3000,10 @@ export default function CasioCalculatorModal({
 
               {/* tan */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">tan⁻¹</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>tan⁻¹</span>
                 <button
                   onClick={() => handleButton("TAN")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                   title="Tangent (Shift: tan⁻¹)"
                 >
                   {isShiftActive ? "tan⁻¹" : "tan"}
@@ -2845,10 +3017,10 @@ export default function CasioCalculatorModal({
             <div className="grid grid-cols-6 gap-1 mb-2 text-[11px] font-bold">
               {/* STO */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">RECALL</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>RECALL</span>
                 <button
                   onClick={() => handleButton("STO")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[10px]"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[10px]`}
                   title="Store to M (Shift: Recall)"
                 >
                   STO
@@ -2857,10 +3029,10 @@ export default function CasioCalculatorModal({
 
               {/* ENG */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">←</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>←</span>
                 <button
                   onClick={() => handleButton("ENG")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[10px]"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[10px]`}
                   title="Engineering Notation"
                 >
                   ENG
@@ -2869,10 +3041,10 @@ export default function CasioCalculatorModal({
 
               {/* ( */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">,</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>,</span>
                 <button
                   onClick={() => handleButton("(")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                 >
                   (
                 </button>
@@ -2880,10 +3052,10 @@ export default function CasioCalculatorModal({
 
               {/* ) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#fb7185] h-2.5 flex items-center">x</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelAlpha} h-2.5 flex items-center`}>x</span>
                 <button
                   onClick={() => handleButton(")")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer`}
                 >
                   )
                 </button>
@@ -2891,7 +3063,7 @@ export default function CasioCalculatorModal({
 
               {/* S <=> D */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center tracking-tighter">
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center tracking-tighter`}>
                   a b/c⇔d/c
                 </span>
                 <button
@@ -2909,10 +3081,10 @@ export default function CasioCalculatorModal({
 
               {/* M+ */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2.5 flex items-center">M-</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2.5 flex items-center`}>M-</span>
                 <button
                   onClick={() => handleButton("M_PLUS")}
-                  className="w-full py-1 rounded-md bg-[#242a35] hover:bg-[#2e3644] border border-slate-600/80 text-slate-100 shadow-xs active:translate-y-[1px] cursor-pointer text-[10px]"
+                  className={`w-full py-1 rounded-md ${themeStyles.funcKey} active:translate-y-[1px] cursor-pointer text-[10px]`}
                   title="Memory M+ (Shift: M-)"
                 >
                   M+
@@ -2926,30 +3098,30 @@ export default function CasioCalculatorModal({
             <div className="w-full grid grid-cols-5 gap-1.5">
               {/* Row 1: 7, 8, 9, DEL (GOLDEN YELLOW), AC (GOLDEN YELLOW) */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2 flex items-center">CONST</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2 flex items-center`}>CONST</span>
                 <button
                   onClick={() => handleButton("7")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   7
                 </button>
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2 flex items-center">CONV</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2 flex items-center`}>CONV</span>
                 <button
                   onClick={() => handleButton("8")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   8
                 </button>
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2 flex items-center">RESET</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2 flex items-center`}>RESET</span>
                 <button
                   onClick={() => handleButton("9")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   9
                 </button>
@@ -2958,8 +3130,8 @@ export default function CasioCalculatorModal({
               {/* DEL - EXACT CASIO GOLDEN YELLOW KEYCAP WITH BOLD BLACK TEXT */}
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-0.5 text-[6.5px] h-2">
-                  <span className="text-[#eab308] font-black">INS</span>
-                  <span className="text-[#fb7185] font-black">UNDO</span>
+                  <span className={`${themeStyles.labelShift} font-black`}>INS</span>
+                  <span className={`${themeStyles.labelAlpha} font-black`}>UNDO</span>
                 </div>
                 <button
                   onClick={() => handleButton("DEL")}
@@ -2972,7 +3144,7 @@ export default function CasioCalculatorModal({
 
               {/* AC - EXACT CASIO GOLDEN YELLOW KEYCAP WITH BOLD BLACK TEXT */}
               <div className="flex flex-col items-center">
-                <span className="text-[7px] font-bold text-[#eab308] h-2 flex items-center">OFF</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} h-2 flex items-center`}>OFF</span>
                 <button
                   onClick={() => handleButton("AC")}
                   className="w-full h-9 sm:h-10 rounded-lg bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 font-black text-xs border-t border-amber-200 shadow-[0_3px_0_#92400e] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
@@ -2986,7 +3158,7 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("4")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   4
                 </button>
@@ -2994,7 +3166,7 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("5")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   5
                 </button>
@@ -3002,25 +3174,25 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("6")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   6
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">nPr</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>nPr</span>
                 <button
                   onClick={() => handleButton("×")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-extrabold text-sm border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-extrabold text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   ×
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">nCr</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>nCr</span>
                 <button
                   onClick={() => handleButton("÷")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-extrabold text-sm border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-extrabold text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   ÷
                 </button>
@@ -3030,7 +3202,7 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("1")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   1
                 </button>
@@ -3038,7 +3210,7 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("2")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   2
                 </button>
@@ -3046,25 +3218,25 @@ export default function CasioCalculatorModal({
               <div className="flex flex-col items-center mt-1">
                 <button
                   onClick={() => handleButton("3")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   3
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">Pol</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>Pol</span>
                 <button
                   onClick={() => handleButton("+")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-extrabold text-sm border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-extrabold text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   +
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">Rec</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>Rec</span>
                 <button
                   onClick={() => handleButton("−")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-extrabold text-sm border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-extrabold text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   −
                 </button>
@@ -3072,54 +3244,54 @@ export default function CasioCalculatorModal({
 
               {/* Row 4: 0, •, ×10ˣ, Ans, = (ALL EXACT SAME SIZE!) */}
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">Rnd</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>Rnd</span>
                 <button
                   onClick={() => handleButton("0")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   0
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
                 <div className="flex items-center gap-0.5 text-[6.5px] -mt-2 mb-0.5 leading-none">
-                  <span className="text-[#eab308] font-bold">Ran#</span>
-                  <span className="text-[#fb7185] font-bold">RanInt</span>
+                  <span className={`${themeStyles.labelShift} font-bold`}>Ran#</span>
+                  <span className={`${themeStyles.labelAlpha} font-bold`}>RanInt</span>
                 </div>
                 <button
                   onClick={() => handleButton(".")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#272e3a] hover:bg-[#313948] text-white font-black text-sm border-t border-white/20 shadow-[0_3px_0_#0d1117] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.numKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                 >
                   •
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
                 <div className="flex items-center gap-0.5 text-[6.5px] -mt-2 mb-0.5 leading-none">
-                  <span className="text-[#eab308] font-bold">π</span>
-                  <span className="text-[#fb7185] font-bold">e</span>
+                  <span className={`${themeStyles.labelShift} font-bold`}>π</span>
+                  <span className={`${themeStyles.labelAlpha} font-bold`}>e</span>
                 </div>
                 <button
                   onClick={() => handleButton("EXP")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-200 font-black text-xs border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-black text-xs active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                   title="Scientific Standard Form (×10ˣ, Shift: π, Alpha: e)"
                 >
                   ×10ˣ
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">%</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>%</span>
                 <button
                   onClick={() => handleButton("ANS")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-black text-xs border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-black text-xs active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                   title="Answer memory (Ans, Shift: %)"
                 >
                   Ans
                 </button>
               </div>
               <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] font-bold text-[#eab308] -mt-2 mb-0.5 leading-none">≈</span>
+                <span className={`text-[7px] font-bold ${themeStyles.labelShift} -mt-2 mb-0.5 leading-none`}>≈</span>
                 <button
                   onClick={() => handleButton("=")}
-                  className="w-full h-9 sm:h-10 rounded-lg bg-[#1e242e] hover:bg-[#28303d] text-slate-100 font-black text-sm border-t border-white/10 shadow-[0_3px_0_#0a0e14] active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none"
+                  className={`w-full h-9 sm:h-10 rounded-lg ${themeStyles.opKey} font-black text-sm active:translate-y-[2px] active:shadow-none transition-transform cursor-pointer flex items-center justify-center leading-none`}
                   title="Calculate (= or Enter)"
                 >
                   =
@@ -3130,7 +3302,7 @@ export default function CasioCalculatorModal({
 
           {/* Bottom Curved Chin Accent */}
           <div className="w-full pt-2 pb-0.5 flex items-center justify-center opacity-30">
-            <div className="w-20 h-1 rounded-full bg-slate-700" />
+            <div className={`w-20 h-1 rounded-full ${themeStyles.chinAccent}`} />
           </div>
 
           {/* Interactive Drag-to-Resize Corner Grip Handle */}

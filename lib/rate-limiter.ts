@@ -208,6 +208,20 @@ export function resetDualPinRateLimit(ip: string, tuteeId?: string): void {
   pinAttempts.delete(studentKey);
 }
 
+// Reset all in-memory rate limit entries associated with a specific student
+export function resetStudentPinRateLimit(tuteeId: string): void {
+  for (const key of pinAttempts.keys()) {
+    if (key.includes(tuteeId)) {
+      pinAttempts.delete(key);
+    }
+  }
+}
+
+// Reset network IP rate limit
+export function resetIpPinRateLimit(ip: string): void {
+  pinIpAttempts.delete(ip);
+}
+
 // Password Login Rate Limiting (Single-key)
 export function checkPasswordRateLimit(key: string): RateLimitResult {
   return checkGenericRateLimit(passwordAttempts, key, MAX_ATTEMPTS, "Too many failed login attempts. Account access temporarily locked for security.");
