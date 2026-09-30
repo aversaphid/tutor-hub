@@ -52,6 +52,7 @@ import {
   Unlock,
   Loader2,
   Info,
+  Mail,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -1150,6 +1151,18 @@ export default function TutorDashboardPage() {
                         offlineLabel="Student Offline"
                         size="xs"
                       />
+                      {(activeLesson.tutee?.parentEmail || activeLesson.tutee?.email) && (
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-normal">
+                          <Mail className="w-3 h-3 text-[#48A5EE]" />
+                          <a
+                            href={`mailto:${activeLesson.tutee.parentEmail || activeLesson.tutee.email}`}
+                            className="hover:underline hover:text-[#48A5EE] font-medium"
+                            title={`Contact Parent/Guardian: ${activeLesson.tutee.parentEmail || activeLesson.tutee.email}`}
+                          >
+                            Parent: {activeLesson.tutee.parentEmail || activeLesson.tutee.email}
+                          </a>
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {activeLesson.studentTopic && (
@@ -1751,6 +1764,7 @@ export default function TutorDashboardPage() {
                     return (
                       student.name.toLowerCase().includes(q) ||
                       (student.pin || "").toLowerCase().includes(q) ||
+                      (student.parentEmail || "").toLowerCase().includes(q) ||
                       (student.email || "").toLowerCase().includes(q)
                     );
                   })
@@ -1785,8 +1799,22 @@ export default function TutorDashboardPage() {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                          {student.email ? <span>{student.email}</span> : <span>Student Profile</span>}
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+                          {(student.parentEmail || student.email) ? (
+                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                              <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
+                              <a
+                                href={`mailto:${student.parentEmail || student.email}`}
+                                className="hover:underline hover:text-[#48A5EE] font-medium"
+                                title={`Contact Parent: ${student.parentEmail || student.email}`}
+                              >
+                                {student.parentEmail || student.email}
+                              </a>
+                              <span className="text-[10px] text-slate-400">(Parent)</span>
+                            </span>
+                          ) : (
+                            <span>Student Profile</span>
+                          )}
                           <span>•</span>
                           <span className="text-[#48A5EE] font-medium">Assigned to You</span>
                         </div>

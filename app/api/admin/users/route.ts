@@ -25,6 +25,7 @@ export async function GET() {
           id: true,
           name: true,
           email: true,
+          parentEmail: true,
           role: true,
           pin: true,
           magicKey: true,
@@ -39,7 +40,7 @@ export async function GET() {
             select: { id: true, name: true, email: true },
           },
           assignedStudents: {
-            select: { id: true, name: true, pin: true, magicKey: true, pinLockedUntil: true, failedPinAttempts: true },
+            select: { id: true, name: true, pin: true, magicKey: true, pinLockedUntil: true, failedPinAttempts: true, parentEmail: true, email: true },
           },
           _count: {
             select: {
@@ -64,6 +65,7 @@ export async function GET() {
             id: true,
             name: true,
             email: true,
+            parentEmail: true,
             role: true,
             active: true,
             assignedTutorId: true,
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parseResult.error.issues[0]?.message || "Validation error" }, { status: 400 });
     }
 
-    const { name, email, role, password, pin, assignedTutorId, studentPay, tutorPay } = parseResult.data;
+    const { name, email, role, password, pin, assignedTutorId, studentPay, tutorPay, parentEmail } = parseResult.data;
 
     let passwordHash = null;
     let finalPin = null;
@@ -173,6 +175,7 @@ export async function POST(request: Request) {
       data: {
         name,
         email: finalEmail,
+        parentEmail: role === "TUTEE" ? (parentEmail?.trim() || null) : null,
         role,
         passwordHash,
         pin: finalPin,
@@ -305,7 +308,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active, cycleMagicKey } = parseResult.data;
+    const { studentId, assignedTutorId, name, studentPay, tutorPay, pin, active, cycleMagicKey, parentEmail } = parseResult.data;
 
     // Handle pay rate updates: freeze historical rates on archived lessons, update unarchived lessons
     if (studentPay !== undefined || tutorPay !== undefined) {
@@ -351,6 +354,9 @@ export async function PATCH(request: Request) {
     }
     if (name !== undefined && name.trim()) {
       updateData.name = name.trim();
+    }
+    if (parentEmail !== undefined) {
+      updateData.parentEmail = parentEmail && parentEmail.trim() ? parentEmail.trim() : null;
     }
     if (studentPay !== undefined) {
       updateData.studentPay = studentPay === null ? null : studentPay;

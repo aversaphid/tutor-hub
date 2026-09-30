@@ -60,6 +60,7 @@ import {
   Loader2,
   HelpCircle,
   FileText,
+  Mail,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -182,6 +183,7 @@ export default function AdminPage() {
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserParentEmail, setNewUserParentEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"TUTOR" | "TUTEE">("TUTEE");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState("");
@@ -195,6 +197,7 @@ export default function AdminPage() {
   const [isEditStudentOpen, setIsEditStudentOpen] = useState(false);
   const [editStudentTarget, setEditStudentTarget] = useState<any>(null);
   const [editStudentName, setEditStudentName] = useState("");
+  const [editStudentParentEmail, setEditStudentParentEmail] = useState("");
   const [editStudentAssignedTutorId, setEditStudentAssignedTutorId] = useState("");
   const [editStudentStudentPay, setEditStudentStudentPay] = useState("");
   const [editStudentTutorPay, setEditStudentTutorPay] = useState("");
@@ -1205,6 +1208,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           name: newUserName,
           email: newUserRole === "TUTOR" ? newUserEmail : undefined,
+          parentEmail: newUserRole === "TUTEE" ? (newUserParentEmail.trim() || undefined) : undefined,
           role: newUserRole,
           password: newUserRole === "TUTOR" ? newUserPassword : undefined,
           pin: newUserRole === "TUTEE" ? newUserPin : undefined,
@@ -1223,6 +1227,7 @@ export default function AdminPage() {
       setIsNewUserOpen(false);
       setNewUserName("");
       setNewUserEmail("");
+      setNewUserParentEmail("");
       setNewUserPassword("");
       setNewUserPin("");
       setNewUserAssignedTutorId("");
@@ -1242,6 +1247,7 @@ export default function AdminPage() {
   const handleOpenEditStudent = (student: any) => {
     setEditStudentTarget(student);
     setEditStudentName(student.name || "");
+    setEditStudentParentEmail(student.parentEmail || student.email || "");
     setEditStudentAssignedTutorId(student.assignedTutorId || "");
     setEditStudentStudentPay(
       student.studentPay !== null && student.studentPay !== undefined
@@ -1350,6 +1356,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           studentId: editStudentTarget.id,
           name: editStudentName.trim() || undefined,
+          parentEmail: editStudentParentEmail.trim() || null,
           assignedTutorId: editStudentAssignedTutorId || null,
           studentPay: editStudentStudentPay ? parseFloat(editStudentStudentPay) : null,
           tutorPay: editStudentTutorPay ? parseFloat(editStudentTutorPay) : null,
@@ -4323,6 +4330,18 @@ export default function AdminPage() {
                                 </span>
                               ) : null}
                             </div>
+                            {(st.parentEmail || st.email) && (
+                              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                <a
+                                  href={`mailto:${st.parentEmail || st.email}`}
+                                  className="hover:text-[#48A5EE] hover:underline truncate max-w-[200px]"
+                                  title={`Contact Parent/Guardian: ${st.parentEmail || st.email}`}
+                                >
+                                  {st.parentEmail || st.email}
+                                </a>
+                              </div>
+                            )}
                             {/* Inactivity Deletion Flag (Policy: no lessons for retention threshold) */}
                             {inactivity.isFlaggedForRetention && (
                               <span
@@ -5754,6 +5773,20 @@ export default function AdminPage() {
                 <>
                   <div>
                     <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      Parent / Guardian Email (Optional)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="e.g. parent@example.com"
+                      value={newUserParentEmail}
+                      onChange={(e) => setNewUserParentEmail(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                    />
+                    <span className="text-[10px] text-slate-400">For lesson notices & coordination. Student logs in via PIN.</span>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
                       Assign Normal Tutor
                     </label>
                     <select
@@ -5950,6 +5983,20 @@ export default function AdminPage() {
                   onChange={(e) => setEditStudentName(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
+              </div>
+
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Parent / Guardian Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. parent@example.com"
+                  value={editStudentParentEmail}
+                  onChange={(e) => setEditStudentParentEmail(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+                <span className="text-[10px] text-slate-400">Used for session notices & tutor coordination.</span>
               </div>
 
               <div>

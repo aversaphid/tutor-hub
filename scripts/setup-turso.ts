@@ -48,6 +48,9 @@ async function setup() {
   try {
     await client.execute(`ALTER TABLE "User" ADD COLUMN "tokenVersion" INTEGER DEFAULT 1;`);
   } catch { }
+  try {
+    await client.execute(`ALTER TABLE "User" ADD COLUMN "parentEmail" TEXT;`);
+  } catch { }
 
   // 2. Create Session table
   await client.execute(`

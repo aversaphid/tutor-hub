@@ -58,6 +58,7 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string | null;
+  parentEmail?: string | null;
   role: "HEAD_TUTOR" | "TUTOR" | "TUTEE";
   magicKey: string | null;
   tokenVersion?: number;
@@ -159,6 +160,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         id: true,
         name: true,
         email: true,
+        parentEmail: true,
         role: true,
         magicKey: true,
         tokenVersion: true,

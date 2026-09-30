@@ -158,6 +158,9 @@ export async function POST(request: Request) {
       student: {
         id: student.id,
         name: student.name,
+        role: student.role,
+        email: student.email,
+        parentEmail: student.parentEmail,
         magicKey: student.magicKey,
       },
     });

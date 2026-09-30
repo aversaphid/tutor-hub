@@ -24,7 +24,7 @@
 1.3 **Minors & Parental Authority:** Tutoring services are provided to students under the age of 18 ("Student"). Student profiles on this portal are set up following external enrollment authorized by the Student's parent or legal guardian.
 
 ### 2. Student Profiles & Security Access
-2.1 **Profile Creation:** Student profiles are created manually by the platform administrator using solely the student's name provided during external onboarding. No student email address, home address, or payment details are collected, requested, or stored on this website.  
+2.1 **Profile Creation & Parent Contact Information:** Student profiles are created by the platform administrator using the student's name provided during external onboarding. A parent or guardian contact email address may optionally be provided (and updated by the parent, student, or administrator) to enable the student's assigned tutor to send session notices, homework updates, and lesson coordination emails. No child's personal email address, home address, or payment details are collected or stored on this website.  
 2.2 **Access Credentials:** Students access their individual timetable and lesson links using their name combined with an administrator-issued **4-digit PIN** or private **Magic Link**.  
 2.3 Parents and students are responsible for maintaining the confidentiality of their PIN and Magic Link. You must notify us immediately at `luke@lbmathstuition.co.uk` if you suspect unauthorized access.
 
@@ -55,11 +55,12 @@ LB MATHS TUITION LTD is committed to protecting the privacy of our tutors, paren
 
 ### 2. Strict Data Minimization: What We Collect on This Platform
 Because bookings and billing are processed externally, data collection on this platform is strictly minimized:
-- **Students (Minors under 18):**
+- **Students (Minors under 18) & Parent/Guardian Contact:**
   - **Student Name:** Used solely to create an individual profile and identify the student on lesson timetables.
-  - **Security Credentials:** An administrator-generated 4-digit PIN and unique URL token (Magic Link) for passwordless portal entry.
+  - **Parent / Guardian Contact Email (Optional):** Stored solely for lesson coordination, schedule updates, and tutor-parent communications. May be provided and updated by the parent, student, or administrator, and is accessible only to the student's assigned tutor and administrators.
+  - **Security Credentials:** An administrator-generated 4-digit PIN and unique URL token (Magic Link) for passwordless portal entry. Students do NOT log in with an email address.
   - **Lesson Records:** Timetable dates, times, attendance confirmation status, topics covered, and optional student ratings/feedback.
-  - *(**Important:** We do **NOT** collect, request, or store student email addresses, home addresses, phone numbers, or dates of birth on this website).*
+  - *(**Important:** We do **NOT** collect or store personal minor email addresses, home addresses, phone numbers, or dates of birth on this website).*
 - **Tutors:** Full name, company-assigned email address (`@lbmathstuition.co.uk`), cryptographically hashed passwords (bcrypt), hourly pay rates, and attendance logs.
 - **Technical & Security Data:** IP addresses, login timestamps, and system audit logs generated automatically to safeguard platform security and verify attendance.
 

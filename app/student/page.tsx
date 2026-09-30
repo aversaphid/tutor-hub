@@ -27,6 +27,7 @@ import {
   Clock,
   Sparkles,
   HelpCircle,
+  Edit3,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
@@ -62,6 +63,48 @@ function StudentLobbyContent() {
   const [topicInput, setTopicInput] = useState("");
   const [topicSaved, setTopicSaved] = useState(false);
   const [isSavingTopic, setIsSavingTopic] = useState(false);
+
+  // Parent / Guardian contact email state
+  const [parentEmailInput, setParentEmailInput] = useState("");
+  const [isSavingParentEmail, setIsSavingParentEmail] = useState(false);
+  const [parentEmailSaved, setParentEmailSaved] = useState(false);
+  const [parentEmailError, setParentEmailError] = useState("");
+  const [isEditingParentEmail, setIsEditingParentEmail] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setParentEmailInput(currentUser.parentEmail || currentUser.email || "");
+    }
+  }, [currentUser?.parentEmail, currentUser?.email]);
+
+  const handleSaveParentEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingParentEmail(true);
+    setParentEmailError("");
+    try {
+      const res = await fetch("/api/student/parent-email", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentEmail: parentEmailInput.trim() || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setParentEmailError(data.error || "Failed to update parent contact email.");
+        return;
+      }
+      setCurrentUser((prev: any) => ({
+        ...prev,
+        parentEmail: data.parentEmail,
+      }));
+      setParentEmailSaved(true);
+      setIsEditingParentEmail(false);
+      setTimeout(() => setParentEmailSaved(false), 3000);
+    } catch {
+      setParentEmailError("Network error. Please try again.");
+    } finally {
+      setIsSavingParentEmail(false);
+    }
+  };
 
   const handleSaveTopic = async () => {
     if (!activeSession) return;
@@ -301,6 +344,109 @@ function StudentLobbyContent() {
   const isMeetingUnlocked =
     activeSession?.status === "IN_PROGRESS" ||
     (activeSession && Date.now() >= unlockThresholdTime && activeSession.status !== "COMPLETED");
+
+  const renderParentEmailCard = () => (
+    <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center shrink-0">
+            <Mail className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
+              Parent / Guardian Contact Email
+            </span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+              Tutors use this to share lesson updates &amp; notes
+            </span>
+          </div>
+        </div>
+        {!isEditingParentEmail && (
+          <button
+            type="button"
+            onClick={() => {
+              setParentEmailInput(currentUser?.parentEmail || currentUser?.email || "");
+              setIsEditingParentEmail(true);
+              setParentEmailError("");
+            }}
+            className="text-xs px-2.5 py-1 rounded-lg text-[#48A5EE] hover:bg-[#48A5EE]/10 font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+          >
+            <Edit3 className="w-3 h-3" />
+            <span>{currentUser?.parentEmail || currentUser?.email ? "Change" : "Add"}</span>
+          </button>
+        )}
+      </div>
+
+      {parentEmailSaved && (
+        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
+          <Check className="w-3.5 h-3.5 shrink-0" />
+          <span>Parent contact email saved successfully!</span>
+        </div>
+      )}
+
+      {parentEmailError && (
+        <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{parentEmailError}</span>
+        </div>
+      )}
+
+      {isEditingParentEmail ? (
+        <form onSubmit={handleSaveParentEmail} className="space-y-2 pt-1">
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={parentEmailInput}
+              onChange={(e) => setParentEmailInput(e.target.value)}
+              placeholder="parent@example.com"
+              autoFocus
+              className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={isSavingParentEmail}
+              className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+            >
+              {isSavingParentEmail ? (
+                <span>Saving...</span>
+              ) : (
+                <>
+                  <Check className="w-3 h-3" />
+                  <span>Save</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingParentEmail(false);
+                setParentEmailError("");
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer shrink-0"
+            >
+              Cancel
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+            For parent updates &amp; lesson coordination. Login continues with your 4-digit PIN.
+          </p>
+        </form>
+      ) : (
+        <div className="flex items-center justify-between text-xs pt-0.5">
+          <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+            {currentUser?.parentEmail || currentUser?.email || (
+              <span className="italic text-slate-400 font-normal">No parent email registered yet</span>
+            )}
+          </span>
+          {(currentUser?.parentEmail || currentUser?.email) && (
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 shrink-0">
+              Registered
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
@@ -627,6 +773,9 @@ function StudentLobbyContent() {
                   </div>
                 )}
 
+                {/* Parent / Guardian Contact Email Card */}
+                {renderParentEmailCard()}
+
                 {/* Other Upcoming Lessons in Right Column */}
                 {upcomingSessions.length > 0 && (
                   <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 transition-colors">
@@ -731,6 +880,11 @@ function StudentLobbyContent() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Sync to Calendar</span>
               </button>
+            </div>
+
+            {/* Parent / Guardian Contact Email Card */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 max-w-md mx-auto text-left">
+              {renderParentEmailCard()}
             </div>
 
             {/* Upcoming sessions if any */}

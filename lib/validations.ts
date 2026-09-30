@@ -66,6 +66,7 @@ export const CreateUserSchema = z.object({
   assignedTutorId: z.string().optional().nullable(),
   studentPay: z.number().min(0, "Student pay must be 0 or more").optional().nullable(),
   tutorPay: z.number().min(0, "Tutor pay must be 0 or more").optional().nullable(),
+  parentEmail: z.string().trim().email("Invalid email address").optional().nullable().or(z.literal("")),
 });
 
 // Change password schema
@@ -87,6 +88,7 @@ export const UpdateStudentSchema = z.object({
   assignedTutorId: z.string().nullable().optional(),
   studentPay: z.number().min(0).nullable().optional(),
   tutorPay: z.number().min(0).nullable().optional(),
+  parentEmail: z.string().trim().email("Invalid email address").optional().nullable().or(z.literal("")),
   pin: z
     .string()
     .trim()
