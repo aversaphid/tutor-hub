@@ -11,6 +11,7 @@ import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
+import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import {
   Calendar,
   Users,
@@ -50,6 +51,7 @@ import {
   ShieldAlert,
   Unlock,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -756,7 +758,7 @@ export default function TutorDashboardPage() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div data-tour="tutor-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20">
@@ -797,12 +799,21 @@ export default function TutorDashboardPage() {
               <span className="hidden sm:inline">Formula Sheet</span>
             </button>
             <button
+              data-tour="tutor-timetable"
               onClick={() => currentUser && handleOpenCalendar(currentUser)}
               className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Open My Weekly Timetable"
             >
               <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
               <span className="hidden sm:inline">My Timetable</span>
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-tutorial"))}
+              className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-[#48A5EE] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800/40"
+              title="Open Tutor Walkthrough Guide"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Guide</span>
             </button>
             <button
               onClick={() => {
@@ -840,6 +851,7 @@ export default function TutorDashboardPage() {
             <span>Next Meeting &amp; Live Deck</span>
           </button>
           <button
+            data-tour="tutor-tab-students"
             onClick={() => setActiveTab("students")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "students"
                 ? "bg-[#48A5EE] text-white shadow-sm"
@@ -850,6 +862,7 @@ export default function TutorDashboardPage() {
             <span>My Assigned Students ({assignedStudents.length})</span>
           </button>
           <button
+            data-tour="tutor-tab-lessons"
             onClick={() => setActiveTab("lessons")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "lessons"
                 ? "bg-[#48A5EE] text-white shadow-sm"
@@ -937,6 +950,12 @@ export default function TutorDashboardPage() {
                           Reason: {activeLesson.delayReason}
                         </span>
                       )}
+                      <LessonCountdownBadge
+                        startTime={activeLesson.scheduledStartTime}
+                        currentTime={currentTime}
+                        status={activeLesson.status}
+                        isLive={isLessonLive}
+                      />
                       <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <span className="font-semibold text-slate-700 dark:text-slate-300">
                           {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
@@ -1023,11 +1042,17 @@ export default function TutorDashboardPage() {
                 </div>
 
                 {/* Teams Meeting URL Setup (~10 minutes before) */}
-                <div className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div data-tour="tutor-teams-input" className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                      <Video className="w-4 h-4 text-[#48A5EE]" />
-                      <span>Teams Meeting Link (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson)</span>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
+                      <Video className="w-4 h-4 text-[#48A5EE] shrink-0" />
+                      <span>Teams Meeting Link</span>
+                      <span
+                        className="font-normal text-slate-400 cursor-help hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        title={`This link will be displayed to the student ${activeLesson?.unlockEarlyMinutes ?? 5} minutes before the lesson`}
+                      >
+                        (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson)
+                      </span>
                     </label>
                     {activeLesson.teamsMeetingUrl && (
                       <a
@@ -1067,7 +1092,7 @@ export default function TutorDashboardPage() {
                 </div>
 
                 {/* Real-time Session Action Triggers */}
-                <div className="flex flex-wrap items-center gap-3 pt-2">
+                <div data-tour="tutor-lesson-controls" className="flex flex-wrap items-center gap-3 pt-2">
                   {!isLessonLive && (
                     <button
                       onClick={handleStartLessonNow}
@@ -1190,24 +1215,11 @@ export default function TutorDashboardPage() {
                         </span>
 
                         {/* Countdown indicator */}
-                        {(() => {
-                          const startMs = new Date(nextLesson.scheduledStartTime).getTime();
-                          const diffMins = Math.round((startMs - currentTime) / 60000);
-                          if (diffMins > 0) {
-                            return (
-                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
-                                Starts in {diffMins}m
-                              </span>
-                            );
-                          } else if (diffMins >= -30) {
-                            return (
-                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-lg">
-                                Ready to start
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
+                        <LessonCountdownBadge
+                          startTime={nextLesson.scheduledStartTime}
+                          currentTime={currentTime}
+                          status={nextLesson.status}
+                        />
                       </div>
 
                       <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -1260,9 +1272,15 @@ export default function TutorDashboardPage() {
                   {/* Teams Meeting URL Setup for Next Lesson */}
                   <div className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                        <Video className="w-4 h-4 text-[#48A5EE]" />
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
+                        <Video className="w-4 h-4 text-[#48A5EE] shrink-0" />
                         <span>Teams Meeting Link for Next Lesson</span>
+                        <span
+                          className="font-normal text-slate-400 cursor-help hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          title={`This link will be displayed to the student ${nextLesson?.unlockEarlyMinutes ?? 5} minutes before the lesson`}
+                        >
+                          (Enter ~{(nextLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson)
+                        </span>
                       </label>
                       {nextLesson.teamsMeetingUrl && (
                         <a

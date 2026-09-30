@@ -8,6 +8,7 @@ import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
+import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import {
   Calendar,
   Users,
@@ -57,6 +58,7 @@ import {
   ShieldAlert,
   Unlock,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -2021,6 +2023,13 @@ export default function AdminPage() {
                     ● {isAdminLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
                   </span>
 
+                  <LessonCountdownBadge
+                    startTime={activeLesson.scheduledStartTime}
+                    currentTime={currentTime}
+                    status={activeLesson.status}
+                    isLive={isAdminLessonLive}
+                  />
+
                   <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                     <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {new Date(activeLesson.scheduledStartTime).toLocaleDateString([], {
@@ -2296,11 +2305,15 @@ export default function AdminPage() {
 
             {/* Quick Teams Link input */}
             <form onSubmit={handleSaveTeamsUrl} className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Video className="w-4 h-4 text-[#48A5EE]" />
-                  <span>
-                    Teams Meeting Link (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before start):
+              <div className="flex items-center justify-between text-xs flex-wrap gap-1">
+                <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 flex-wrap">
+                  <Video className="w-4 h-4 text-[#48A5EE] shrink-0" />
+                  <span>Teams Meeting Link</span>
+                  <span
+                    className="font-normal text-slate-400 cursor-help hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    title={`This link will be displayed to the student ${activeLesson?.unlockEarlyMinutes ?? 5} minutes before the lesson`}
+                  >
+                    (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson):
                   </span>
                 </span>
                 {teamsSuccess && (

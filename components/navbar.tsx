@@ -3,16 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, Key, User, Clock, Eye, Settings } from "lucide-react";
+import { LogOut, Key, User, Clock, Eye, Settings, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import ChangePasswordModal from "./change-password-modal";
 import TutorLoginModal from "./tutor-login-modal";
 import AccessibilityModal from "./accessibility-modal";
+import TutorialModal from "./tutorial-modal";
 import ThemeToggle from "./theme-toggle";
 import { formatTutorName } from "@/lib/format";
 
 interface NavbarProps {
   user?: {
+    id?: string;
     name: string;
     role: string;
     email?: string | null;
@@ -26,6 +28,34 @@ export default function Navbar({ user }: NavbarProps) {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isA11yModalOpen, setIsA11yModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  // Listen for open-tutorial custom event from any view (students & tutors only)
+  useEffect(() => {
+    const handleOpenTutorial = () => {
+      if (user?.role === "HEAD_TUTOR" || pathname?.startsWith("/admin")) return;
+      setIsTutorialOpen(true);
+    };
+    window.addEventListener("open-tutorial", handleOpenTutorial);
+    return () => window.removeEventListener("open-tutorial", handleOpenTutorial);
+  }, [user?.role, pathname]);
+
+  // First-time login onboarding auto-trigger (students and tutors only, not admin)
+  useEffect(() => {
+    if (!user?.id || !user?.role || user.role === "HEAD_TUTOR" || pathname?.startsWith("/admin")) return;
+    try {
+      const key = `tutorhub_tutorial_seen_${user.role}_${user.id}`;
+      const hasSeen = localStorage.getItem(key);
+      if (!hasSeen) {
+        const timer = setTimeout(() => {
+          setIsTutorialOpen(true);
+        }, 700);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // safe fallback
+    }
+  }, [user?.id, user?.role, pathname]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -109,6 +139,7 @@ export default function Navbar({ user }: NavbarProps) {
 
             {/* Accessibility Options Button */}
             <button
+              data-tour="navbar-a11y"
               onClick={() => setIsA11yModalOpen(true)}
               className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
               title="Accessibility Options (Text size, Dyslexia font, Audio, Contrast)"
@@ -116,6 +147,19 @@ export default function Navbar({ user }: NavbarProps) {
             >
               <Eye className="w-4 h-4 text-[#48A5EE]" />
             </button>
+
+            {/* Hub Guide Button (Students and Tutors only, not Admin) */}
+            {!isHeadTutor && !pathname?.startsWith("/admin") && (
+              <button
+                data-tour="navbar-guide"
+                onClick={() => setIsTutorialOpen(true)}
+                className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
+                title="Hub Guide & Walkthrough"
+                aria-label="Open Hub Guide and Walkthrough"
+              >
+                <HelpCircle className="w-4 h-4 text-[#48A5EE]" />
+              </button>
+            )}
           </div>
 
           {/* Right Action: Tutor Login or Staff Menu */}
@@ -190,6 +234,13 @@ export default function Navbar({ user }: NavbarProps) {
       <AccessibilityModal
         isOpen={isA11yModalOpen}
         onClose={() => setIsA11yModalOpen(false)}
+      />
+
+      {/* Platform Walkthrough & Tutorial Modal */}
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+        user={user}
       />
     </>
   );

@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Clock,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
@@ -307,7 +308,7 @@ function StudentLobbyContent() {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
         {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div data-tour="student-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-5 py-3.5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -324,6 +325,14 @@ function StudentLobbyContent() {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-tutorial"))}
+              className="text-xs px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-[#48A5EE] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800/40"
+              title="Open platform walkthrough guide"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Hub Guide</span>
+            </button>
             <Link
               href="/"
               className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors"
@@ -395,6 +404,7 @@ function StudentLobbyContent() {
               <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
                 <button
                   type="button"
+                  data-tour="student-exams"
                   onClick={() => setIsExamCountdownOpen(true)}
                   className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
                   title="Open Official GCSE & A-Level Maths Exam Countdown & Timetables"
@@ -413,6 +423,7 @@ function StudentLobbyContent() {
                 </button>
                 <button
                   type="button"
+                  data-tour="student-formulas"
                   onClick={() => setIsFormulaSheetOpen(true)}
                   className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
                   title="Open GCSE & A-Level Maths Formula Sheet"
@@ -422,6 +433,7 @@ function StudentLobbyContent() {
                 </button>
                 <button
                   type="button"
+                  data-tour="student-calculator"
                   onClick={() => setIsCalculatorOpen(true)}
                   className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
                   title="Open Casio fx-83GTX Scientific Calculator"
@@ -429,7 +441,7 @@ function StudentLobbyContent() {
                   <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
                   <span>Casio fx-83GTX</span>
                 </button>
-                <div className="shrink-0">
+                <div data-tour="student-calendar" className="shrink-0">
                   <AddToCalendar session={activeSession} label="Add to Personal Calendar" />
                 </div>
               </div>
@@ -455,7 +467,7 @@ function StudentLobbyContent() {
             {/* 2-Column Responsive Dashboard Grid (Fits comfortably without scrolling!) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
               {/* Left Column (7 cols): Live Countdown Timer & InPrivate Teams Meeting Room */}
-              <div className="lg:col-span-7 space-y-3.5">
+              <div data-tour="student-teams-card" className="lg:col-span-7 space-y-3.5">
                 <CountdownTimer
                   initialSession={activeSession}
                   onStatusChange={(updated) => {
@@ -501,7 +513,7 @@ function StudentLobbyContent() {
                 {(activeSession.status === "SCHEDULED" ||
                   activeSession.status === "DELAYED" ||
                   activeSession.status === "IN_PROGRESS") && (
-                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors">
+                  <div data-tour="student-topic-box" className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2.5 transition-colors">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] flex items-center justify-center shrink-0">
                         <BookOpen className="w-3.5 h-3.5" />
