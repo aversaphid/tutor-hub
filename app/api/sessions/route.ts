@@ -91,12 +91,11 @@ export async function GET(request: Request) {
     if (user.role === "TUTEE") {
       // Students can ONLY ever view their own sessions
       where.tuteeId = user.id;
-      // Student lobby needs active/upcoming sessions, recent cancelled, and completed sessions (for previous lesson notes)
+      // Optimize: student lobby only needs active/upcoming sessions and recent cancelled (last 7 days)
       if (activeOnly || !status) {
-        where.OR = [
-          { scheduledEndTime: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
-          { status: "COMPLETED" },
-        ];
+        where.scheduledEndTime = {
+          gte: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+        };
       }
     } else if (user.role === "TUTOR") {
       // Tutors can view sessions where they are the tutor OR sessions of their assigned students

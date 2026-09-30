@@ -51,6 +51,7 @@ import {
   ShieldAlert,
   Unlock,
   Loader2,
+  Info,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -1020,6 +1021,17 @@ export default function TutorDashboardPage() {
                           <span>Today&apos;s topic: {activeLesson.studentTopic}</span>
                         </div>
                       )}
+                      {activeLesson.notes && (
+                        <div
+                          className="inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs font-medium shadow-2xs"
+                          title="Manually set admin notes for tutor"
+                        >
+                          <Info className="w-3.5 h-3.5 text-[#48A5EE] shrink-0 mt-0.5 sm:mt-0" />
+                          <span>
+                            <strong className="font-semibold text-blue-800 dark:text-blue-300">Admin Notes:</strong> {activeLesson.notes}
+                          </span>
+                        </div>
+                      )}
                       {activeLessonPrevNotes && (
                         <div
                           className="inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-xs font-medium shadow-2xs"
@@ -1275,6 +1287,17 @@ export default function TutorDashboardPage() {
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
                             <BookOpen className="w-3.5 h-3.5 shrink-0" />
                             <span>Today&apos;s topic: {nextLesson.studentTopic}</span>
+                          </div>
+                        )}
+                        {nextLesson.notes && (
+                          <div
+                            className="inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs font-medium shadow-2xs"
+                            title="Manually set admin notes for tutor"
+                          >
+                            <Info className="w-3.5 h-3.5 text-[#48A5EE] shrink-0 mt-0.5 sm:mt-0" />
+                            <span>
+                              <strong className="font-semibold text-blue-800 dark:text-blue-300">Admin Notes:</strong> {nextLesson.notes}
+                            </span>
                           </div>
                         )}
                         {nextLessonPrevNotes && (
@@ -1985,6 +2008,15 @@ export default function TutorDashboardPage() {
                                         <span>{s.studentTopic}</span>
                                       </div>
                                     )}
+                                    {s.notes && (
+                                      <div
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px] font-medium max-w-[280px] truncate"
+                                        title={`Admin note: ${s.notes}`}
+                                      >
+                                        <Info className="w-2.5 h-2.5 shrink-0 text-[#48A5EE]" />
+                                        <span className="truncate">Admin note: {s.notes}</span>
+                                      </div>
+                                    )}
                                     {getPreviousLessonNotes(s) && (
                                       <div
                                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-[10px] font-medium max-w-[280px] truncate"
@@ -2220,6 +2252,11 @@ export default function TutorDashboardPage() {
                                   {s.feedbackNotes && (
                                     <p className="text-slate-500 dark:text-slate-400 mt-1 italic">
                                       Notes: &quot;{s.feedbackNotes}&quot;
+                                    </p>
+                                  )}
+                                  {s.notes && (
+                                    <p className="text-slate-500 dark:text-slate-400 mt-1 text-[11px]">
+                                      <strong className="text-blue-600 dark:text-blue-400 font-semibold">Admin Notes:</strong> &quot;{s.notes}&quot;
                                     </p>
                                   )}
                                 </div>

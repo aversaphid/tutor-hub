@@ -62,23 +62,6 @@ function StudentLobbyContent() {
   const [topicInput, setTopicInput] = useState("");
   const [topicSaved, setTopicSaved] = useState(false);
   const [isSavingTopic, setIsSavingTopic] = useState(false);
-  const [allStudentSessions, setAllStudentSessions] = useState<any[]>([]);
-
-  // Find extra notes & homework written in the previous lesson for this student
-  const previousLessonNotes = useMemo(() => {
-    if (!activeSession) return null;
-    const currentStart = new Date(activeSession.scheduledStartTime).getTime();
-    const past = allStudentSessions
-      .filter((s) => {
-        if (s.id === activeSession.id || s.status === "CANCELLED") return false;
-        const sStart = new Date(s.scheduledStartTime).getTime();
-        return sStart < currentStart && (s.status === "COMPLETED" || Boolean(s.feedbackNotes));
-      })
-      .sort((a, b) => new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime());
-
-    const prev = past[0];
-    return prev?.feedbackNotes?.trim() || null;
-  }, [activeSession, allStudentSessions]);
 
   const handleSaveTopic = async () => {
     if (!activeSession) return;
@@ -162,7 +145,6 @@ function StudentLobbyContent() {
       if (!res.ok) return;
       const data = await res.json();
       const sessions: any[] = data.sessions || [];
-      setAllStudentSessions(sessions);
 
       const now = Date.now();
       const live = resolveActiveSession(sessions, now);
@@ -582,21 +564,6 @@ function StudentLobbyContent() {
                           {activeSession.studentTopic}
                         </span>
                       </p>
-                    )}
-
-                    {/* Previous Lesson Extra Notes & Homework Label */}
-                    {previousLessonNotes && (
-                      <div className="mt-2 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-start gap-2 text-xs">
-                        <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-                        <div className="space-y-0.5">
-                          <span className="font-bold text-purple-800 dark:text-purple-300">
-                            Previous lesson extra notes &amp; homework:
-                          </span>
-                          <p className="text-slate-700 dark:text-slate-300 text-xs">
-                            {previousLessonNotes}
-                          </p>
-                        </div>
-                      </div>
                     )}
                   </div>
                 )}
