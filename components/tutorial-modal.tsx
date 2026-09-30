@@ -207,7 +207,7 @@ export default function TutorialModal({ isOpen, onClose, user }: TutorialModalPr
       icon: ShieldCheck,
       targetSelector: '[data-tour="tutor-header"]',
       description:
-        "Your command center for managing tuition sessions, monitoring queues, taking lesson notes, and coordinating learning materials. You can click 'Guide' on this header banner anytime to replay this walkthrough.",
+        "Your command center for managing tuition sessions, monitoring queues, taking lesson notes, and coordinating learning materials. You can click the Guide (?) icon in the top banner anytime to replay this walkthrough.",
       tips: [
         "Direct visibility of active and upcoming student lessons.",
         "Quick access to tools, formula sheets, and your weekly timetable.",

@@ -51,7 +51,6 @@ import {
   ShieldAlert,
   Unlock,
   Loader2,
-  HelpCircle,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -806,14 +805,6 @@ export default function TutorDashboardPage() {
             >
               <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
               <span className="hidden sm:inline">My Timetable</span>
-            </button>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent("open-tutorial"))}
-              className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-[#48A5EE] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800/40"
-              title="Open Tutor Walkthrough Guide"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Guide</span>
             </button>
             <button
               onClick={() => {
