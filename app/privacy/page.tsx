@@ -40,12 +40,13 @@ export default function PrivacyPage() {
           </p>
           <div className="space-y-3 pt-1">
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs space-y-1">
-              <strong className="text-slate-800 dark:text-slate-200 block">Students (Minors under 18):</strong>
+              <strong className="text-slate-800 dark:text-slate-200 block">Students (Minors under 18) &amp; Parent Contact:</strong>
               <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-300">
                 <li><strong>Student Name:</strong> Provided by parents externally, used solely to identify the student and build their timetable profile.</li>
-                <li><strong>Security Credentials:</strong> A random 4-digit PIN and secure Magic Link token for passwordless portal entry.</li>
+                <li><strong>Parent / Guardian Contact Email (Optional):</strong> Stored solely for lesson coordination, schedule updates, and tutor-parent communication. May be set and updated by the parent, student, or administrator, and is accessible only to the student&apos;s assigned tutor and administrators.</li>
+                <li><strong>Security Credentials:</strong> A random 4-digit PIN and secure Magic Link token for passwordless portal entry. Students do NOT log in with an email address.</li>
                 <li><strong>Lesson Records:</strong> Scheduled dates, times, attendance confirmation status, topics covered, and optional ratings/feedback.</li>
-                <li><em>We do <strong>NOT</strong> collect or store student emails, phone numbers, home addresses, or financial data on this website.</em></li>
+                <li><em>We do <strong>NOT</strong> collect or store children&apos;s personal email addresses, phone numbers, home addresses, or financial data on this website.</em></li>
               </ul>
             </div>
 

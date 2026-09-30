@@ -50,7 +50,7 @@ export default function TermsPage() {
             <span>2. Student Profiles &amp; Security Access</span>
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
-            2.1 <strong>Profile Creation:</strong> Student profiles are created manually by the platform administrator using solely the student&apos;s name provided during external onboarding. No student email address, home address, or payment details are collected, requested, or stored on this website.
+            2.1 <strong>Profile Creation &amp; Parent Contact Information:</strong> Student profiles are created by the platform administrator using the student&apos;s name provided during external onboarding. A parent or guardian contact email address may optionally be provided (and updated by the parent, student, or administrator) to allow the student&apos;s assigned tutor to send session notices, homework updates, and lesson coordination emails. No child&apos;s personal email address, home address, or payment details are collected or stored on this website.
           </p>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
             2.2 <strong>Access Credentials:</strong> Students access their individual timetable and lesson links using their name combined with an administrator-issued <strong>4-digit PIN</strong> or private <strong>Magic Link</strong>.
