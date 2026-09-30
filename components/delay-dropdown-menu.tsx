@@ -27,7 +27,10 @@ export default function DelayDropdownMenu({
 
   if (!session) return null;
 
-  const isDelayed = session.status === "DELAYED" || (session.delayMinutes && session.delayMinutes > 0);
+  const isDelayed = Boolean(
+    session.status === "DELAYED" ||
+    (typeof session.delayMinutes === "number" && session.delayMinutes > 0)
+  );
 
   const handleQuickPreset = (mins: number) => {
     setIsOpen(false);
@@ -168,17 +171,33 @@ export default function DelayDropdownMenu({
                 <span>Add explanation / reason...</span>
               </button>
 
-              {isDelayed && onResetStartTime && (
+              {Boolean(onResetStartTime) && (
                 <button
                   type="button"
                   onClick={() => {
+                    if (!isDelayed) return;
                     setIsOpen(false);
-                    onResetStartTime(session);
+                    onResetStartTime?.(session);
                   }}
-                  disabled={isResettingStartTime}
-                  className="w-full py-1.5 px-2 rounded-xl text-left font-semibold text-[11px] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer flex items-center gap-2"
+                  disabled={!isDelayed || isResettingStartTime}
+                  className={`w-full py-1.5 px-2 rounded-xl text-left font-semibold text-[11px] transition-colors flex items-center gap-2 ${
+                    isDelayed
+                      ? "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                      : "text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50 select-none"
+                  }`}
+                  title={
+                    isDelayed
+                      ? `Reset start time back to original schedule (removes ${session.delayMinutes}m delay)`
+                      : "No delay currently active on this lesson"
+                  }
                 >
-                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                  <RotateCcw
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      isDelayed
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-slate-400 dark:text-slate-600"
+                    }`}
+                  />
                   <span>Reset start time to original</span>
                 </button>
               )}
