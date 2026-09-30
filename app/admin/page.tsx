@@ -65,6 +65,7 @@ import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
+import DelayDropdownMenu from "@/components/delay-dropdown-menu";
 import SessionAuditModal from "@/components/session-audit-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 
@@ -1569,8 +1570,8 @@ export default function AdminPage() {
     });
   };
 
-  const handleConfirmDelay = async (minutes: number, reason?: string) => {
-    const targetId = delayModal.sessionId || activeLesson?.id;
+  const handleConfirmDelay = async (minutes: number, reason?: string, targetSessionId?: string) => {
+    const targetId = targetSessionId || delayModal.sessionId || activeLesson?.id;
     if (!targetId) return;
     setIsSubmittingDelay(true);
     try {
@@ -2293,29 +2294,13 @@ export default function AdminPage() {
                 </button>
               )}
 
-              <button
-                onClick={() => handleDelay(5)}
-                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                title="Delay lesson by 5 minutes"
-              >
-                +5m Delay
-              </button>
-              <button
-                onClick={() => handleDelay(10)}
-                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
-                title="Delay lesson by 10 minutes"
-              >
-                +10m Delay
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenDelayModal(10, activeLesson)}
-                className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer flex items-center gap-1.5"
-                title="Custom delay duration or add explanation for student"
-              >
-                <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Custom / Reason...</span>
-              </button>
+              <DelayDropdownMenu
+                session={activeLesson}
+                onApplyDelay={(mins, reason) => handleConfirmDelay(mins, reason, activeLesson.id)}
+                onOpenReasonModal={(mins, s) => handleOpenDelayModal(mins, s)}
+                onResetStartTime={handleResetStartTime}
+                isResettingStartTime={isResettingStartTime}
+              />
               {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
                 <button
                   type="button"

@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
+import DelayDropdownMenu from "@/components/delay-dropdown-menu";
 import SharedResourcesHub from "@/components/shared-resources-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
@@ -591,8 +592,8 @@ export default function TutorDashboardPage() {
     });
   };
 
-  const handleConfirmDelay = async (mins: number, reason?: string) => {
-    const targetId = delayModal.sessionId || activeLesson?.id;
+  const handleConfirmDelay = async (mins: number, reason?: string, targetSessionId?: string) => {
+    const targetId = targetSessionId || delayModal.sessionId || activeLesson?.id;
     if (!targetId) return;
     setIsSubmittingDelay(true);
     try {
@@ -1158,29 +1159,13 @@ export default function TutorDashboardPage() {
                   )}
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDelayLesson(5)}
-                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
-                      title="Delay this lesson by 5 minutes"
-                    >
-                      +5m Delay
-                    </button>
-                    <button
-                      onClick={() => handleDelayLesson(10)}
-                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer"
-                      title="Delay this lesson by 10 minutes"
-                    >
-                      +10m Delay
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDelayModal(10, activeLesson)}
-                      className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                      title="Custom delay duration or add explanation for student"
-                    >
-                      <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      <span>Custom / Reason...</span>
-                    </button>
+                    <DelayDropdownMenu
+                      session={activeLesson}
+                      onApplyDelay={(mins, reason) => handleConfirmDelay(mins, reason, activeLesson.id)}
+                      onOpenReasonModal={(mins, s) => handleOpenDelayModal(mins, s)}
+                      onResetStartTime={handleResetStartTime}
+                      isResettingStartTime={isResettingStartTime}
+                    />
                     {(activeLesson.delayMinutes > 0 || activeLesson.status === "DELAYED") && (
                       <button
                         type="button"
@@ -1402,35 +1387,13 @@ export default function TutorDashboardPage() {
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     {/* Delay Action Controls */}
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDelayModal(5, nextLesson)}
-                        className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                        title="Delay this upcoming lesson by 5 minutes"
-                      >
-                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span>+5m Delay</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDelayModal(10, nextLesson)}
-                        className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                        title="Delay this upcoming lesson by 10 minutes"
-                      >
-                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span>+10m Delay</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDelayModal(15, nextLesson)}
-                        className="px-3.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                        title="Custom delay or add explanation for student"
-                      >
-                        <FastForward className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span>Custom / Reason...</span>
-                      </button>
+                      <DelayDropdownMenu
+                        session={nextLesson}
+                        onApplyDelay={(mins, reason) => handleConfirmDelay(mins, reason, nextLesson.id)}
+                        onOpenReasonModal={(mins, s) => handleOpenDelayModal(mins, s)}
+                        onResetStartTime={handleResetStartTime}
+                        isResettingStartTime={isResettingStartTime}
+                      />
 
                       {(nextLesson.delayMinutes > 0 || nextLesson.status === "DELAYED") && (
                         <button
