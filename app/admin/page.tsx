@@ -59,6 +59,7 @@ import {
   Unlock,
   Loader2,
   HelpCircle,
+  FileText,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -152,6 +153,11 @@ export default function AdminPage() {
   const [reminderModalSession, setReminderModalSession] = useState<any>(null);
   const [editReminderText, setEditReminderText] = useState("");
   const [isSavingReminder, setIsSavingReminder] = useState(false);
+
+  // Edit Student/Tutor Lesson Notes Modal State
+  const [notesModalSession, setNotesModalSession] = useState<any>(null);
+  const [editNotesText, setEditNotesText] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Cycling Magic Link State
   const [cyclingStudentId, setCyclingStudentId] = useState<string | null>(null);
@@ -957,6 +963,32 @@ export default function AdminPage() {
       alert("Network error updating reminder.");
     } finally {
       setIsSavingReminder(false);
+    }
+  };
+
+  // Save/Update Student & Tutor Lesson Notes
+  const handleSaveNotes = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notesModalSession) return;
+    setIsSavingNotes(true);
+    try {
+      const res = await fetch(`/api/sessions/${notesModalSession.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: editNotesText.trim() || null }),
+      });
+      if (res.ok) {
+        setActionMessage("Lesson notes updated!");
+        setNotesModalSession(null);
+        await refreshAllData();
+        setTimeout(() => setActionMessage(""), 3000);
+      } else {
+        alert("Failed to update lesson notes.");
+      }
+    } catch {
+      alert("Network error updating lesson notes.");
+    } finally {
+      setIsSavingNotes(false);
     }
   };
 
@@ -2136,35 +2168,66 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* 3. PERSONAL REMINDER & ATTENDANCE CONFIRMATION TOGGLES */}
+            {/* 3. PERSONAL REMINDER, STUDENT/TUTOR NOTES & ATTENDANCE CONFIRMATION TOGGLES */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-              {/* Reminder Badge/Button */}
-              {activeLesson.adminReminder ? (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shrink-0">
-                  <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span className="font-semibold">Reminder: {activeLesson.adminReminder}</span>
+              {/* Badges/Buttons Group */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Reminder Badge/Button */}
+                {activeLesson.adminReminder ? (
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shrink-0">
+                    <Bell className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="font-semibold">Reminder: {activeLesson.adminReminder}</span>
+                    <button
+                      onClick={() => {
+                        setReminderModalSession(activeLesson);
+                        setEditReminderText(activeLesson.adminReminder || "");
+                      }}
+                      className="ml-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ) : (
                   <button
                     onClick={() => {
                       setReminderModalSession(activeLesson);
-                      setEditReminderText(activeLesson.adminReminder || "");
+                      setEditReminderText("");
                     }}
-                    className="ml-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
                   >
-                    Edit
+                    <Bell className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    <span>+ Add Reminder</span>
                   </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setReminderModalSession(activeLesson);
-                    setEditReminderText("");
-                  }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
-                >
-                  <Bell className="w-3.5 h-3.5 text-[#48A5EE]" />
-                  <span>+ Add Reminder</span>
-                </button>
-              )}
+                )}
+
+                {/* Notes Badge/Button */}
+                {activeLesson.notes ? (
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-xs shrink-0">
+                    <FileText className="w-3.5 h-3.5 text-[#48A5EE] shrink-0" />
+                    <span className="font-semibold">Notes: {activeLesson.notes}</span>
+                    <button
+                      onClick={() => {
+                        setNotesModalSession(activeLesson);
+                        setEditNotesText(activeLesson.notes || "");
+                      }}
+                      className="ml-1 text-[11px] font-bold text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNotesModalSession(activeLesson);
+                      setEditNotesText("");
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    <span>+ Add Notes</span>
+                  </button>
+                )}
+              </div>
 
               {/* Attendance Confirmation Group (kept together on one line) */}
               <div className="flex items-center gap-1.5 shrink-0">
@@ -2809,37 +2872,70 @@ export default function AdminPage() {
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {s.title}
                                   </div>
-                                  {/* Personal Admin Reminder */}
-                                  {s.adminReminder ? (
-                                    <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
-                                      <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                      <span className="font-semibold truncate max-w-[140px]" title={s.adminReminder}>
-                                        {s.adminReminder}
-                                      </span>
+                                  {/* Personal Admin Reminder & Student/Tutor Notes */}
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    {s.adminReminder ? (
+                                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                        <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                        <span className="font-semibold truncate max-w-[120px]" title={s.adminReminder}>
+                                          {s.adminReminder}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setReminderModalSession(s);
+                                            setEditReminderText(s.adminReminder || "");
+                                          }}
+                                          className="text-[10px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
+                                          title="Edit Reminder"
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    ) : (
                                       <button
                                         onClick={() => {
                                           setReminderModalSession(s);
-                                          setEditReminderText(s.adminReminder || "");
+                                          setEditReminderText("");
                                         }}
-                                        className="text-[10px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
-                                        title="Edit Reminder"
+                                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                        title="Add personal reminder for this lesson"
                                       >
-                                        Edit
+                                        <Bell className="w-2.5 h-2.5" />
+                                        <span>+ Reminder</span>
                                       </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setReminderModalSession(s);
-                                        setEditReminderText("");
-                                      }}
-                                      className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                      title="Add personal reminder for this lesson"
-                                    >
-                                      <Bell className="w-2.5 h-2.5" />
-                                      <span>+ Reminder</span>
-                                    </button>
-                                  )}
+                                    )}
+
+                                    {s.notes ? (
+                                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
+                                        <FileText className="w-2.5 h-2.5 text-[#48A5EE] shrink-0" />
+                                        <span className="font-semibold truncate max-w-[120px]" title={s.notes}>
+                                          {s.notes}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setNotesModalSession(s);
+                                            setEditNotesText(s.notes || "");
+                                          }}
+                                          className="text-[10px] text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer font-bold"
+                                          title="Edit Notes"
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          setNotesModalSession(s);
+                                          setEditNotesText("");
+                                        }}
+                                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                        title="Add notes for student or tutor"
+                                      >
+                                        <FileText className="w-2.5 h-2.5" />
+                                        <span>+ Notes</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-3 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
                                   {formatTutorName(s.tutor?.name)}
@@ -3550,8 +3646,18 @@ export default function AdminPage() {
                               </div>
 
                               {s.notes && (
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                                   <strong>Notes:</strong> &quot;{s.notes}&quot;
+                                  <button
+                                    onClick={() => {
+                                      setNotesModalSession(s);
+                                      setEditNotesText(s.notes || "");
+                                    }}
+                                    className="text-[10px] text-blue-600 dark:text-blue-400 underline hover:text-blue-800 cursor-pointer font-bold"
+                                    title="Edit Notes"
+                                  >
+                                    Edit
+                                  </button>
                                 </p>
                               )}
                             </div>
@@ -5968,6 +6074,93 @@ export default function AdminPage() {
                     className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold shadow-sm disabled:opacity-50 cursor-pointer"
                   >
                     {isSavingReminder ? "Saving..." : "Save Reminder"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STUDENT & TUTOR NOTES MODAL */}
+      {notesModalSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-[#48A5EE]">
+                <FileText className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  Student &amp; Tutor Lesson Notes
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Visible to both the student and tutor in their lesson lobbies.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              Lesson: <strong>{notesModalSession.title}</strong> &bull; Student: <strong>{notesModalSession.tutee?.name}</strong> &bull; Tutor: <strong>{formatTutorName(notesModalSession.tutor?.name)}</strong>
+            </p>
+
+            <form onSubmit={handleSaveNotes} className="space-y-4 text-xs">
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Notes / Instructions
+                </label>
+                <textarea
+                  rows={3}
+                  value={editNotesText}
+                  onChange={(e) => setEditNotesText(e.target.value)}
+                  placeholder="Instructions for student or tutor..."
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE] resize-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                {notesModalSession.notes ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setEditNotesText("");
+                      setIsSavingNotes(true);
+                      try {
+                        const res = await fetch(`/api/sessions/${notesModalSession.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ notes: null }),
+                        });
+                        if (res.ok) {
+                          setActionMessage("Lesson notes cleared.");
+                          setNotesModalSession(null);
+                          await refreshAllData();
+                          setTimeout(() => setActionMessage(""), 3000);
+                        }
+                      } finally {
+                        setIsSavingNotes(false);
+                      }
+                    }}
+                    className="text-xs text-rose-500 hover:underline cursor-pointer"
+                  >
+                    Clear Notes
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNotesModalSession(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingNotes}
+                    className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingNotes ? "Saving..." : "Save Notes"}
                   </button>
                 </div>
               </div>

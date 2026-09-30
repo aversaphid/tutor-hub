@@ -172,7 +172,17 @@ export async function PATCH(
     } else {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.unlockEarlyMinutes !== undefined) updateData.unlockEarlyMinutes = updates.unlockEarlyMinutes;
-      if (updates.notes !== undefined) updateData.notes = updates.notes;
+      if (updates.notes !== undefined) {
+        updateData.notes = updates.notes ? updates.notes.trim() : null;
+        if (updates.status !== "CANCELLED" && auditAction === "REPORT_EDITED") {
+          auditAction = "NOTES_UPDATED";
+          auditDetailsList.push(
+            updateData.notes
+              ? `Student & Tutor notes updated: "${updateData.notes}"`
+              : "Student & Tutor notes cleared."
+          );
+        }
+      }
       if (updates.status !== undefined) {
         updateData.status = updates.status;
         if (updates.status === "CANCELLED") {
