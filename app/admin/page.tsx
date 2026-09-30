@@ -79,10 +79,13 @@ import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } 
 import TimeSelect from "@/components/time-select";
 import { useRouter } from "next/navigation";
 import { resolveActiveSession } from "@/lib/session-utils";
+import { useOnlinePresence } from "@/hooks/use-presence";
+import OnlineBadge from "@/components/online-badge";
 
 export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { isOnline, handlePresenceEvent } = useOnlinePresence(currentUser?.id);
   const [activeTab, setActiveTab] = useState<"lessons" | "students" | "tutors" | "resources" | "audit" | "settings" | "analytics">("lessons");
 
   const [sessions, setSessions] = useState<any[]>([]);
@@ -538,6 +541,18 @@ export default function AdminPage() {
         es = new EventSource("/api/events");
         es.addEventListener("session-update", () => {
           refreshAllData();
+        });
+        es.addEventListener("presence-snapshot", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            handlePresenceEvent("presence-snapshot", data);
+          } catch {}
+        });
+        es.addEventListener("presence-update", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            handlePresenceEvent("presence-update", data);
+          } catch {}
         });
         es.onerror = () => {
           es?.close();
@@ -2189,9 +2204,17 @@ export default function AdminPage() {
                   {activeLesson.title}
                 </h3>
 
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong> &bull; Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
-                </p>
+                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1.5">
+                    <span>Tutor: <strong className="text-slate-700 dark:text-slate-200">{formatTutorName(activeLesson.tutor?.name)}</strong></span>
+                    <OnlineBadge isOnline={isOnline(activeLesson.tutor?.id)} label="Online" offlineLabel="Offline" size="xs" />
+                  </span>
+                  <span>&bull;</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong></span>
+                    <OnlineBadge isOnline={isOnline(activeLesson.tutee?.id)} label="Student Online" offlineLabel="Student Offline" size="xs" />
+                  </span>
+                </div>
 
                 {/* STUDENT TOPIC FOR TODAY */}
                 {activeLesson.studentTopic && (
@@ -2963,8 +2986,11 @@ export default function AdminPage() {
                               return (
                               <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                                 <td className="px-4 py-3">
-                                  <div className="font-bold text-slate-800 dark:text-slate-100">
-                                    {s.tutee?.name}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-slate-800 dark:text-slate-100">
+                                      {s.tutee?.name}
+                                    </span>
+                                    <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
                                   </div>
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {s.title}
@@ -4271,10 +4297,11 @@ export default function AdminPage() {
                         {/* 1. Student Name & Live/Upcoming Badge */}
                         <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={st.active === false ? "text-slate-500 dark:text-slate-400" : ""}>
                                 {st.name}
                               </span>
+                              <OnlineBadge isOnline={isOnline(st.id)} label="Online" offlineLabel="Offline" size="xs" />
                               {st.pinLockedUntil && new Date(st.pinLockedUntil).getTime() > currentTime && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
                                   <ShieldAlert className="w-2.5 h-2.5 text-rose-600 shrink-0" />
@@ -4672,7 +4699,10 @@ export default function AdminPage() {
                     {filteredTutors.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                          {formatTutorName(t.name)}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{formatTutorName(t.name)}</span>
+                            <OnlineBadge isOnline={isOnline(t.id)} label="Online" offlineLabel="Offline" size="xs" />
+                          </div>
                         </td>
                         <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">
                           {t.email}

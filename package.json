@@ -16,7 +16,8 @@
     "test:notes": "node node_modules/tsx/dist/cli.mjs test/verify-previous-lesson-notes.ts",
     "test:edit-notes": "node node_modules/tsx/dist/cli.mjs test/verify-edit-notes.ts",
     "test:prev-teams": "node node_modules/tsx/dist/cli.mjs test/verify-prev-teams-url.ts",
-    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts && node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts && node node_modules/tsx/dist/cli.mjs test/verify-optimisation-suite.ts && node node_modules/tsx/dist/cli.mjs test/verify-previous-lesson-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-edit-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-prev-teams-url.ts"
+    "test:presence": "node node_modules/tsx/dist/cli.mjs test/verify-presence.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts && node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts && node node_modules/tsx/dist/cli.mjs test/verify-optimisation-suite.ts && node node_modules/tsx/dist/cli.mjs test/verify-previous-lesson-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-edit-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-prev-teams-url.ts && node node_modules/tsx/dist/cli.mjs test/verify-presence.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

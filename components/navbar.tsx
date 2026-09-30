@@ -71,8 +71,34 @@ export default function Navbar({ user }: NavbarProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Presence heartbeat for any logged-in user on any page
+  useEffect(() => {
+    if (!user?.id) return;
+    const sendHeartbeat = () => {
+      fetch("/api/presence", { method: "POST" }).catch(() => {});
+    };
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sendHeartbeat();
+    };
+    const onLeave = () => {
+      if (navigator.sendBeacon) navigator.sendBeacon("/api/presence/leave");
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("beforeunload", onLeave);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("beforeunload", onLeave);
+    };
+  }, [user?.id]);
+
   const handleLogout = async () => {
     try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/presence/leave");
+      }
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/");
       router.refresh();

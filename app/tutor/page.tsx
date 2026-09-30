@@ -63,10 +63,13 @@ import Link from "next/link";
 import { formatTutorName } from "@/lib/format";
 import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
+import { useOnlinePresence } from "@/hooks/use-presence";
+import OnlineBadge from "@/components/online-badge";
 
 export default function TutorDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { isOnline, handlePresenceEvent } = useOnlinePresence(currentUser?.id);
   const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons" | "resources" | "settings">("active");
 
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
@@ -339,6 +342,18 @@ export default function TutorDashboardPage() {
         es = new EventSource("/api/events");
         es.addEventListener("session-update", () => {
           loadMySessions();
+        });
+        es.addEventListener("presence-snapshot", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            handlePresenceEvent("presence-snapshot", data);
+          } catch {}
+        });
+        es.addEventListener("presence-update", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            handlePresenceEvent("presence-update", data);
+          } catch {}
         });
         es.onerror = () => {
           es?.close();
@@ -1125,9 +1140,17 @@ export default function TutorDashboardPage() {
                     <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
                       {activeLesson.title}
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
+                      </p>
+                      <OnlineBadge
+                        isOnline={isOnline(activeLesson.tutee?.id)}
+                        label="Student Online"
+                        offlineLabel="Student Offline"
+                        size="xs"
+                      />
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {activeLesson.studentTopic && (
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
@@ -1389,9 +1412,17 @@ export default function TutorDashboardPage() {
                       <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100">
                         {nextLesson.title}
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Student: <strong className="text-slate-700 dark:text-slate-200">{nextLesson.tutee?.name}</strong>
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Student: <strong className="text-slate-700 dark:text-slate-200">{nextLesson.tutee?.name}</strong>
+                        </p>
+                        <OnlineBadge
+                          isOnline={isOnline(nextLesson.tutee?.id)}
+                          label="Student Online"
+                          offlineLabel="Student Offline"
+                          size="xs"
+                        />
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
                         {nextLesson.studentTopic && (
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
@@ -1741,6 +1772,12 @@ export default function TutorDashboardPage() {
                           <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
                             {student.name}
                           </span>
+                          <OnlineBadge
+                            isOnline={isOnline(student.id)}
+                            label="Online"
+                            offlineLabel="Offline"
+                            size="xs"
+                          />
                           {isLocked && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
                               <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
@@ -2095,8 +2132,11 @@ export default function TutorDashboardPage() {
                               return (
                               <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                                 <td className="px-4 py-3">
-                                  <div className="font-bold text-slate-800 dark:text-slate-100">
-                                    {s.tutee?.name}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-slate-800 dark:text-slate-100">
+                                      {s.tutee?.name}
+                                    </span>
+                                    <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
                                   </div>
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {s.title}
