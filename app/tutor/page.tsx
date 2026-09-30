@@ -224,6 +224,44 @@ export default function TutorDashboardPage() {
     [nextLesson, getPreviousLessonNotes]
   );
 
+  // Retrieve Teams meeting link used in previous lesson for the student
+  const getPreviousLessonTeamsUrl = useCallback(
+    (session: any): string | null => {
+      if (!session) return null;
+      const tuteeId = session.tuteeId || session.tutee?.id;
+      if (!tuteeId) return null;
+
+      const currentStart = new Date(session.scheduledStartTime).getTime();
+
+      const pastForStudent = mySessions
+        .filter((s: any) => {
+          const sTuteeId = s.tuteeId || s.tutee?.id;
+          if (sTuteeId !== tuteeId || s.id === session.id) return false;
+          if (s.status === "CANCELLED") return false;
+          const sStart = new Date(s.scheduledStartTime).getTime();
+          return sStart < currentStart && Boolean(s.teamsMeetingUrl?.trim());
+        })
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime()
+        );
+
+      const previousLesson = pastForStudent[0];
+      return previousLesson?.teamsMeetingUrl?.trim() || null;
+    },
+    [mySessions]
+  );
+
+  const activeLessonPrevTeamsUrl = useMemo(
+    () => getPreviousLessonTeamsUrl(activeLesson),
+    [activeLesson, getPreviousLessonTeamsUrl]
+  );
+
+  const nextLessonPrevTeamsUrl = useMemo(
+    () => getPreviousLessonTeamsUrl(nextLesson),
+    [nextLesson, getPreviousLessonTeamsUrl]
+  );
+
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
 
   // Collapsible Lesson Sections state (Upcoming expanded by default, others collapsed)
@@ -519,6 +557,81 @@ export default function TutorDashboardPage() {
       alert("Network error updating Teams URL");
     } finally {
       setIsUpdatingNextTeams(false);
+    }
+  };
+
+  const handleUsePreviousTeamsUrl = async () => {
+    if (!activeLessonPrevTeamsUrl || !activeLesson) return;
+    setTeamsUrlInput(activeLessonPrevTeamsUrl);
+    setIsUpdatingTeams(true);
+    setTeamsSuccess("");
+    try {
+      const res = await fetch(`/api/sessions/${activeLesson.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamsMeetingUrl: activeLessonPrevTeamsUrl }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTeamsSuccess("Teams link set to previous lesson link!");
+        setActiveLesson(data.session);
+        loadMySessions();
+        setTimeout(() => setTeamsSuccess(""), 3500);
+      } else {
+        alert(data.error || "Failed to update Teams URL");
+      }
+    } catch {
+      alert("Network error updating Teams URL");
+    } finally {
+      setIsUpdatingTeams(false);
+    }
+  };
+
+  const handleUsePreviousNextTeamsUrl = async () => {
+    if (!nextLessonPrevTeamsUrl || !nextLesson) return;
+    setNextTeamsUrlInput(nextLessonPrevTeamsUrl);
+    setIsUpdatingNextTeams(true);
+    setNextTeamsSuccess("");
+    try {
+      const res = await fetch(`/api/sessions/${nextLesson.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamsMeetingUrl: nextLessonPrevTeamsUrl }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNextTeamsSuccess("Teams link set to previous lesson link!");
+        loadMySessions();
+        setTimeout(() => setNextTeamsSuccess(""), 3500);
+      } else {
+        alert(data.error || "Failed to update Teams URL");
+      }
+    } catch {
+      alert("Network error updating Teams URL");
+    } finally {
+      setIsUpdatingNextTeams(false);
+    }
+  };
+
+  const handleSetSessionPreviousTeamsUrl = async (session: any) => {
+    const prevUrl = getPreviousLessonTeamsUrl(session);
+    if (!prevUrl) return;
+    try {
+      const res = await fetch(`/api/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamsMeetingUrl: prevUrl }),
+      });
+      if (res.ok) {
+        setActionMessage(`Teams link set from previous lesson for ${session.tutee?.name || "student"}!`);
+        loadLiveSession();
+        loadMySessions();
+        setTimeout(() => setActionMessage(""), 4000);
+      } else {
+        alert("Failed to save Teams meeting link.");
+      }
+    } catch {
+      alert("Network error updating Teams link.");
     }
   };
 
@@ -1129,10 +1242,22 @@ export default function TutorDashboardPage() {
                       placeholder="https://teams.microsoft.com/l/meetup-join/..."
                       className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE]"
                     />
+                    {activeLessonPrevTeamsUrl && teamsUrlInput !== activeLessonPrevTeamsUrl && (
+                      <button
+                        type="button"
+                        onClick={handleUsePreviousTeamsUrl}
+                        disabled={isUpdatingTeams}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
+                        title={`Set to link used in previous lesson: ${activeLessonPrevTeamsUrl}`}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        <span>Use Previous Link</span>
+                      </button>
+                    )}
                     <button
                       onClick={handleUpdateTeamsUrl}
                       disabled={isUpdatingTeams}
-                      className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
                     >
                       <Save className="w-3.5 h-3.5" />
                       <span>{isUpdatingTeams ? "Saving..." : "Save Link"}</span>
@@ -1365,11 +1490,23 @@ export default function TutorDashboardPage() {
                         placeholder="https://teams.microsoft.com/l/meetup-join/..."
                         className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE]"
                       />
+                      {nextLessonPrevTeamsUrl && nextTeamsUrlInput !== nextLessonPrevTeamsUrl && (
+                        <button
+                          type="button"
+                          onClick={handleUsePreviousNextTeamsUrl}
+                          disabled={isUpdatingNextTeams}
+                          className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
+                          title={`Set to link used in previous lesson: ${nextLessonPrevTeamsUrl}`}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                          <span>Use Previous Link</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={handleUpdateNextTeamsUrl}
                         disabled={isUpdatingNextTeams}
-                        className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
                       >
                         <Save className="w-3.5 h-3.5" />
                         <span>{isUpdatingNextTeams ? "Saving..." : "Save Link"}</span>
@@ -2016,7 +2153,20 @@ export default function TutorDashboardPage() {
                                         <span>Teams</span>
                                       </a>
                                     ) : (
-                                      <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                        {getPreviousLessonTeamsUrl(s) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSetSessionPreviousTeamsUrl(s)}
+                                            className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline cursor-pointer flex items-center gap-0.5"
+                                            title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
+                                          >
+                                            <RotateCcw className="w-2.5 h-2.5" />
+                                            <span>+ Use Prev</span>
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
                                     <AddToCalendar session={s} compact />
                                   </div>
