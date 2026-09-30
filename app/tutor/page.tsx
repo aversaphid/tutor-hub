@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
@@ -183,6 +183,44 @@ export default function TutorDashboardPage() {
   useEffect(() => {
     setNextTeamsUrlInput(nextLesson?.teamsMeetingUrl || "");
   }, [nextLesson?.id, nextLesson?.teamsMeetingUrl]);
+
+  // Helper to retrieve extra notes & homework from the previous lesson for a student
+  const getPreviousLessonNotes = useCallback(
+    (session: any): string | null => {
+      if (!session) return null;
+      const tuteeId = session.tuteeId || session.tutee?.id;
+      if (!tuteeId) return null;
+
+      const currentStart = new Date(session.scheduledStartTime).getTime();
+
+      const pastForStudent = mySessions
+        .filter((s: any) => {
+          const sTuteeId = s.tuteeId || s.tutee?.id;
+          if (sTuteeId !== tuteeId || s.id === session.id) return false;
+          if (s.status === "CANCELLED") return false;
+          const sStart = new Date(s.scheduledStartTime).getTime();
+          return sStart < currentStart && (s.status === "COMPLETED" || Boolean(s.feedbackNotes));
+        })
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime()
+        );
+
+      const previousLesson = pastForStudent[0];
+      return previousLesson?.feedbackNotes?.trim() || null;
+    },
+    [mySessions]
+  );
+
+  const activeLessonPrevNotes = useMemo(
+    () => getPreviousLessonNotes(activeLesson),
+    [activeLesson, getPreviousLessonNotes]
+  );
+
+  const nextLessonPrevNotes = useMemo(
+    () => getPreviousLessonNotes(nextLesson),
+    [nextLesson, getPreviousLessonNotes]
+  );
 
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
 
@@ -975,12 +1013,25 @@ export default function TutorDashboardPage() {
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Student: <strong className="text-slate-700 dark:text-slate-200">{activeLesson.tutee?.name}</strong>
                     </p>
-                    {activeLesson.studentTopic && (
-                      <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
-                        <BookOpen className="w-3.5 h-3.5 shrink-0" />
-                        <span>Today&apos;s topic: {activeLesson.studentTopic}</span>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      {activeLesson.studentTopic && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                          <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                          <span>Today&apos;s topic: {activeLesson.studentTopic}</span>
+                        </div>
+                      )}
+                      {activeLessonPrevNotes && (
+                        <div
+                          className="inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-xs font-medium shadow-2xs"
+                          title="Extra notes & homework set in the previous lesson"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5 sm:mt-0" />
+                          <span>
+                            <strong className="font-semibold text-purple-800 dark:text-purple-300">Previous extra notes &amp; homework:</strong> {activeLessonPrevNotes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* VISIBLE PIN & MAGIC LINK FOR NEXT MEETING */}
@@ -1219,12 +1270,25 @@ export default function TutorDashboardPage() {
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         Student: <strong className="text-slate-700 dark:text-slate-200">{nextLesson.tutee?.name}</strong>
                       </p>
-                      {nextLesson.studentTopic && (
-                        <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
-                          <BookOpen className="w-3.5 h-3.5 shrink-0" />
-                          <span>Today&apos;s topic: {nextLesson.studentTopic}</span>
-                        </div>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                        {nextLesson.studentTopic && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                            <span>Today&apos;s topic: {nextLesson.studentTopic}</span>
+                          </div>
+                        )}
+                        {nextLessonPrevNotes && (
+                          <div
+                            className="inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-xs font-medium shadow-2xs"
+                            title="Extra notes & homework set in the previous lesson"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5 sm:mt-0" />
+                            <span>
+                              <strong className="font-semibold text-purple-800 dark:text-purple-300">Previous extra notes &amp; homework:</strong> {nextLessonPrevNotes}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Visible PIN & Magic Link for next lesson */}
@@ -1914,12 +1978,23 @@ export default function TutorDashboardPage() {
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400">
                                     {s.title}
                                   </div>
-                                  {s.studentTopic && (
-                                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
-                                      <BookOpen className="w-2.5 h-2.5 shrink-0" />
-                                      <span>{s.studentTopic}</span>
-                                    </div>
-                                  )}
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    {s.studentTopic && (
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
+                                        <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                                        <span>{s.studentTopic}</span>
+                                      </div>
+                                    )}
+                                    {getPreviousLessonNotes(s) && (
+                                      <div
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-[10px] font-medium max-w-[280px] truncate"
+                                        title={`Previous extra notes & homework: ${getPreviousLessonNotes(s)}`}
+                                      >
+                                        <FileText className="w-2.5 h-2.5 shrink-0 text-purple-600 dark:text-purple-400" />
+                                        <span className="truncate">Prev notes: {getPreviousLessonNotes(s)}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
                                   <div className="font-semibold text-slate-700 dark:text-slate-200">
