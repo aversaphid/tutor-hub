@@ -2991,17 +2991,36 @@ export default function AdminPage() {
                                   s.status !== "CANCELLED");
 
                               return (
-                              <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                              <tr
+                                key={s.id}
+                                onClick={(e) => {
+                                  if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                                  handleOpenReschedule(s);
+                                }}
+                                className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group/row"
+                                title="Click on lesson to edit time or reschedule"
+                              >
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-slate-800 dark:text-slate-100">
-                                      {s.tutee?.name}
-                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenReschedule(s)}
+                                      className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1.5"
+                                      title="Click to edit lesson time or reschedule"
+                                    >
+                                      <span>{s.tutee?.name}</span>
+                                      <CalendarClock className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-[#48A5EE] transition-opacity shrink-0" />
+                                    </button>
                                     <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
                                   </div>
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReschedule(s)}
+                                    className="text-left text-[11px] text-slate-500 dark:text-slate-400 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer block"
+                                    title="Click to edit lesson time or reschedule"
+                                  >
                                     {s.title}
-                                  </div>
+                                  </button>
                                   {/* Personal Admin Reminder & Student/Tutor Notes */}
                                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                     {s.adminReminder ? (
@@ -3071,18 +3090,26 @@ export default function AdminPage() {
                                   {formatTutorName(s.tutor?.name)}
                                 </td>
                                 <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                                  <div className="font-semibold text-slate-700 dark:text-slate-200">
-                                    {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                      weekday: "short",
-                                      month: "short",
-                                      day: "numeric",
-                                    })}{" "}
-                                    &bull;{" "}
-                                    {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReschedule(s)}
+                                    className="text-left font-semibold text-slate-700 dark:text-slate-200 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1.5"
+                                    title="Click to edit lesson time or reschedule"
+                                  >
+                                    <span>
+                                      {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                        weekday: "short",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}{" "}
+                                      &bull;{" "}
+                                      {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                    <CalendarClock className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#48A5EE] transition-colors shrink-0" />
+                                  </button>
                                   <div className="mt-1 flex items-center gap-2 font-sans">
                                     {s.teamsMeetingUrl ? (
                                       <a

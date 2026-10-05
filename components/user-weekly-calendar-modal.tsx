@@ -22,6 +22,7 @@ import {
   GripVertical,
   Move,
   Loader2,
+  CalendarClock,
 } from "lucide-react";
 import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -117,6 +118,27 @@ export default function UserWeeklyCalendarModal({
     conflictReason: string;
   } | null>(null);
   const [optimisticOverrides, setOptimisticOverrides] = useState<Record<string, { scheduledStartTime: string; scheduledEndTime: string }>>({});
+
+  // Edit time state for selected session
+  const [isEditingSelectedTime, setIsEditingSelectedTime] = useState(false);
+  const [editSelectedDate, setEditSelectedDate] = useState("");
+  const [editSelectedStartTime, setEditSelectedStartTime] = useState("");
+  const [editSelectedEndTime, setEditSelectedEndTime] = useState("");
+  const [editSelectedError, setEditSelectedError] = useState("");
+  const [isSubmittingEditTime, setIsSubmittingEditTime] = useState(false);
+
+  useEffect(() => {
+    if (selectedSession) {
+      const sStart = new Date(selectedSession.scheduledStartTime);
+      const sEnd = new Date(selectedSession.scheduledEndTime);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setEditSelectedDate(`${sStart.getFullYear()}-${pad(sStart.getMonth() + 1)}-${pad(sStart.getDate())}`);
+      setEditSelectedStartTime(`${pad(sStart.getHours())}:${pad(Math.floor(sStart.getMinutes() / 5) * 5)}`);
+      setEditSelectedEndTime(`${pad(sEnd.getHours())}:${pad(Math.floor(sEnd.getMinutes() / 5) * 5)}`);
+      setIsEditingSelectedTime(false);
+      setEditSelectedError("");
+    }
+  }, [selectedSession]);
 
   // Active-only students and tutors for combo lists
   const activeStudents = useMemo(() => {
@@ -552,6 +574,81 @@ export default function UserWeeklyCalendarModal({
       alert("Network error deleting lesson.");
     } finally {
       setIsDeletingSession(false);
+    }
+  };
+
+  // Save edited time from selected session modal
+  const handleSaveSelectedTime = async () => {
+    if (!editSelectedDate || !editSelectedStartTime || !editSelectedEndTime || !selectedSession) return;
+    setEditSelectedError("");
+
+    const [startH, startM] = editSelectedStartTime.split(":").map(Number);
+    const [endH, endM] = editSelectedEndTime.split(":").map(Number);
+    const [year, month, day] = editSelectedDate.split("-").map(Number);
+
+    const newStart = new Date(year, month - 1, day, startH, startM, 0, 0);
+    const newEnd = new Date(year, month - 1, day, endH, endM, 0, 0);
+
+    if (newEnd.getTime() <= newStart.getTime()) {
+      setEditSelectedError("End time must be after start time.");
+      return;
+    }
+
+    setIsSubmittingEditTime(true);
+    try {
+      const res = await fetch(`/api/sessions/${selectedSession.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledStartTime: newStart.toISOString(),
+          scheduledEndTime: newEnd.toISOString(),
+          allowOverlap: false,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409 && data.conflict) {
+          setClashConfirmation({
+            session: selectedSession,
+            newStart,
+            newEnd,
+            conflictReason: data.error || "A scheduling conflict or tutor unavailability was detected.",
+          });
+          setIsEditingSelectedTime(false);
+          return;
+        }
+        setEditSelectedError(data.error || "Failed to update lesson time.");
+        return;
+      }
+
+      setOptimisticOverrides((prev) => ({
+        ...prev,
+        [selectedSession.id]: {
+          scheduledStartTime: newStart.toISOString(),
+          scheduledEndTime: newEnd.toISOString(),
+        },
+      }));
+
+      setSelectedSession((prev: any) => ({
+        ...prev,
+        scheduledStartTime: newStart.toISOString(),
+        scheduledEndTime: newEnd.toISOString(),
+      }));
+
+      setIsEditingSelectedTime(false);
+      showDragToast(
+        "success",
+        `Lesson time updated to ${newStart.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} at ${newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+      );
+
+      if (onSessionCreated) {
+        onSessionCreated();
+      }
+    } catch (err: any) {
+      setEditSelectedError(err?.message || "Failed to reschedule lesson.");
+    } finally {
+      setIsSubmittingEditTime(false);
     }
   };
 
@@ -1728,25 +1825,135 @@ export default function UserWeeklyCalendarModal({
                   {formatTutorName(selectedSession.tutor?.name)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-semibold">Scheduled:</span>
-                <span className="font-mono text-slate-700 dark:text-slate-300">
-                  {new Date(selectedSession.scheduledStartTime).toLocaleDateString([], {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}{" "}
-                  {new Date(selectedSession.scheduledStartTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  &ndash;{" "}
-                  {new Date(selectedSession.scheduledEndTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
+              {!isEditingSelectedTime ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-semibold">Scheduled:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      {new Date(selectedSession.scheduledStartTime).toLocaleDateString([], {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}{" "}
+                      {new Date(selectedSession.scheduledStartTime).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      &ndash;{" "}
+                      {new Date(selectedSession.scheduledEndTime).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    {isAdmin && selectedSession.status !== "COMPLETED" && selectedSession.status !== "CANCELLED" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingSelectedTime(true);
+                          setEditSelectedError("");
+                        }}
+                        className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                        title="Edit exact date and time (5-minute precision)"
+                      >
+                        <CalendarClock className="w-3 h-3" />
+                        <span>Edit Time</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-3 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 text-xs">
+                      <CalendarClock className="w-3.5 h-3.5 text-[#48A5EE]" />
+                      <span>Edit Date &amp; Time (5-min precision)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingSelectedTime(false)}
+                      className="text-slate-400 hover:text-slate-600 text-[11px] font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {editSelectedError && (
+                    <div className="p-2 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-[11px] font-semibold flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{editSelectedError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-slate-600 dark:text-slate-400 font-semibold text-[10px] mb-0.5">
+                        Date
+                      </label>
+                      <input
+                        type="date"
+                        value={editSelectedDate}
+                        onChange={(e) => setEditSelectedDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs focus:outline-none focus:border-[#48A5EE]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-400 font-semibold text-[10px] mb-0.5">
+                          Start Time
+                        </label>
+                        <TimeSelect
+                          value={editSelectedStartTime}
+                          onChange={(newStart) => {
+                            setEditSelectedStartTime(newStart);
+                            const [sH, sM] = editSelectedStartTime.split(":").map(Number);
+                            const [eH, eM] = editSelectedEndTime.split(":").map(Number);
+                            const dur = Math.max(30, (eH * 60 + eM) - (sH * 60 + sM));
+                            setEditSelectedEndTime(addMinutesToTime(newStart, isNaN(dur) ? 60 : dur));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 dark:text-slate-400 font-semibold text-[10px] mb-0.5">
+                          End Time
+                        </label>
+                        <TimeSelect
+                          value={editSelectedEndTime}
+                          onChange={(newEnd) => setEditSelectedEndTime(newEnd)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSelectedTime(false)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSubmittingEditTime}
+                        onClick={handleSaveSelectedTime}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSubmittingEditTime ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Save New Time</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 font-semibold">Status:</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
