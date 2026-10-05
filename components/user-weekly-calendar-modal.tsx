@@ -13,11 +13,15 @@ import {
   Video,
   Check,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   Trash2,
   Palmtree,
   Ban,
   Copy,
+  GripVertical,
+  Move,
+  Loader2,
 } from "lucide-react";
 import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
@@ -99,6 +103,20 @@ export default function UserWeeklyCalendarModal({
   // Selected Unavailability block for viewing / deleting
   const [selectedUnavailability, setSelectedUnavailability] = useState<any | null>(null);
   const [isDeletingUnavail, setIsDeletingUnavail] = useState(false);
+
+  // Drag and drop reschedule state
+  const [draggedSession, setDraggedSession] = useState<any | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<{ dateStr: string; hour: number; minute: number } | null>(null);
+  const [isDraggingActive, setIsDraggingActive] = useState(false);
+  const [isReschedulingDrag, setIsReschedulingDrag] = useState(false);
+  const [dragToast, setDragToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [clashConfirmation, setClashConfirmation] = useState<{
+    session: any;
+    newStart: Date;
+    newEnd: Date;
+    conflictReason: string;
+  } | null>(null);
+  const [optimisticOverrides, setOptimisticOverrides] = useState<Record<string, { scheduledStartTime: string; scheduledEndTime: string }>>({});
 
   // Active-only students and tutors for combo lists
   const activeStudents = useMemo(() => {
@@ -208,22 +226,32 @@ export default function UserWeeklyCalendarModal({
     return list;
   }, []);
 
-  // Filter lessons for the active target user on this active week
+  // Filter lessons for the active target user on this active week (with optimistic overrides for smooth drag & drop)
   const userSessions = useMemo(() => {
     if (!targetUser) return [];
     const startMs = monday.getTime();
     const endMs = new Date(sunday).setHours(23, 59, 59, 999);
 
-    return allSessions.filter((s) => {
-      const sStart = new Date(s.scheduledStartTime).getTime();
-      if (sStart < startMs || sStart > endMs) return false;
-      if (isStudent) {
-        return s.tuteeId === targetUser.id || s.tutee?.id === targetUser.id;
-      } else {
-        return s.tutorId === targetUser.id || s.tutor?.id === targetUser.id;
-      }
-    });
-  }, [targetUser, allSessions, monday, sunday, isStudent]);
+    return allSessions
+      .map((s) => {
+        if (optimisticOverrides[s.id]) {
+          return {
+            ...s,
+            ...optimisticOverrides[s.id],
+          };
+        }
+        return s;
+      })
+      .filter((s) => {
+        const sStart = new Date(s.scheduledStartTime).getTime();
+        if (sStart < startMs || sStart > endMs) return false;
+        if (isStudent) {
+          return s.tuteeId === targetUser.id || s.tutee?.id === targetUser.id;
+        } else {
+          return s.tutorId === targetUser.id || s.tutor?.id === targetUser.id;
+        }
+      });
+  }, [targetUser, allSessions, monday, sunday, isStudent, optimisticOverrides]);
 
   // Current time calculations for live indicator
   const currentHourFloat = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
@@ -297,6 +325,153 @@ export default function UserWeeklyCalendarModal({
     }
 
     setIsQuickAddOpen(true);
+  };
+
+  // Helper to show floating drag toast notification
+  const showDragToast = (type: "success" | "error", message: string) => {
+    setDragToast({ type, message });
+    setTimeout(() => {
+      setDragToast((prev) => (prev?.message === message ? null : prev));
+    }, 4500);
+  };
+
+  // Drag & drop lesson rescheduling handlers (Head Tutor / Admin only)
+  const handleDragStart = (e: React.DragEvent, session: any) => {
+    if (!isAdmin || session.status === "COMPLETED" || session.status === "CANCELLED") {
+      e.preventDefault();
+      return;
+    }
+    setDraggedSession(session);
+    setIsDraggingActive(true);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", session.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSession(null);
+    setDragOverTarget(null);
+    // Keep isDraggingActive true briefly so that onClick doesn't immediately open the details modal
+    setTimeout(() => {
+      setIsDraggingActive(false);
+    }, 120);
+  };
+
+  const handleDragOverSlot = (e: React.DragEvent, dateStr: string, hour: number, minute: number) => {
+    if (!draggedSession || !isAdmin) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    if (
+      !dragOverTarget ||
+      dragOverTarget.dateStr !== dateStr ||
+      dragOverTarget.hour !== hour ||
+      dragOverTarget.minute !== minute
+    ) {
+      setDragOverTarget({ dateStr, hour, minute });
+    }
+  };
+
+  const executeReschedule = async (
+    session: any,
+    newStart: Date,
+    newEnd: Date,
+    allowOverlap: boolean = false
+  ) => {
+    setIsReschedulingDrag(true);
+
+    // Apply optimistic override for instant feedback
+    setOptimisticOverrides((prev) => ({
+      ...prev,
+      [session.id]: {
+        scheduledStartTime: newStart.toISOString(),
+        scheduledEndTime: newEnd.toISOString(),
+      },
+    }));
+
+    try {
+      const res = await fetch(`/api/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledStartTime: newStart.toISOString(),
+          scheduledEndTime: newEnd.toISOString(),
+          allowOverlap,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Revert optimistic override
+        setOptimisticOverrides((prev) => {
+          const next = { ...prev };
+          delete next[session.id];
+          return next;
+        });
+
+        if (res.status === 409 && data.conflict) {
+          // Schedule clash / blackout conflict -> prompt for confirmation
+          setClashConfirmation({
+            session,
+            newStart,
+            newEnd,
+            conflictReason: data.error || "A scheduling conflict or tutor unavailability was detected.",
+          });
+          return;
+        } else {
+          showDragToast("error", data.error || "Failed to reschedule lesson");
+          return;
+        }
+      }
+
+      showDragToast(
+        "success",
+        `Lesson moved to ${newStart.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} at ${newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+      );
+
+      // Trigger calendar/dashboard reload
+      if (onSessionCreated) {
+        onSessionCreated();
+      }
+    } catch (err: any) {
+      // Revert optimistic override
+      setOptimisticOverrides((prev) => {
+        const next = { ...prev };
+        delete next[session.id];
+        return next;
+      });
+      showDragToast("error", err?.message || "Failed to reschedule lesson due to network error");
+    } finally {
+      setIsReschedulingDrag(false);
+    }
+  };
+
+  const handleDropOnSlot = async (e: React.DragEvent, dayDate: Date, hour: number, minute: number) => {
+    e.preventDefault();
+    if (!draggedSession || !isAdmin) return;
+
+    const currentSession = draggedSession;
+    setDraggedSession(null);
+    setDragOverTarget(null);
+
+    // Compute original duration in ms
+    const origStart = new Date(currentSession.scheduledStartTime).getTime();
+    const origEnd = new Date(currentSession.scheduledEndTime).getTime();
+    const durationMs = Math.max(30 * 60 * 1000, origEnd - origStart);
+
+    // Construct new start Date
+    const targetDate = new Date(dayDate);
+    targetDate.setHours(hour, minute, 0, 0);
+
+    const newStart = targetDate;
+    const newEnd = new Date(targetDate.getTime() + durationMs);
+
+    // If dropped onto the exact same time, do nothing
+    if (newStart.getTime() === origStart) {
+      return;
+    }
+
+    await executeReschedule(currentSession, newStart, newEnd, false);
   };
 
   // Submit new 1-hour lesson
@@ -782,6 +957,12 @@ export default function UserWeeklyCalendarModal({
                 </button>
               </>
             )}
+            {isAdmin && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#48A5EE] border border-blue-200 dark:border-blue-900 text-[10px] font-bold tracking-wide shadow-2xs">
+                <Move className="w-3 h-3 animate-pulse" />
+                <span>Drag lessons to reschedule</span>
+              </span>
+            )}
             {isAdmin ? (
               <span className="hidden sm:inline text-slate-400">
                 {isStudent
@@ -935,6 +1116,9 @@ export default function UserWeeklyCalendarModal({
                   return sDate.toDateString() === dayDate.toDateString();
                 });
 
+                const pad = (n: number) => String(n).padStart(2, "0");
+                const dayDateStr = `${dayDate.getFullYear()}-${pad(dayDate.getMonth() + 1)}-${pad(dayDate.getDate())}`;
+
                 return (
                   <div
                     key={dayIdx}
@@ -967,7 +1151,38 @@ export default function UserWeeklyCalendarModal({
                         </div>
                       </div>
                     )}
-                    {/* Background 30-minute slot click targets */}
+
+                    {/* GHOST DROP PREVIEW FOR DRAG & DROP RESCHEDULING */}
+                    {draggedSession && dragOverTarget?.dateStr === dayDateStr && (() => {
+                      const origStart = new Date(draggedSession.scheduledStartTime).getTime();
+                      const origEnd = new Date(draggedSession.scheduledEndTime).getTime();
+                      const durationHours = Math.max(0.5, (origEnd - origStart) / (1000 * 60 * 60));
+                      const previewStartHour = dragOverTarget.hour + dragOverTarget.minute / 60;
+                      const previewTopPx = (previewStartHour - START_HOUR) * HOUR_HEIGHT;
+                      const previewHeightPx = Math.max(48, durationHours * HOUR_HEIGHT - 4);
+
+                      return (
+                        <div
+                          style={{
+                            top: `${previewTopPx}px`,
+                            height: `${previewHeightPx}px`,
+                          }}
+                          className="absolute left-1.5 right-1.5 rounded-2xl border-2 border-dashed border-[#48A5EE] bg-[#48A5EE]/20 backdrop-blur-xs z-30 pointer-events-none p-2.5 flex flex-col justify-between shadow-lg shadow-blue-500/10 transition-all duration-75 animate-pulse"
+                        >
+                          <div className="flex items-center gap-1.5 text-blue-900 dark:text-blue-100 font-extrabold text-xs">
+                            <Move className="w-3.5 h-3.5 text-[#48A5EE]" />
+                            <span className="truncate">Move &ldquo;{draggedSession.title || "Lesson"}&rdquo; here</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-blue-900 dark:text-blue-200 font-bold bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md inline-block w-fit">
+                            {String(dragOverTarget.hour).padStart(2, "0")}:{String(dragOverTarget.minute).padStart(2, "0")}
+                            {" → "}
+                            {addMinutesToTime(`${String(dragOverTarget.hour).padStart(2, "0")}:${String(dragOverTarget.minute).padStart(2, "0")}`, Math.round(durationHours * 60))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Background 30-minute slot click targets & drag targets */}
                     {hours.map((hour) => {
                       if (hour === 24) return null; // No 24-25 slot
                       return (
@@ -979,9 +1194,16 @@ export default function UserWeeklyCalendarModal({
                           {/* 00 - 30 min slot */}
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
-                            onClick={() => handleSlotClick(dayDate, hour, 0)}
+                            onClick={() => {
+                              if (isDraggingActive) return;
+                              handleSlotClick(dayDate, hour, 0);
+                            }}
+                            onDragOver={(e) => handleDragOverSlot(e, dayDateStr, hour, 0)}
+                            onDrop={(e) => handleDropOnSlot(e, dayDate, hour, 0)}
                             className={`border-b border-dashed border-slate-100 dark:border-slate-800/50 transition-colors relative group ${
-                              isAdmin || !isStudent
+                              dragOverTarget?.dateStr === dayDateStr && dragOverTarget?.hour === hour && dragOverTarget?.minute === 0
+                                ? "bg-blue-100/60 dark:bg-blue-900/40"
+                                : isAdmin || !isStudent
                                 ? "cursor-pointer hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
                                 : "cursor-default"
                             }`}
@@ -1022,9 +1244,16 @@ export default function UserWeeklyCalendarModal({
                           {/* 30 - 00 min slot */}
                           <div
                             style={{ height: `${HOUR_HEIGHT / 2}px` }}
-                            onClick={() => handleSlotClick(dayDate, hour, 30)}
+                            onClick={() => {
+                              if (isDraggingActive) return;
+                              handleSlotClick(dayDate, hour, 30);
+                            }}
+                            onDragOver={(e) => handleDragOverSlot(e, dayDateStr, hour, 30)}
+                            onDrop={(e) => handleDropOnSlot(e, dayDate, hour, 30)}
                             className={`transition-colors relative group ${
-                              isAdmin || !isStudent
+                              dragOverTarget?.dateStr === dayDateStr && dragOverTarget?.hour === hour && dragOverTarget?.minute === 30
+                                ? "bg-blue-100/60 dark:bg-blue-900/40"
+                                : isAdmin || !isStudent
                                 ? "cursor-pointer hover:bg-[#48A5EE]/5 dark:hover:bg-[#48A5EE]/10"
                                 : "cursor-default"
                             }`}
@@ -1090,26 +1319,40 @@ export default function UserWeeklyCalendarModal({
                         bgClass = "bg-rose-600 text-white line-through opacity-70";
                       }
 
+                      const isDraggable = isAdmin && session.status !== "COMPLETED" && session.status !== "CANCELLED";
+                      const isBeingDragged = draggedSession?.id === session.id;
+
                       return (
                         <div
                           key={session.id}
+                          draggable={isDraggable}
+                          onDragStart={(e) => handleDragStart(e, session)}
+                          onDragEnd={handleDragEnd}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (isDraggingActive) return;
                             setSelectedSession(session);
                           }}
                           style={{
                             top: `${topPx}px`,
                             height: `${heightPx}px`,
                           }}
-                          className={`absolute left-1 right-1 rounded-2xl p-2.5 shadow-md cursor-pointer transition-transform hover:scale-[1.01] z-10 overflow-hidden flex flex-col justify-between ${bgClass}`}
+                          className={`absolute left-1 right-1 rounded-2xl p-2.5 shadow-md transition-all z-10 overflow-hidden flex flex-col justify-between ${bgClass} ${
+                            isDraggable ? "cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-white/50" : "cursor-pointer"
+                          } ${isBeingDragged ? "opacity-30 scale-95 border-2 border-dashed border-white shadow-none" : "hover:scale-[1.01]"}`}
                         >
                           <div className="space-y-0.5">
-                            <div className="font-extrabold text-xs flex items-center gap-1.5 leading-tight">
+                            <div className="font-extrabold text-xs flex items-center justify-between gap-1.5 leading-tight">
                               <span className="truncate">
                                 {isStudent
                                   ? formatTutorName(session.tutor?.name)
                                   : session.tutee?.name}
                               </span>
+                              {isDraggable && (
+                                <span className="opacity-60 hover:opacity-100 shrink-0 cursor-grab" title="Drag to reschedule">
+                                  <GripVertical className="w-3.5 h-3.5" />
+                                </span>
+                              )}
                             </div>
                             <div className="text-[11px] opacity-90 font-medium leading-snug line-clamp-2">
                               {session.title || "Maths Lesson"}
@@ -1979,6 +2222,94 @@ export default function UserWeeklyCalendarModal({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CLASH CONFIRMATION MODAL */}
+      {clashConfirmation && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-3xl p-6 border border-amber-300 dark:border-amber-700 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+              <div className="p-2 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-6 h-6 shrink-0" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-base text-slate-800 dark:text-slate-100">Schedule Conflict Detected</h4>
+                <p className="text-[11px] text-slate-500 font-medium">Head Tutor Overlap Confirmation</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {clashConfirmation.conflictReason}
+            </p>
+
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs space-y-1.5">
+              <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <span>Target Reschedule Slot:</span>
+                <span className="font-mono text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                  {clashConfirmation.newStart.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}
+                </span>
+              </div>
+              <div className="font-mono text-slate-600 dark:text-slate-300 text-[11px] font-bold">
+                {clashConfirmation.newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {" – "}
+                {clashConfirmation.newEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setClashConfirmation(null)}
+                className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { session, newStart, newEnd } = clashConfirmation;
+                  setClashConfirmation(null);
+                  executeReschedule(session, newStart, newEnd, true);
+                }}
+                className="py-2 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Reschedule Anyway (Allow Overlap)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAG & RESCHEDULE FLOATING TOAST / INDICATOR */}
+      {(dragToast || isReschedulingDrag) && (
+        <div className="fixed bottom-6 right-6 z-70 animate-in slide-in-from-bottom-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border text-xs font-semibold ${
+              isReschedulingDrag
+                ? "bg-slate-900 text-white border-slate-700 shadow-slate-900/30"
+                : dragToast?.type === "success"
+                ? "bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/25"
+                : "bg-rose-600 text-white border-rose-500 shadow-rose-500/25"
+            }`}
+          >
+            {isReschedulingDrag ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-[#48A5EE]" />
+                <span>Rescheduling lesson...</span>
+              </>
+            ) : dragToast?.type === "success" ? (
+              <>
+                <Check className="w-4 h-4 shrink-0 text-emerald-200" />
+                <span>{dragToast.message}</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-200" />
+                <span>{dragToast?.message}</span>
+              </>
+            )}
           </div>
         </div>
       )}
