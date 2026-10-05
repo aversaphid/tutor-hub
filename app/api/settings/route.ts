@@ -3,16 +3,24 @@ import { prisma } from "@/lib/prisma";
 import {
   getCachedSubwaySurfersSetting,
   setCachedSubwaySurfersSetting,
+  getCachedBillingDurationMode,
+  setCachedBillingDurationMode,
 } from "@/lib/settings-cache";
+import { DEFAULT_BILLING_DURATION_MODE, BillingDurationMode } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const cached = getCachedSubwaySurfersSetting();
-    if (cached !== null) {
+    const cachedSubway = getCachedSubwaySurfersSetting();
+    const cachedBilling = getCachedBillingDurationMode();
+
+    if (cachedSubway !== null && cachedBilling !== null) {
       return NextResponse.json(
-        { subwaySurfersEnabled: cached },
+        {
+          subwaySurfersEnabled: cachedSubway,
+          billingDurationMode: cachedBilling,
+        },
         {
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -21,15 +29,26 @@ export async function GET() {
       );
     }
 
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key: "subwaySurfersEnabled" },
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        key: { in: ["subwaySurfersEnabled", "billingDurationMode"] },
+      },
     });
 
-    const enabled = setting ? setting.value === "true" : true;
+    const subwaySetting = settings.find((s) => s.key === "subwaySurfersEnabled");
+    const billingSetting = settings.find((s) => s.key === "billingDurationMode");
+
+    const enabled = subwaySetting ? subwaySetting.value === "true" : true;
+    const billingMode = (billingSetting?.value as BillingDurationMode) || DEFAULT_BILLING_DURATION_MODE;
+
     setCachedSubwaySurfersSetting(enabled);
+    setCachedBillingDurationMode(billingMode);
 
     return NextResponse.json(
-      { subwaySurfersEnabled: enabled },
+      {
+        subwaySurfersEnabled: enabled,
+        billingDurationMode: billingMode,
+      },
       {
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -38,9 +57,9 @@ export async function GET() {
     );
   } catch (error) {
     console.error("Failed to load public settings:", error);
-    // Graceful fallback to enabled so site continues working
     return NextResponse.json({
       subwaySurfersEnabled: true,
+      billingDurationMode: DEFAULT_BILLING_DURATION_MODE,
     });
   }
 }

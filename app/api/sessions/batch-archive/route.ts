@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         id: true,
         title: true,
         scheduledStartTime: true,
+        scheduledEndTime: true,
         studentPay: true,
         tutorPay: true,
         tutee: {
@@ -71,9 +72,15 @@ export async function POST(request: Request) {
       });
     }
 
+    const billingSetting = await prisma.systemSetting.findUnique({
+      where: { key: "billingDurationMode" },
+    });
+    const billingMode = (billingSetting?.value as any) || "ROUND_NEAREST_HOUR";
+
     const ids = sessionsToArchive.map((s) => s.id);
+    const { getSessionTutorPay } = await import("@/lib/billing");
     const totalPayout = sessionsToArchive.reduce(
-      (sum, s) => sum + (s.tutorPay ?? s.tutee?.tutorPay ?? 0),
+      (sum, s) => sum + getSessionTutorPay(s, billingMode),
       0
     );
 

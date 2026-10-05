@@ -83,6 +83,14 @@ import { resolveActiveSession } from "@/lib/session-utils";
 import { useOnlinePresence } from "@/hooks/use-presence";
 import OnlineBadge from "@/components/online-badge";
 
+import {
+  BillingDurationMode,
+  DEFAULT_BILLING_DURATION_MODE,
+  calculateSessionAmounts,
+  getSessionStudentPay,
+  getSessionTutorPay,
+} from "@/lib/billing";
+
 export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -103,6 +111,7 @@ export default function AdminPage() {
 
   // System Settings state
   const [subwaySurfersEnabled, setSubwaySurfersEnabled] = useState(false);
+  const [billingDurationMode, setBillingDurationMode] = useState<BillingDurationMode>(DEFAULT_BILLING_DURATION_MODE);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
@@ -650,6 +659,9 @@ export default function AdminPage() {
         if (typeof d.subwaySurfersEnabled === "boolean") {
           setSubwaySurfersEnabled(d.subwaySurfersEnabled);
         }
+        if (d.billingDurationMode === "ROUND_NEAREST_HOUR" || d.billingDurationMode === "PROPORTIONAL") {
+          setBillingDurationMode(d.billingDurationMode);
+        }
       }
       // If the admin is actively viewing the audit logs tab, refresh them too
       if (auditLogsLoaded) {
@@ -657,6 +669,42 @@ export default function AdminPage() {
       }
     } catch { } finally {
       isRefreshingRef.current = false;
+    }
+  };
+
+  const handleToggleBillingDurationMode = async (mode: BillingDurationMode) => {
+    setIsUpdatingSettings(true);
+    setSettingsMessage("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingDurationMode: mode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBillingDurationMode(data.billingDurationMode);
+        setSettingsMessage(
+          `Billing calculation updated to: ${
+            data.billingDurationMode === "PROPORTIONAL"
+              ? "Proportional (half hour = half cost)"
+              : "Nearest Hour Rounding (1h25 -> 1h, 1h30 -> 2h)"
+          }`
+        );
+        window.dispatchEvent(
+          new CustomEvent("th_settings_updated", {
+            detail: { billingDurationMode: data.billingDurationMode },
+          })
+        );
+        await refreshAllData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSettingsMessage(errData.error || "Failed to update billing mode. Please try again.");
+      }
+    } catch (err: any) {
+      setSettingsMessage(err.message || "Network error updating billing mode.");
+    } finally {
+      setIsUpdatingSettings(false);
     }
   };
 
@@ -2547,7 +2595,7 @@ export default function AdminPage() {
           const completedUnpaid = sessions.filter(
             (s) => !s.tutorPaid && s.status !== "CANCELLED" && (s.status === "COMPLETED" || new Date(s.scheduledEndTime).getTime() <= now.getTime())
           );
-          const totalUnpaid = completedUnpaid.reduce((sum, s) => sum + (s.tutee?.tutorPay || 0), 0);
+          const totalUnpaid = completedUnpaid.reduce((sum, s) => sum + getSessionTutorPay(s, billingDurationMode), 0);
           const pendingConfirmations = sessions.filter(
             (s) => (s.status === "SCHEDULED" || s.status === "DELAYED") && new Date(s.scheduledEndTime).getTime() > now.getTime() && (!s.tuteeConfirmed || !s.tutorConfirmed)
           );
@@ -2755,7 +2803,7 @@ export default function AdminPage() {
 
           // Total payout sum for all completed unpaid lessons
           const totalUnpaidTutorPayout = completedUnpaidList.reduce(
-            (sum, s) => sum + (s.tutorPay ?? s.tutee?.tutorPay ?? 0),
+            (sum, s) => sum + getSessionTutorPay(s, billingDurationMode),
             0
           );
 
@@ -2770,7 +2818,7 @@ export default function AdminPage() {
                 totalPayout: 0,
               };
               existing.sessions.push(s);
-              existing.totalPayout += (s.tutorPay ?? s.tutee?.tutorPay ?? 0);
+              existing.totalPayout += getSessionTutorPay(s, billingDurationMode);
               map.set(tid, existing);
             }
             return Array.from(map.values());
@@ -2787,7 +2835,7 @@ export default function AdminPage() {
             return sStart >= start && sStart <= end;
           });
           const batchMatchingPayout = batchMatchingSessions.reduce(
-            (sum, s) => sum + (s.tutee?.tutorPay || 0),
+            (sum, s) => sum + getSessionTutorPay(s, billingDurationMode),
             0
           );
 
@@ -3633,26 +3681,41 @@ export default function AdminPage() {
                               </div>
 
                               {/* Pay Breakdown Banner Under Lesson Header */}
-                              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs font-semibold">
-                                  <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                                  <span>Needs to be Paid to Tutor:</span>
-                                  <strong className="font-extrabold text-amber-800 dark:text-amber-300 font-mono">
-                                    {s.tutee?.tutorPay !== null && s.tutee?.tutorPay !== undefined
-                                      ? formatCurrency(s.tutee.tutorPay)
-                                      : "Rate not set"}
-                                  </strong>
-                                </div>
+                              {(() => {
+                                const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                return (
+                                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs font-semibold">
+                                      <DollarSign className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                      <span>Needs to be Paid to Tutor:</span>
+                                      <strong className="font-extrabold text-amber-800 dark:text-amber-300 font-mono">
+                                        {amounts.baseTutorRate !== null
+                                          ? formatCurrency(amounts.tutorPay)
+                                          : "Rate not set"}
+                                      </strong>
+                                      {amounts.baseTutorRate !== null && amounts.multiplier !== 1 && (
+                                        <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400 opacity-90">
+                                          ({formatCurrency(amounts.baseTutorRate)}/hr × {amounts.multiplier}h)
+                                        </span>
+                                      )}
+                                    </div>
 
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                                  <span>Student Fee:</span>
-                                  <strong className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                                    {s.tutee?.studentPay !== null && s.tutee?.studentPay !== undefined
-                                      ? formatCurrency(s.tutee.studentPay)
-                                      : "Rate not set"}
-                                  </strong>
-                                </div>
-                              </div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                                      <span>Student Fee:</span>
+                                      <strong className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                        {amounts.baseStudentRate !== null
+                                          ? formatCurrency(amounts.studentPay)
+                                          : "Rate not set"}
+                                      </strong>
+                                      {amounts.baseStudentRate !== null && amounts.multiplier !== 1 && (
+                                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                          ({formatCurrency(amounts.baseStudentRate)}/hr × {amounts.multiplier}h)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                               {/* What was covered by tutor */}
                               {s.feedbackCovered ? (
@@ -3961,26 +4024,41 @@ export default function AdminPage() {
                               </div>
 
                               {/* Paid Breakdown */}
-                              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
-                                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span>Paid to Tutor:</span>
-                                  <span className="font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
-                                    {(s.tutorPay ?? s.tutee?.tutorPay) !== null && (s.tutorPay ?? s.tutee?.tutorPay) !== undefined
-                                      ? formatCurrency(s.tutorPay ?? s.tutee?.tutorPay)
-                                      : "Rate not set"}
-                                  </span>
-                                </div>
+                              {(() => {
+                                const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                return (
+                                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/70 text-emerald-900 dark:text-emerald-200 text-xs font-semibold">
+                                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                      <span>Paid to Tutor:</span>
+                                      <span className="font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
+                                        {amounts.baseTutorRate !== null
+                                          ? formatCurrency(amounts.tutorPay)
+                                          : "Rate not set"}
+                                      </span>
+                                      {amounts.baseTutorRate !== null && amounts.multiplier !== 1 && (
+                                        <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300 opacity-90">
+                                          ({formatCurrency(amounts.baseTutorRate)}/hr × {amounts.multiplier}h)
+                                        </span>
+                                      )}
+                                    </div>
 
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                                  <span>Student Fee:</span>
-                                  <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                                    {(s.studentPay ?? s.tutee?.studentPay) !== null && (s.studentPay ?? s.tutee?.studentPay) !== undefined
-                                      ? formatCurrency(s.studentPay ?? s.tutee?.studentPay)
-                                      : "Rate not set"}
-                                  </span>
-                                </div>
-                              </div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                                      <span>Student Fee:</span>
+                                      <span className="font-extrabold text-slate-900 dark:text-slate-100 font-mono">
+                                        {amounts.baseStudentRate !== null
+                                          ? formatCurrency(amounts.studentPay)
+                                          : "Rate not set"}
+                                      </span>
+                                      {amounts.baseStudentRate !== null && amounts.multiplier !== 1 && (
+                                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                          ({formatCurrency(amounts.baseStudentRate)}/hr × {amounts.multiplier}h)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                               {s.feedbackCovered && (
                                 <div className="text-xs bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
@@ -5025,6 +5103,120 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Lesson Duration & Billing Calculation Control */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE]">
+                        <Clock className="w-4 h-4" />
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        Lesson Duration Billing &amp; Pay Scaling
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-[#48A5EE]/10 text-[#48A5EE] border border-[#48A5EE]/20`}
+                      >
+                        {billingDurationMode === "ROUND_NEAREST_HOUR" ? "Nearest Hour" : "Proportional"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                      Determines how lesson fees charged to students and pay owed to tutors scale for lessons longer or shorter than 1 hour.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  {/* Option 1: Nearest Hour */}
+                  <button
+                    type="button"
+                    disabled={isUpdatingSettings}
+                    onClick={() => handleToggleBillingDurationMode("ROUND_NEAREST_HOUR")}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                      billingDurationMode === "ROUND_NEAREST_HOUR"
+                        ? "bg-white dark:bg-slate-800 border-[#48A5EE] shadow-sm ring-2 ring-[#48A5EE]/20"
+                        : "bg-white/60 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600"
+                    } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            billingDurationMode === "ROUND_NEAREST_HOUR"
+                              ? "border-[#48A5EE] bg-[#48A5EE]"
+                              : "border-slate-300 dark:border-slate-600"
+                          }`}
+                        >
+                          {billingDurationMode === "ROUND_NEAREST_HOUR" && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          Nearest Hour Rounding (Default)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        System Standard
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Rounds to nearest whole hour (min 1 hr). Ideal for standard scheduled hourly blocks.
+                    </p>
+
+                    <div className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80 space-y-1">
+                      <div>&bull; <strong>1 hr 25m</strong> &rarr; 1 hr (1.0× base rate)</div>
+                      <div>&bull; <strong>1 hr 30m</strong> &rarr; 2 hrs (2.0× base rate)</div>
+                      <div>&bull; <strong>2 hrs 00m</strong> &rarr; 2 hrs (2.0× base rate)</div>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Proportional */}
+                  <button
+                    type="button"
+                    disabled={isUpdatingSettings}
+                    onClick={() => handleToggleBillingDurationMode("PROPORTIONAL")}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                      billingDurationMode === "PROPORTIONAL"
+                        ? "bg-white dark:bg-slate-800 border-[#48A5EE] shadow-sm ring-2 ring-[#48A5EE]/20"
+                        : "bg-white/60 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600"
+                    } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            billingDurationMode === "PROPORTIONAL"
+                              ? "border-[#48A5EE] bg-[#48A5EE]"
+                              : "border-slate-300 dark:border-slate-600"
+                          }`}
+                        >
+                          {billingDurationMode === "PROPORTIONAL" && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          Exact Proportionality
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#48A5EE]">
+                        Linear Time
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Costs scale directly with lesson minutes (e.g. half an hour = half cost).
+                    </p>
+
+                    <div className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80 space-y-1">
+                      <div>&bull; <strong>30 mins</strong> &rarr; 0.5× cost (half fee &amp; pay)</div>
+                      <div>&bull; <strong>1 hr 30m</strong> &rarr; 1.5× cost (1.50× rate)</div>
+                      <div>&bull; <strong>2 hrs 00m</strong> &rarr; 2.0× cost (double rate)</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Unified Password Management Section */}
               <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
                 <div>
@@ -5446,6 +5638,7 @@ export default function AdminPage() {
             sessions={sessions}
             tutors={tutors}
             students={students}
+            billingDurationMode={billingDurationMode}
           />
         )}
       </main>

@@ -19,6 +19,14 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatTutorName } from "@/lib/format";
 
+import {
+  BillingDurationMode,
+  DEFAULT_BILLING_DURATION_MODE,
+  getSessionStudentPay as calcSessionStudentPay,
+  getSessionTutorPay as calcSessionTutorPay,
+  getLessonDurationHours,
+} from "@/lib/billing";
+
 // Calculate standard UK week (Monday 00:00:00 to Sunday 23:59:59.999)
 function getWeekRange(dateInput: Date | string = new Date()): { start: Date; end: Date; label: string } {
   const d = new Date(dateInput);
@@ -46,12 +54,14 @@ interface RevenueAnalyticsHubProps {
   sessions: any[];
   tutors: any[];
   students: any[];
+  billingDurationMode?: BillingDurationMode;
 }
 
 export default function RevenueAnalyticsHub({
   sessions,
   tutors,
   students,
+  billingDurationMode = DEFAULT_BILLING_DURATION_MODE,
 }: RevenueAnalyticsHubProps) {
   const [timeframe, setTimeframe] = useState<"THIS_WEEK" | "CUSTOM_WEEK" | "THIS_MONTH" | "LAST_MONTH" | "CUSTOM" | "ALL">("THIS_WEEK");
   const [customMonth, setCustomMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
@@ -73,24 +83,17 @@ export default function RevenueAnalyticsHub({
     setCustomWeekDate(d.toISOString().slice(0, 10));
   };
 
-  // Helper to extract numeric fees
+  // Duration-aware session pricing helpers adhering to the global billing mode
   const getSessionStudentPay = (s: any): number => {
-    if (typeof s.studentPay === "number" && !isNaN(s.studentPay)) return s.studentPay;
-    if (typeof s.tutee?.studentPay === "number" && !isNaN(s.tutee.studentPay)) return s.tutee.studentPay;
-    return 0;
+    return calcSessionStudentPay(s, billingDurationMode);
   };
 
   const getSessionTutorPay = (s: any): number => {
-    if (typeof s.tutorPay === "number" && !isNaN(s.tutorPay)) return s.tutorPay;
-    if (typeof s.tutee?.tutorPay === "number" && !isNaN(s.tutee.tutorPay)) return s.tutee.tutorPay;
-    return 0;
+    return calcSessionTutorPay(s, billingDurationMode);
   };
 
   const getSessionDurationHours = (s: any): number => {
-    const start = new Date(s.scheduledStartTime).getTime();
-    const end = new Date(s.scheduledEndTime).getTime();
-    if (isNaN(start) || isNaN(end) || end <= start) return 1;
-    return (end - start) / (1000 * 60 * 60);
+    return getLessonDurationHours(s);
   };
 
   // Filter completed lessons by timeframe and tutor
@@ -176,7 +179,7 @@ export default function RevenueAnalyticsHub({
       avgHourlyProfit,
       unpaidPayroll,
     };
-  }, [filteredCompletedSessions]);
+  }, [filteredCompletedSessions, billingDurationMode]);
 
   // Tutor breakdown
   const tutorBreakdown = useMemo(() => {
@@ -217,7 +220,7 @@ export default function RevenueAnalyticsHub({
     }
 
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredCompletedSessions, tutors]);
+  }, [filteredCompletedSessions, tutors, billingDurationMode]);
 
   // Student breakdown
   const studentBreakdown = useMemo(() => {
@@ -256,7 +259,7 @@ export default function RevenueAnalyticsHub({
     }
 
     return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredCompletedSessions, students, tutors]);
+  }, [filteredCompletedSessions, students, tutors, billingDurationMode]);
 
   // Month-on-month trend (last 6 months)
   const monthlyTrends = useMemo(() => {
@@ -307,7 +310,7 @@ export default function RevenueAnalyticsHub({
     return Array.from(monthsMap.values())
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey))
       .slice(0, 6);
-  }, [sessions, selectedTutorId]);
+  }, [sessions, selectedTutorId, billingDurationMode]);
 
   // Daily breakdown for the selected week (Monday through Sunday)
   const weeklyDailyBreakdown = useMemo(() => {
@@ -363,7 +366,7 @@ export default function RevenueAnalyticsHub({
     }
 
     return days;
-  }, [filteredCompletedSessions, timeframe, thisWeekRange, activeWeekRange]);
+  }, [filteredCompletedSessions, timeframe, thisWeekRange, activeWeekRange, billingDurationMode]);
 
   // CSV Export for financial reporting
   const handleExportFinancialCSV = () => {
@@ -433,13 +436,19 @@ export default function RevenueAnalyticsHub({
       {/* Header Banner & Filters */}
       <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="p-2 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE]">
               <TrendingUp className="w-5 h-5" />
             </span>
             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
               Tuition Business &amp; Revenue Analytics
             </h2>
+            <span
+              className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 tracking-wider"
+              title="System-wide lesson duration billing mode set in Admin Settings"
+            >
+              {billingDurationMode === "PROPORTIONAL" ? "Proportional Pricing" : "Nearest Hour Pricing"}
+            </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Real-time financial performance, tutor payroll expenditure, and gross profit margins.
