@@ -3018,15 +3018,11 @@ export default function AdminPage() {
                         <table className="w-full text-left text-xs">
                           <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
                             <tr>
-                              <th className="px-4 py-3">Student &amp; Lesson</th>
-                              <th className="px-3 py-3">Tutor</th>
-                              <th className="px-3 py-3">Date &amp; Time</th>
-                              <th className="px-2 py-3 text-center">Status</th>
-                              <th className="px-3 py-3 text-center">Attendance</th>
-                              <th className="px-3 py-3 text-center">Delay</th>
-                              <th className="px-3 py-3">PIN &amp; Link</th>
-                              <th className="px-3 py-3 text-center">Reschedule / Repeat</th>
-                              <th className="px-3 py-3 text-center">Cancel / Delete</th>
+                              <th className="px-3.5 py-2.5">Student &amp; Tutor</th>
+                              <th className="px-3 py-2.5">Date &amp; Time</th>
+                              <th className="px-3 py-2.5 text-center">Status &amp; Attendance</th>
+                              <th className="px-3 py-2.5 text-center">PIN &amp; Delay</th>
+                              <th className="px-3 py-2.5 text-center">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3048,33 +3044,38 @@ export default function AdminPage() {
                                 className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group/row"
                                 title="Click on lesson to edit time or reschedule"
                               >
-                                <td className="px-4 py-3">
+                                {/* 1. Student & Tutor */}
+                                <td className="px-3.5 py-2.5">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <button
                                       type="button"
                                       onClick={() => handleOpenReschedule(s)}
-                                      className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1.5"
+                                      className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1"
                                       title="Click to edit lesson time or reschedule"
                                     >
                                       <span>{s.tutee?.name}</span>
-                                      <CalendarClock className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-[#48A5EE] transition-opacity shrink-0" />
+                                      <CalendarClock className="w-3 h-3 opacity-0 group-hover:opacity-100 text-[#48A5EE] transition-opacity shrink-0" />
                                     </button>
                                     <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenReschedule(s)}
-                                    className="text-left text-[11px] text-slate-500 dark:text-slate-400 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer block"
-                                    title="Click to edit lesson time or reschedule"
-                                  >
-                                    {s.title}
-                                  </button>
-                                  {/* Personal Admin Reminder & Student/Tutor Notes */}
-                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap">
+                                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                      with {formatTutorName(s.tutor?.name)}
+                                    </span>
+                                    {s.title && s.title !== "Maths Tuition" && (
+                                      <>
+                                        <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+                                        <span className="truncate max-w-[130px]" title={s.title}>{s.title}</span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Compact Personal Reminder & Notes */}
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
                                     {s.adminReminder ? (
-                                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
                                         <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                        <span className="font-semibold truncate max-w-[120px]" title={s.adminReminder}>
+                                        <span className="font-medium truncate max-w-[95px]" title={s.adminReminder}>
                                           {s.adminReminder}
                                         </span>
                                         <button
@@ -3082,7 +3083,7 @@ export default function AdminPage() {
                                             setReminderModalSession(s);
                                             setEditReminderText(s.adminReminder || "");
                                           }}
-                                          className="text-[10px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
+                                          className="text-[9px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
                                           title="Edit Reminder"
                                         >
                                           Edit
@@ -3094,18 +3095,18 @@ export default function AdminPage() {
                                           setReminderModalSession(s);
                                           setEditReminderText("");
                                         }}
-                                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                        title="Add personal reminder for this lesson"
+                                        className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                        title="Add personal reminder"
                                       >
                                         <Bell className="w-2.5 h-2.5" />
-                                        <span>+ Reminder</span>
+                                        <span>+ Remind</span>
                                       </button>
                                     )}
 
                                     {s.notes ? (
-                                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
+                                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
                                         <FileText className="w-2.5 h-2.5 text-[#48A5EE] shrink-0" />
-                                        <span className="font-semibold truncate max-w-[120px]" title={s.notes}>
+                                        <span className="font-medium truncate max-w-[95px]" title={s.notes}>
                                           {s.notes}
                                         </span>
                                         <button
@@ -3113,7 +3114,7 @@ export default function AdminPage() {
                                             setNotesModalSession(s);
                                             setEditNotesText(s.notes || "");
                                           }}
-                                          className="text-[10px] text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer font-bold"
+                                          className="text-[9px] text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer font-bold"
                                           title="Edit Notes"
                                         >
                                           Edit
@@ -3125,23 +3126,22 @@ export default function AdminPage() {
                                           setNotesModalSession(s);
                                           setEditNotesText("");
                                         }}
-                                        className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                        title="Add notes for student or tutor"
+                                        className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                        title="Add notes"
                                       >
                                         <FileText className="w-2.5 h-2.5" />
-                                        <span>+ Notes</span>
+                                        <span>+ Note</span>
                                       </button>
                                     )}
                                   </div>
                                 </td>
-                                <td className="px-3 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
-                                  {formatTutorName(s.tutor?.name)}
-                                </td>
-                                <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+
+                                {/* 2. Date & Time */}
+                                <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
                                   <button
                                     type="button"
                                     onClick={() => handleOpenReschedule(s)}
-                                    className="text-left font-semibold text-slate-700 dark:text-slate-200 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1.5"
+                                    className="text-left font-semibold text-slate-700 dark:text-slate-200 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1 font-mono"
                                     title="Click to edit lesson time or reschedule"
                                   >
                                     <span>
@@ -3156,21 +3156,22 @@ export default function AdminPage() {
                                         minute: "2-digit",
                                       })}
                                     </span>
-                                    <CalendarClock className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#48A5EE] transition-colors shrink-0" />
+                                    <CalendarClock className="w-3 h-3 text-slate-400 group-hover:text-[#48A5EE] transition-colors shrink-0" />
                                   </button>
-                                  <div className="mt-1 flex items-center gap-2 font-sans">
+                                  <div className="mt-1 flex items-center gap-2 font-sans text-[10px]">
                                     {s.teamsMeetingUrl ? (
                                       <a
                                         href={s.teamsMeetingUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1"
+                                        title="Open Microsoft Teams Meeting"
                                       >
                                         <Video className="w-3 h-3" />
                                         <span>Teams</span>
                                       </a>
                                     ) : (
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1">
                                         <span className="text-slate-400 italic text-[10px]">No Teams</span>
                                         {getPreviousLessonTeamsUrl(s) && (
                                           <button
@@ -3180,7 +3181,7 @@ export default function AdminPage() {
                                             title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
                                           >
                                             <RotateCcw className="w-2.5 h-2.5" />
-                                            <span>+ Use Prev</span>
+                                            <span>+ Prev</span>
                                           </button>
                                         )}
                                       </div>
@@ -3188,96 +3189,97 @@ export default function AdminPage() {
                                     <AddToCalendar session={s} compact />
                                   </div>
                                 </td>
-                                <td className="px-2 py-3 text-center whitespace-nowrap">
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
-                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                        : s.status === "DELAYED"
-                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                                      }`}
-                                  >
-                                    {isRowLive
-                                      ? "IN_PROGRESS"
-                                      : s.status === "DELAYED" && s.delayMinutes
-                                      ? `DELAYED (+${s.delayMinutes}m)`
-                                      : s.status}
-                                  </span>
+
+                                {/* 3. Status & Attendance */}
+                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
+                                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                          : s.status === "DELAYED"
+                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                            : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                        }`}
+                                    >
+                                      {isRowLive
+                                        ? "LIVE NOW"
+                                        : s.status === "DELAYED" && s.delayMinutes
+                                        ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status}
+                                    </span>
+                                  </div>
                                   {s.delayReason && (
                                     <div
-                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[110px] mx-auto mt-0.5"
+                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[120px] mx-auto mt-0.5"
                                       title={s.delayReason}
                                     >
                                       {s.delayReason}
                                     </div>
                                   )}
-                                </td>
-                                <td className="px-3 py-3">
-                                  {/* Confirmation Toggles */}
-                                  <div className="flex flex-col gap-1 min-w-[105px]">
+                                  {/* Compact Confirmation Toggles */}
+                                  <div className="flex items-center justify-center gap-1.5 mt-1">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
-                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${s.tutorConfirmed
-                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tutorConfirmed
+                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
                                         }`}
-                                      title="Click to toggle Tutor Confirmation"
+                                      title={`Tutor attendance: ${s.tutorConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
                                     >
-                                      <span className="flex items-center gap-1">
-                                        {s.tutorConfirmed ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                                        ) : (
-                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
-                                        )}
-                                        <span>Tutor</span>
-                                      </span>
-                                      <span>{s.tutorConfirmed ? "✓" : "—"}</span>
+                                      <span>Tutor</span>
+                                      <span className={s.tutorConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tutorConfirmed ? "✓" : "—"}</span>
                                     </button>
 
                                     <button
                                       type="button"
                                       onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
-                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center justify-between gap-1 transition-all cursor-pointer border ${s.tuteeConfirmed
-                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tuteeConfirmed
+                                          ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
                                         }`}
-                                      title="Click to toggle Student Confirmation"
+                                      title={`Student attendance: ${s.tuteeConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
                                     >
-                                      <span className="flex items-center gap-1">
-                                        {s.tuteeConfirmed ? (
-                                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                                        ) : (
-                                          <Clock className="w-2.5 h-2.5 text-slate-400" />
-                                        )}
-                                        <span>Student</span>
-                                      </span>
-                                      <span>{s.tuteeConfirmed ? "✓" : "—"}</span>
+                                      <span>Student</span>
+                                      <span className={s.tuteeConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tuteeConfirmed ? "✓" : "—"}</span>
                                     </button>
                                   </div>
                                 </td>
-                                {/* Delay & Reason Column */}
-                                <td className="px-3 py-3 text-center whitespace-nowrap">
-                                  <div className="flex flex-col items-center gap-1 min-w-[90px]">
+
+                                {/* 4. PIN & Delay */}
+                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                      PIN: {s.tutee?.pin || "----"}
+                                    </span>
+                                    <button
+                                      onClick={() => copyMagicLink(s.tutee?.magicKey)}
+                                      className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
+                                      title="Copy Magic Link"
+                                    >
+                                      {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-center gap-1 mt-1">
                                     <button
                                       type="button"
                                       onClick={() => handleOpenDelayModal(s.delayMinutes || 10, s)}
-                                      className={`w-full px-2 py-1 rounded-lg font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border ${
-                                        s.delayMinutes && s.delayMinutes > 0
-                                          ? "bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
-                                          : "bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                      className={`px-1.5 py-0.5 rounded-md font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border ${
+                                        Boolean(s.delayMinutes && s.delayMinutes > 0)
+                                          ? "bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                                          : "bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                       }`}
-                                      title={s.delayMinutes && s.delayMinutes > 0 ? `Change delay (currently +${s.delayMinutes}m)` : "Add custom delay or reason"}
+                                      title={Boolean(s.delayMinutes && s.delayMinutes > 0) ? `Change delay (currently +${s.delayMinutes}m)` : "Add custom delay or reason"}
                                     >
                                       <FastForward className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                      <span>{s.delayMinutes && s.delayMinutes > 0 ? `+${s.delayMinutes}m Edit` : "+ Delay"}</span>
+                                      <span>{Boolean(s.delayMinutes && s.delayMinutes > 0) ? `+${s.delayMinutes}m` : "+ Delay"}</span>
                                     </button>
-                                    {s.delayMinutes && s.delayMinutes > 0 ? (
+                                    {Boolean(s.delayMinutes && s.delayMinutes > 0) ? (
                                       <button
                                         type="button"
                                         onClick={() => handleResetStartTime(s)}
                                         disabled={isResettingStartTime}
-                                        className="w-full px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-slate-200 dark:border-slate-700"
+                                        className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-semibold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
                                         title="Reset start time to original scheduled time"
                                       >
                                         <RotateCcw className="w-2.5 h-2.5 text-slate-500 shrink-0" />
@@ -3286,78 +3288,60 @@ export default function AdminPage() {
                                     ) : null}
                                   </div>
                                 </td>
-                                <td className="px-3 py-3">
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
-                                      PIN: {s.tutee?.pin || "----"}
-                                    </span>
-                                    <button
-                                      onClick={() => copyMagicLink(s.tutee?.magicKey)}
-                                      className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
-                                      title="Copy Magic Link"
-                                    >
-                                      {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
-                                    </button>
-                                  </div>
-                                </td>
-                                {/* Reschedule, +1 Wk, +2 Wks in one column */}
-                                <td className="px-3 py-3 text-center">
-                                  <div className="flex flex-col items-center gap-1 min-w-[125px]">
-                                    <button
-                                      onClick={() => handleOpenReschedule(s)}
-                                      className="w-full px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
-                                      title="Reschedule this lesson"
-                                    >
-                                      <CalendarClock className="w-3 h-3 text-purple-500 shrink-0" />
-                                      <span>Reschedule</span>
-                                    </button>
-                                    <div className="flex items-center gap-1 w-full">
+
+                                {/* 5. Actions */}
+                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                  <div className="flex flex-col items-center gap-1 min-w-[130px]">
+                                    <div className="flex items-center gap-1 w-full justify-center">
+                                      <button
+                                        onClick={() => handleOpenReschedule(s)}
+                                        className="flex-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
+                                        title="Reschedule this lesson"
+                                      >
+                                        <CalendarClock className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                        <span>Reschedule</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelSession(s)}
+                                        className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-rose-200 dark:border-rose-800"
+                                        title="Cancel this lesson"
+                                      >
+                                        <XCircle className="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                        <span>Cancel</span>
+                                      </button>
+                                    </div>
+                                    <div className="flex items-center gap-1 w-full justify-center">
                                       <button
                                         onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                                        className="flex-1 px-1 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5"
+                                        className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5"
                                         title="Schedule next week (+7 days)"
                                       >
                                         <Repeat className="w-2.5 h-2.5 shrink-0" />
-                                        <span>+1 Wk</span>
+                                        <span>+1w</span>
                                       </button>
                                       <button
                                         onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                                        className="flex-1 px-1 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-purple-200 dark:border-purple-800"
+                                        className="px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-purple-200 dark:border-purple-800"
                                         title="Schedule biweekly (+14 days)"
                                       >
                                         <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
-                                        <span>+2 Wks</span>
+                                        <span>+2w</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenSessionAudit(s)}
+                                        className="p-1 rounded-md text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                        title="View Lesson Audit Trail"
+                                      >
+                                        <History className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSession(s.id, s.title)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                        title="Delete Lesson Permanently"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
                                       </button>
                                     </div>
-                                  </div>
-                                </td>
-                                {/* Cancel and Delete in separate column */}
-                                <td className="px-3 py-3 text-center">
-                                  <div className="flex flex-col items-center gap-1 min-w-[70px]">
-                                    <button
-                                      onClick={() => handleCancelSession(s)}
-                                      className="w-full px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-rose-200 dark:border-rose-800"
-                                      title="Cancel this lesson"
-                                    >
-                                      <XCircle className="w-3 h-3 text-rose-500 shrink-0" />
-                                      <span>Cancel</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenSessionAudit(s)}
-                                      className="w-full px-1.5 py-0.5 rounded-lg text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
-                                      title="View Lesson Audit Trail"
-                                    >
-                                      <History className="w-2.5 h-2.5 shrink-0" />
-                                      <span>Audit</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteSession(s.id, s.title)}
-                                      className="w-full px-1.5 py-0.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[10px] font-semibold"
-                                      title="Delete Lesson Permanently"
-                                    >
-                                      <Trash2 className="w-2.5 h-2.5 shrink-0" />
-                                      <span>Delete</span>
-                                    </button>
                                   </div>
                                 </td>
                               </tr>
