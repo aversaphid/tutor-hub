@@ -51,6 +51,21 @@ export async function GET() {
     const timeSlug = new Date().toTimeString().slice(0, 8).replace(/:/g, "-");
     const filename = `lbmaths-backup-${dateSlug}-${timeSlug}.json`;
 
+    // Audit log backup export event
+    try {
+      const anySession = sessions[0];
+      if (anySession) {
+        await prisma.auditLog.create({
+          data: {
+            sessionId: anySession.id,
+            actorId: user.id,
+            action: "SYSTEM_BACKUP_EXPORTED",
+            details: `Head Tutor ${user.name} exported system backup (${sanitizedUsers.length} users, ${sessions.length} sessions).`,
+          },
+        });
+      }
+    } catch {}
+
     return new Response(JSON.stringify(backupPayload, null, 2), {
       status: 200,
       headers: {
@@ -308,6 +323,21 @@ export async function POST(request: Request) {
         console.error("Failed to restore session", ses.id, err);
       }
     }
+
+    // Audit log backup restore event
+    try {
+      const anySession = await prisma.session.findFirst();
+      if (anySession) {
+        await prisma.auditLog.create({
+          data: {
+            sessionId: anySession.id,
+            actorId: user.id,
+            action: "SYSTEM_BACKUP_RESTORED",
+            details: `Head Tutor ${user.name} restored system backup (${restoredUsersCount} users, ${restoredSessionsCount} sessions, ${restoredSettingsCount} settings).`,
+          },
+        });
+      }
+    } catch {}
 
     return NextResponse.json({
       success: true,

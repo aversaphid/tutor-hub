@@ -860,8 +860,8 @@ export default function AdminPage() {
   const handleAdminSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordModalUser) return;
-    if (!adminNewPassword || adminNewPassword.length < 5) {
-      setPasswordModalError("Password must be at least 5 characters.");
+    if (!adminNewPassword || adminNewPassword.length < 8) {
+      setPasswordModalError("Password must be at least 8 characters.");
       return;
     }
     if (adminNewPassword !== adminConfirmPassword) {
@@ -912,8 +912,8 @@ export default function AdminPage() {
       setAdminSelfPasswordError("Current password is required.");
       return;
     }
-    if (adminSelfNewPassword.length < 5) {
-      setAdminSelfPasswordError("New password must be at least 5 characters.");
+    if (adminSelfNewPassword.length < 8) {
+      setAdminSelfPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (adminSelfNewPassword !== adminSelfConfirmPassword) {
@@ -957,8 +957,8 @@ export default function AdminPage() {
       setSettingsTutorPasswordError("Please select a tutor account.");
       return;
     }
-    if (settingsTutorNewPassword.length < 5) {
-      setSettingsTutorPasswordError("New password must be at least 5 characters.");
+    if (settingsTutorNewPassword.length < 8) {
+      setSettingsTutorPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (settingsTutorNewPassword !== settingsTutorConfirmPassword) {

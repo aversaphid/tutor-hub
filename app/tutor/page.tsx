@@ -893,8 +893,8 @@ export default function TutorDashboardPage() {
       setTutorPasswordError("Current password is required.");
       return;
     }
-    if (tutorNewPassword.length < 5) {
-      setTutorPasswordError("New password must be at least 5 characters.");
+    if (tutorNewPassword.length < 8) {
+      setTutorPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (tutorNewPassword !== tutorConfirmPassword) {

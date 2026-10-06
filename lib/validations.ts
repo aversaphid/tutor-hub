@@ -53,7 +53,7 @@ export const CreateUserSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
   role: z.enum(["HEAD_TUTOR", "TUTOR", "TUTEE"]),
-  password: z.string().min(5, "Password must be at least 5 characters").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
   pin: z
     .string()
     .trim()
@@ -72,7 +72,7 @@ export const CreateUserSchema = z.object({
 // Change password schema
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(5, "New password must be at least 5 characters"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
 });
 
 // Reassign student tutor
@@ -119,7 +119,7 @@ export const BatchArchiveSessionsSchema = z.object({
 // Admin update user password
 export const AdminUpdateUserPasswordSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  newPassword: z.string().min(5, "New password must be at least 5 characters"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
 });
 
 // Lesson Completion by Student (What was covered, 1-5 star rating, optional notes)

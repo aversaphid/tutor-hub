@@ -116,8 +116,8 @@ export async function POST(request: Request) {
     let finalEmail = email ? email.toLowerCase().trim() : null;
 
     if (role === "HEAD_TUTOR" || role === "TUTOR") {
-      if (!password || password.length < 5) {
-        return NextResponse.json({ error: "Password must be at least 5 characters for tutor accounts." }, { status: 400 });
+      if (!password || password.length < 8) {
+        return NextResponse.json({ error: "Password must be at least 8 characters for tutor accounts." }, { status: 400 });
       }
       if (!finalEmail) {
         finalEmail = `${name.trim().toLowerCase().replace(/\s+/g, "")}@lbmathstuition.co.uk`;

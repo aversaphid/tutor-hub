@@ -154,6 +154,13 @@ export async function PATCH(
       auditDetailsList.push(`Session adjusted: ${newStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${newEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`);
     }
 
+    if (user.role === "TUTEE") {
+      return NextResponse.json(
+        { error: "Forbidden. Students cannot modify session settings." },
+        { status: 403 }
+      );
+    }
+
     if (updates.teamsMeetingUrl !== undefined) {
       updateData.teamsMeetingUrl = updates.teamsMeetingUrl || null;
       auditDetailsList.push(
@@ -163,13 +170,6 @@ export async function PATCH(
       );
       if (auditAction === "REPORT_EDITED") auditAction = "TEAMS_LINK_UPDATED";
     }
-
-    if (user.role === "TUTEE") {
-      if (existing.tuteeId !== user.id) {
-        return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-      }
-      // Note: Attendance confirmations can only be updated by the Admin as personal reminders
-    } else {
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.unlockEarlyMinutes !== undefined) updateData.unlockEarlyMinutes = updates.unlockEarlyMinutes;
       if (updates.notes !== undefined) {
@@ -250,7 +250,6 @@ export async function PATCH(
       ) {
         auditDetailsList.push("Lesson report feedback updated.");
       }
-    }
 
     const updated = await prisma.session.update({
       where: { id },

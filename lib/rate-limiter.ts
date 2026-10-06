@@ -43,16 +43,31 @@ export interface RateLimitResult {
   error?: string;
 }
 
+function isValidIp(ip: string): boolean {
+  if (!ip) return false;
+  const clean = ip.replace(/:\d+$/, "").trim();
+  // Validates IPv4 or IPv6
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(clean) || /^[0-9a-fA-F:]+$/.test(clean);
+}
+
 export function getClientIp(request: Request): string {
+  // 1. Cloudflare connecting IP (trusted when behind Cloudflare)
+  const cfConnectingIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cfConnectingIp && isValidIp(cfConnectingIp)) return cfConnectingIp;
+
+  // 2. Nginx / reverse proxy authenticated real IP
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp && isValidIp(realIp)) return realIp;
+
+  // 3. Fallback to X-Forwarded-For (validate each hop)
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded.split(",")[0].trim();
-    if (first) return first;
+    const parts = forwarded.split(",").map((s) => s.trim());
+    for (const part of parts) {
+      if (isValidIp(part)) return part;
+    }
   }
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-  if (cfConnectingIp) return cfConnectingIp.trim();
+
   return "127.0.0.1";
 }
 

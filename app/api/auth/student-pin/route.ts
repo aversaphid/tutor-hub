@@ -70,9 +70,8 @@ export async function POST(request: Request) {
     }
 
     // 3. Dual-tier network rate limiting check (IP network tier + Student key tier)
-    // If student is known and verified unlocked in DB, in-memory student rate limit is synced
     const rateLimitCheck = checkDualPinRateLimit(ip, tuteeId);
-    if (!rateLimitCheck.allowed && (!student || (student.failedPinAttempts || 0) >= 5)) {
+    if (!rateLimitCheck.allowed) {
       return NextResponse.json(
         {
           error: rateLimitCheck.error,
