@@ -5,6 +5,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import TutorCompletionModal from "@/components/tutor-completion-modal";
+import LessonNotesModal from "@/components/lesson-notes-modal";
 import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
@@ -122,6 +123,9 @@ export default function TutorDashboardPage() {
   // Tutor Completion Modal
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [sessionToComplete, setSessionToComplete] = useState<any>(null);
+
+  // Lesson Notes Popup Modal
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
 
   // Delay Reason Modal
   const [delayModal, setDelayModal] = useState<{
@@ -1375,6 +1379,20 @@ export default function TutorDashboardPage() {
                       </button>
                     )}
                   </div>
+
+                  {/* Notes & Homework Popup Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsNotesModalOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title="Add or review extra notes and homework for the student during this lesson"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>Notes &amp; Homework</span>
+                    {activeLesson.feedbackNotes && (
+                      <span className="w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400" title="Notes added" />
+                    )}
+                  </button>
 
                   <button
                     onClick={() => handleCancelSession(activeLesson)}
@@ -2984,11 +3002,34 @@ export default function TutorDashboardPage() {
           setSessionToComplete(null);
         }}
         session={sessionToComplete}
+        onNotesSaved={(newNotes) => {
+          if (activeLesson && sessionToComplete?.id === activeLesson.id) {
+            setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
+          }
+          setMySessions((prev: any[]) =>
+            prev.map((s) => (s.id === sessionToComplete?.id ? { ...s, feedbackNotes: newNotes } : s))
+          );
+        }}
         onCompleted={(updated) => {
           setActionMessage(`Lesson report for ${updated?.tutee?.name || "student"} saved successfully!`);
           loadLiveSession();
           loadMySessions();
           setTimeout(() => setActionMessage(""), 4000);
+        }}
+      />
+
+      {/* Lesson Notes Popup Modal */}
+      <LessonNotesModal
+        isOpen={isNotesModalOpen}
+        onClose={() => setIsNotesModalOpen(false)}
+        session={activeLesson}
+        onSaved={(newNotes) => {
+          setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
+          setMySessions((prev: any[]) =>
+            prev.map((s) => (s.id === activeLesson?.id ? { ...s, feedbackNotes: newNotes } : s))
+          );
+          setActionMessage("Lesson notes & homework saved!");
+          setTimeout(() => setActionMessage(""), 3000);
         }}
       />
 

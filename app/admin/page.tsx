@@ -1815,6 +1815,23 @@ export default function AdminPage() {
     setIsCompleteModalOpen(true);
   };
 
+  const handleCloseAdminCompleteModal = async () => {
+    if (completeTargetLesson && completeNotes.trim() !== (completeTargetLesson.feedbackNotes || "").trim()) {
+      try {
+        await fetch(`/api/sessions/${completeTargetLesson.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedbackNotes: completeNotes.trim() }),
+        });
+        await refreshAllData();
+      } catch (err) {
+        console.error("Admin auto-save notes on modal close error:", err);
+      }
+    }
+    setIsCompleteModalOpen(false);
+    setCompleteTargetLesson(null);
+  };
+
   // Submit Lesson Completion & Feedback
   const handleSubmitComplete = async (skipFeedback = false) => {
     if (!completeTargetLesson) return;
@@ -6692,7 +6709,7 @@ export default function AdminPage() {
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
-          onClick={() => setIsCompleteModalOpen(false)}
+          onClick={handleCloseAdminCompleteModal}
         >
           <div
             className="w-full max-w-lg bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100"
@@ -6715,7 +6732,7 @@ export default function AdminPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsCompleteModalOpen(false)}
+                onClick={handleCloseAdminCompleteModal}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -6819,7 +6836,7 @@ export default function AdminPage() {
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsCompleteModalOpen(false)}
+                  onClick={handleCloseAdminCompleteModal}
                   className="px-3.5 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel

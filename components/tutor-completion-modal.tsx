@@ -8,6 +8,7 @@ interface TutorCompletionModalProps {
   onClose: () => void;
   session: any;
   onCompleted: (updatedSession: any) => void;
+  onNotesSaved?: (newNotes: string) => void;
 }
 
 export default function TutorCompletionModal({
@@ -15,6 +16,7 @@ export default function TutorCompletionModal({
   onClose,
   session,
   onCompleted,
+  onNotesSaved,
 }: TutorCompletionModalProps) {
   const isEditing = Boolean(session?.feedbackCovered || session?.status === "COMPLETED");
 
@@ -24,17 +26,77 @@ export default function TutorCompletionModal({
   const [feedbackNotes, setFeedbackNotes] = useState(session?.feedbackNotes || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [draftSavedMsg, setDraftSavedMsg] = useState("");
 
   useEffect(() => {
-    if (session) {
-      setFeedbackCovered(session.feedbackCovered || "");
+    if (session && isOpen) {
+      let draftNotes = "";
+      let draftCovered = "";
+      try {
+        draftNotes = localStorage.getItem(`tutor_draft_notes_${session.id}`) || "";
+        draftCovered = localStorage.getItem(`tutor_draft_covered_${session.id}`) || "";
+      } catch {}
+
+      setFeedbackCovered(draftCovered || session.feedbackCovered || "");
       setFeedbackRating(session.feedbackRating || 5);
-      setFeedbackNotes(session.feedbackNotes || "");
+      const chosenNotes = session.feedbackNotes || draftNotes || "";
+      setFeedbackNotes(chosenNotes);
       setError("");
+      setDraftSavedMsg(draftNotes && !session.feedbackNotes ? "Restored saved notes draft" : "");
     }
   }, [session, isOpen]);
 
+  // Auto-save changes to notes when closing the modal so tutors never lose what they typed
+  const handleCloseModal = async () => {
+    const trimmedNotes = feedbackNotes.trim();
+    const originalNotes = (session?.feedbackNotes || "").trim();
+
+    if (session?.id && trimmedNotes !== originalNotes) {
+      try {
+        const res = await fetch(`/api/sessions/${session.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedbackNotes: trimmedNotes }),
+        });
+        if (res.ok) {
+          if (onNotesSaved) {
+            onNotesSaved(trimmedNotes);
+          }
+        }
+      } catch (err) {
+        console.error("Auto-save feedbackNotes on modal close error:", err);
+      }
+    }
+    onClose();
+  };
+
+  // Listen for Escape key to close and auto-save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, feedbackNotes, session]);
+
   if (!isOpen || !session) return null;
+
+  const handleNotesChange = (val: string) => {
+    setFeedbackNotes(val);
+    try {
+      localStorage.setItem(`tutor_draft_notes_${session.id}`, val);
+    } catch {}
+    setDraftSavedMsg("Draft saved");
+  };
+
+  const handleCoveredChange = (val: string) => {
+    setFeedbackCovered(val);
+    try {
+      localStorage.setItem(`tutor_draft_covered_${session.id}`, val);
+    } catch {}
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +139,11 @@ export default function TutorCompletionModal({
         return;
       }
 
+      try {
+        localStorage.removeItem(`tutor_draft_notes_${session.id}`);
+        localStorage.removeItem(`tutor_draft_covered_${session.id}`);
+      } catch {}
+
       onCompleted(data.session);
       onClose();
     } catch {
@@ -87,10 +154,16 @@ export default function TutorCompletionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 relative transition-colors max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={handleCloseModal}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 relative transition-colors max-h-[90vh] overflow-y-auto"
+      >
         <button
-          onClick={onClose}
+          onClick={handleCloseModal}
           className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
@@ -144,7 +217,7 @@ export default function TutorCompletionModal({
               required
               rows={3}
               value={feedbackCovered}
-              onChange={(e) => setFeedbackCovered(e.target.value)}
+              onChange={(e) => handleCoveredChange(e.target.value)}
               placeholder="e.g. Quadratic equations and factorisation. Went well — student picked up the methods quickly and solved exam questions independently..."
               className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all resize-none text-xs"
             />
@@ -191,17 +264,27 @@ export default function TutorCompletionModal({
                 <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>Extra notes &amp; homework assigned (Optional)</span>
               </label>
-              <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800 shrink-0">
-                Shown to Student
-              </span>
+              <div className="flex items-center gap-1.5">
+                {draftSavedMsg && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    {draftSavedMsg}
+                  </span>
+                )}
+                <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800 shrink-0">
+                  Shown to Student
+                </span>
+              </div>
             </div>
             <textarea
-              rows={2}
+              rows={3}
               value={feedbackNotes}
-              onChange={(e) => setFeedbackNotes(e.target.value)}
+              onChange={(e) => handleNotesChange(e.target.value)}
               placeholder="e.g. Set textbook p. 42 Q 1-6 for homework. Needs to review negative signs."
               className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all resize-none text-xs"
             />
+            <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <span>Automatically saved even if you close or cancel this window.</span>
+            </div>
             <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1 font-medium bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
               <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
               <span><strong>Disclaimer:</strong> Extra notes and homework entered here are shown directly to the student in their lobby and previous lesson notes.</span>
@@ -212,7 +295,7 @@ export default function TutorCompletionModal({
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer"
             >
               Cancel
