@@ -20,6 +20,7 @@ export async function GET() {
         name: true,
         pinLockedUntil: true,
         failedPinAttempts: true,
+        tutorPay: true,
       },
       orderBy: {
         name: "asc",

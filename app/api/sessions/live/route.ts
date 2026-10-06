@@ -95,6 +95,7 @@ export async function GET(request: Request) {
           name: true,
           pin: !isStudent,
           magicKey: !isStudent,
+          tutorPay: !isStudent,
         },
       },
     };

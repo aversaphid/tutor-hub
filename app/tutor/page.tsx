@@ -61,7 +61,13 @@ import SharedResourcesHub from "@/components/shared-resources-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { formatTutorName } from "@/lib/format";
+import { formatTutorName, formatCurrency } from "@/lib/format";
+import {
+  getSessionTutorPay,
+  calculateSessionAmounts,
+  BillingDurationMode,
+  DEFAULT_BILLING_DURATION_MODE,
+} from "@/lib/billing";
 import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
 import { useOnlinePresence } from "@/hooks/use-presence";
@@ -72,6 +78,7 @@ export default function TutorDashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { isOnline, handlePresenceEvent } = useOnlinePresence(currentUser?.id);
   const [activeTab, setActiveTab] = useState<"active" | "students" | "lessons" | "resources" | "settings">("active");
+  const [billingDurationMode, setBillingDurationMode] = useState<BillingDurationMode>(DEFAULT_BILLING_DURATION_MODE);
 
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [mySessions, setMySessions] = useState<any[]>([]);
@@ -437,6 +444,17 @@ export default function TutorDashboardPage() {
       await Promise.all([
         loadAssignedStudents(),
         loadMySessions(),
+        (async () => {
+          try {
+            const setRes = await fetch("/api/settings");
+            if (setRes.ok) {
+              const setData = await setRes.json();
+              if (setData.billingDurationMode) {
+                setBillingDurationMode(setData.billingDurationMode);
+              }
+            }
+          } catch {}
+        })(),
       ]);
     } catch (err) {
       console.error("Tutor init error:", err);
@@ -1136,6 +1154,23 @@ export default function TutorDashboardPage() {
                           minute: "2-digit",
                         })}
                       </span>
+                      {(() => {
+                        const amounts = calculateSessionAmounts(activeLesson, billingDurationMode);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 text-xs font-bold font-mono border border-emerald-300 dark:border-emerald-800 shadow-2xs"
+                            title={`Your payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                          >
+                            <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
+                            {amounts.baseTutorRate > 0 && (
+                              <span className="font-normal text-emerald-700 dark:text-emerald-400 text-[11px]">
+                                ({formatCurrency(amounts.baseTutorRate)}/hr)
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -1420,6 +1455,24 @@ export default function TutorDashboardPage() {
                           currentTime={currentTime}
                           status={nextLesson.status}
                         />
+
+                        {(() => {
+                          const amounts = calculateSessionAmounts(nextLesson, billingDurationMode);
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 text-xs font-bold font-mono border border-emerald-300 dark:border-emerald-800 shadow-2xs"
+                              title={`Your payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                            >
+                              <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
+                              {amounts.baseTutorRate > 0 && (
+                                <span className="font-normal text-emerald-700 dark:text-emerald-400 text-[11px]">
+                                  ({formatCurrency(amounts.baseTutorRate)}/hr)
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -1792,6 +1845,13 @@ export default function TutorDashboardPage() {
                             offlineLabel="Offline"
                             size="xs"
                           />
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold font-mono"
+                            title={`Your hourly pay rate for ${student.name}: ${typeof student.tutorPay === "number" ? formatCurrency(student.tutorPay) + "/hr" : "Rate not set"}`}
+                          >
+                            <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span>{typeof student.tutorPay === "number" ? `${formatCurrency(student.tutorPay)}/hr` : "Rate not set"}</span>
+                          </span>
                           {isLocked && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
                               <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
@@ -1821,6 +1881,18 @@ export default function TutorDashboardPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* Tutor Pay Rate Pill */}
+                        <div
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200"
+                          title={`Your compensation rate for ${student.name}`}
+                        >
+                          <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Your Pay:</span>
+                          <strong className="text-xs font-mono font-bold text-emerald-900 dark:text-emerald-100">
+                            {typeof student.tutorPay === "number" ? `${formatCurrency(student.tutorPay)}/hr` : "—"}
+                          </strong>
+                        </div>
+
                         {/* Weekly Calendar Modal Button */}
                         <button
                           onClick={() => handleOpenCalendar(student)}
@@ -2166,8 +2238,25 @@ export default function TutorDashboardPage() {
                                     </span>
                                     <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
                                   </div>
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    {s.title}
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                                    <span>{s.title}</span>
+                                    {(() => {
+                                      const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                      return (
+                                        <span
+                                          className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold font-mono"
+                                          title={`Your payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                                        >
+                                          <DollarSign className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                          <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
+                                          {amounts.baseTutorRate > 0 && (
+                                            <span className="font-normal text-emerald-700/80 dark:text-emerald-400/80 text-[9px]">
+                                              ({formatCurrency(amounts.baseTutorRate)}/hr)
+                                            </span>
+                                          )}
+                                        </span>
+                                      );
+                                    })()}
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1 mt-1">
                                     {s.studentTopic && (
@@ -2358,6 +2447,9 @@ export default function TutorDashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:flex-row sm:items-center">
+                    <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 text-xs font-bold font-mono border border-amber-200 dark:border-amber-800">
+                      Total Payout: {formatCurrency(completedUnpaidList.reduce((sum, s) => sum + getSessionTutorPay(s, billingDurationMode), 0))}
+                    </span>
                     <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
                       {isCompletedOpen ? "Hide" : "Show"}
                     </span>
@@ -2416,6 +2508,24 @@ export default function TutorDashboardPage() {
                                 <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] font-bold">
                                   Payment Pending
                                 </span>
+
+                                {(() => {
+                                  const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 text-xs font-bold font-mono border border-emerald-300 dark:border-emerald-800 shadow-2xs"
+                                      title={`Pending payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                                    >
+                                      <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                      <span>Payout: {formatCurrency(amounts.tutorPay)}</span>
+                                      {amounts.baseTutorRate > 0 && (
+                                        <span className="font-normal text-emerald-700 dark:text-emerald-400 text-[11px]">
+                                          ({formatCurrency(amounts.baseTutorRate)}/hr)
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
+                                })()}
 
                                 {!s.feedbackCovered && (
                                   <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 text-[10px] font-bold flex items-center gap-1 border border-red-200 dark:border-red-800">
@@ -2591,6 +2701,9 @@ export default function TutorDashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-900 dark:text-emerald-200 text-xs font-bold font-mono border border-emerald-200 dark:border-emerald-800">
+                      Total Earned: {formatCurrency(archivedPaidList.reduce((sum, s) => sum + getSessionTutorPay(s, billingDurationMode), 0))}
+                    </span>
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                       {isArchivedOpen ? "Hide" : "Show"}
                     </span>
@@ -2638,6 +2751,19 @@ export default function TutorDashboardPage() {
                                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-bold">
                                   Paid &amp; Archived
                                 </span>
+
+                                {(() => {
+                                  const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 text-xs font-bold font-mono border border-emerald-300 dark:border-emerald-800 shadow-2xs"
+                                      title={`Paid amount for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                                    >
+                                      <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                      <span>Paid: {formatCurrency(amounts.tutorPay)}</span>
+                                    </span>
+                                  );
+                                })()}
                               </div>
 
                               {s.feedbackCovered && (

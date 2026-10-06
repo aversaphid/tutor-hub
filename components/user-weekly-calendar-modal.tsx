@@ -24,7 +24,8 @@ import {
   Loader2,
   CalendarClock,
 } from "lucide-react";
-import { formatTutorName, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import { getSessionTutorPay, calculateSessionAmounts } from "@/lib/billing";
 import TimeSelect from "@/components/time-select";
 
 interface UserWeeklyCalendarModalProps {
@@ -1465,15 +1466,22 @@ export default function UserWeeklyCalendarModal({
                                 {end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </span>
-                            {session.tutorPaid ? (
-                              <span className="font-bold text-emerald-300 text-[9px] uppercase tracking-wider">Paid</span>
-                            ) : (
-                              session.teamsMeetingUrl && (
-                                <span className="p-0.5 rounded bg-white/20">
-                                  <Video className="w-3 h-3" />
+                            <div className="flex items-center gap-1.5">
+                              {(!isStudent || isAdmin) && getSessionTutorPay(session) > 0 && (
+                                <span className="font-bold text-white/95 text-[9px] bg-white/20 px-1 py-0.5 rounded">
+                                  {formatCurrency(getSessionTutorPay(session))}
                                 </span>
-                              )
-                            )}
+                              )}
+                              {session.tutorPaid ? (
+                                <span className="font-bold text-emerald-300 text-[9px] uppercase tracking-wider">Paid</span>
+                              ) : (
+                                session.teamsMeetingUrl && (
+                                  <span className="p-0.5 rounded bg-white/20">
+                                    <Video className="w-3 h-3" />
+                                  </span>
+                                )
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -1962,13 +1970,25 @@ export default function UserWeeklyCalendarModal({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 font-semibold">Tutor Payout:</span>
-                <span className="font-bold text-slate-800 dark:text-slate-100">
-                  {selectedSession.tutorPaid ? (
-                    <span className="text-emerald-600 font-bold">Paid / Settled</span>
-                  ) : (
-                    <span className="text-amber-600 font-bold">Unpaid</span>
+                <div className="text-right">
+                  {(!isStudent || isAdmin) && getSessionTutorPay(selectedSession) > 0 && (
+                    <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(getSessionTutorPay(selectedSession))}
+                      {calculateSessionAmounts(selectedSession).baseTutorRate > 0 && (
+                        <span className="text-xs font-normal text-slate-400 ml-1">
+                          ({formatCurrency(calculateSessionAmounts(selectedSession).baseTutorRate)}/hr)
+                        </span>
+                      )}
+                    </div>
                   )}
-                </span>
+                  <span className="text-xs font-bold">
+                    {selectedSession.tutorPaid ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">Paid / Settled</span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">Unpaid</span>
+                    )}
+                  </span>
+                </div>
               </div>
 
               {selectedSession.notes && (

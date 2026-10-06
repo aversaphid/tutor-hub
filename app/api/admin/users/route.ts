@@ -74,6 +74,7 @@ export async function GET() {
             pinLockedUntil: true,
             failedPinAttempts: true,
             createdAt: true,
+            tutorPay: true,
           },
         },
       },
