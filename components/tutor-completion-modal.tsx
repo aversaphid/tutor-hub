@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Star, CheckCircle2, X, AlertCircle, BookOpen, FileText } from "lucide-react";
+import { Star, CheckCircle2, X, AlertCircle, BookOpen, FileText, Info } from "lucide-react";
 
 interface TutorCompletionModalProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export default function TutorCompletionModal({
     }
 
     if (!feedbackCovered.trim()) {
-      setError("Please describe what was covered in the lesson.");
+      setError("Please describe what was covered in the lesson and how it went.");
       return;
     }
 
@@ -129,20 +129,28 @@ export default function TutorCompletionModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* Topics Covered (Required) */}
+          {/* Topics Covered & How it went (Required) */}
           <div className="space-y-1.5">
-            <label className="text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>What did you cover in this lesson? <span className="text-rose-500">*</span></span>
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>What did you cover in this lesson? How did it go? <span className="text-rose-500">*</span></span>
+              </label>
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 shrink-0">
+                Shown to Admin
+              </span>
+            </div>
             <textarea
               required
               rows={3}
               value={feedbackCovered}
               onChange={(e) => setFeedbackCovered(e.target.value)}
-              placeholder="e.g. Quadratic equations, factorisation methods, and GCSE exam practice questions..."
+              placeholder="e.g. Quadratic equations and factorisation. Went well — student picked up the methods quickly and solved exam questions independently..."
               className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all resize-none text-xs"
             />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              This summary is shown to admin for lesson reviews and quality tracking.
+            </p>
           </div>
 
           {/* 5-Star Rating (Required) - How lesson went overall */}
@@ -176,12 +184,17 @@ export default function TutorCompletionModal({
             </div>
           </div>
 
-          {/* Extra Notes (Optional) */}
+          {/* Extra Notes & Homework (Optional) */}
           <div className="space-y-1.5">
-            <label className="text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>Extra notes &amp; homework assigned (Optional)</span>
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Extra notes &amp; homework assigned (Optional)</span>
+              </label>
+              <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800 shrink-0">
+                Shown to Student
+              </span>
+            </div>
             <textarea
               rows={2}
               value={feedbackNotes}
@@ -189,6 +202,10 @@ export default function TutorCompletionModal({
               placeholder="e.g. Set textbook p. 42 Q 1-6 for homework. Needs to review negative signs."
               className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all resize-none text-xs"
             />
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1 font-medium bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
+              <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span><strong>Disclaimer:</strong> Extra notes and homework entered here are shown directly to the student in their lobby and previous lesson notes.</span>
+            </p>
           </div>
 
           {/* Actions */}

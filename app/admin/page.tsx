@@ -6780,13 +6780,18 @@ export default function AdminPage() {
 
               {/* Topics Covered */}
               <div className="space-y-1">
-                <label className="font-bold text-slate-700 dark:text-slate-300">
-                  Topics Covered (Optional)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Topics Covered &amp; How It Went (Optional)
+                  </label>
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                    Shown to Admin
+                  </span>
+                </div>
                 <textarea
                   value={completeCovered}
                   onChange={(e) => setCompleteCovered(e.target.value)}
-                  placeholder="e.g. Quadratic equations, factorising, solving by completing the square..."
+                  placeholder="e.g. Quadratic equations, factorising, solving exam questions. Went well..."
                   rows={2}
                   className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-[#48A5EE]"
                 />
@@ -6794,16 +6799,25 @@ export default function AdminPage() {
 
               {/* Notes & Feedback */}
               <div className="space-y-1">
-                <label className="font-bold text-slate-700 dark:text-slate-300">
-                  Tutor / Admin Notes (Optional)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Extra Notes &amp; Homework (Optional)
+                  </label>
+                  <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                    Shown to Students
+                  </span>
+                </div>
                 <textarea
                   value={completeNotes}
                   onChange={(e) => setCompleteNotes(e.target.value)}
-                  placeholder="e.g. Excellent focus today. Next session work on word problems and exam past paper questions."
+                  placeholder="e.g. Excellent focus today. Complete exercise 4B questions 1-5 for next week."
                   rows={2}
                   className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-[#48A5EE]"
                 />
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1 font-medium bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
+                  <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span><strong>Disclaimer:</strong> Notes and homework entered here are shown directly to the student in their lobby.</span>
+                </p>
               </div>
             </div>
 

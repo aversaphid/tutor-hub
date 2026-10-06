@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Star, X, Check, AlertCircle, BookOpen, MessageSquare } from "lucide-react";
+import { Star, X, Check, AlertCircle, BookOpen, MessageSquare, Info } from "lucide-react";
 
 interface StudentCompletionModalProps {
   session: any;
@@ -110,18 +110,23 @@ export default function StudentCompletionModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* 1. What was covered (Required) */}
+          {/* 1. What was covered & how it went (Required) */}
           <div>
-            <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>What did you cover in this lesson? <span className="text-red-500">*</span></span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>What did you cover in this lesson? How did it go? <span className="text-red-500">*</span></span>
+              </label>
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                Shown to Admin
+              </span>
+            </div>
             <textarea
               required
               rows={3}
               value={covered}
               onChange={(e) => setCovered(e.target.value)}
-              placeholder="e.g. Quadratic equations, factorisation, and past paper 2 questions 1-4..."
+              placeholder="e.g. Quadratic equations, factorisation, and past paper questions. Went well..."
               className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] focus:bg-white dark:focus:bg-slate-900 transition-all resize-none"
             />
           </div>
@@ -161,10 +166,15 @@ export default function StudentCompletionModal({
 
           {/* 3. Optional Additional Notes */}
           <div>
-            <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1 flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-[#48A5EE]" />
-              <span>Additional Notes / Homework Set (Optional)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Additional Notes / Homework Set (Optional)</span>
+              </label>
+              <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                Shown to Student
+              </span>
+            </div>
             <textarea
               rows={2}
               value={notes}
@@ -172,6 +182,10 @@ export default function StudentCompletionModal({
               placeholder="e.g. Homework set: Chapter 5 exercises due next Tuesday..."
               className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] focus:bg-white dark:focus:bg-slate-900 transition-all resize-none"
             />
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1 font-medium mt-1">
+              <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span><strong>Disclaimer:</strong> Notes and homework entered here are shown to students in their lesson records.</span>
+            </p>
           </div>
 
           {/* Actions */}
