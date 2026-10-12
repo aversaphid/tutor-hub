@@ -59,6 +59,8 @@ export default function CountdownTimer({
   const prevStatusRef = useRef(initialSession.status);
   const prevDelayRef = useRef(initialSession.delayMinutes);
   const hasTriggeredZeroChime = useRef(false);
+  const onStatusChangeRef = useRef(onStatusChange);
+  onStatusChangeRef.current = onStatusChange;
 
   // Sync with session updates from parent (e.g. status changes, delays, start chimes) without duplicate network polling
   useEffect(() => {
@@ -94,8 +96,7 @@ export default function CountdownTimer({
 
     prevStatusRef.current = newSession.status;
     setSession(newSession);
-    onStatusChange?.(newSession);
-  }, [initialSession, onStatusChange, preferences.reducedMotion]);
+  }, [initialSession, preferences.reducedMotion]);
 
   useEffect(() => {
     const calculateTime = () => {
@@ -123,7 +124,7 @@ export default function CountdownTimer({
           if (session.status !== "IN_PROGRESS") {
             const updatedLiveSession = { ...session, status: "IN_PROGRESS" as const };
             setSession(updatedLiveSession);
-            onStatusChange?.(updatedLiveSession);
+            onStatusChangeRef.current?.(updatedLiveSession);
           }
         }
       } else {

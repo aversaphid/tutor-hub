@@ -63,9 +63,13 @@ export function useOnlinePresence(currentUserId?: string) {
       heartbeatInterval = setInterval(sendHeartbeat, 25_000);
     }
 
-    // 3. Heartbeat on window focus or visibility change to visible
+    // 3. Heartbeat on window focus or visibility change to visible (throttled to at most once every 15s)
+    let lastVisibilityCheck = 0;
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        const now = Date.now();
+        if (now - lastVisibilityCheck < 15_000) return;
+        lastVisibilityCheck = now;
         sendHeartbeat();
         fetchOnlineUsers();
       }

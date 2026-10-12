@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -182,15 +182,24 @@ function StudentLobbyContent() {
     init();
   }, [magicKey, router]);
 
-  const loadStudentSessions = async (tuteeId: string) => {
+  const isLoadingSessionsRef = useRef(false);
+  const lastLoadedTimeRef = useRef(0);
+
+  const loadStudentSessions = useCallback(async (tuteeId: string) => {
+    if (isLoadingSessionsRef.current) return;
+    const now = Date.now();
+    // Throttle duplicate loads within 2 seconds
+    if (now - lastLoadedTimeRef.current < 2000) return;
+    isLoadingSessionsRef.current = true;
+    lastLoadedTimeRef.current = now;
+
     try {
       const res = await fetch(`/api/sessions?tuteeId=${tuteeId}&active=true`);
       if (!res.ok) return;
       const data = await res.json();
       const sessions: any[] = data.sessions || [];
 
-      const now = Date.now();
-      const live = resolveActiveSession(sessions, now);
+      const live = resolveActiveSession(sessions, Date.now());
       setActiveSession(live || null);
       // Pre-fill topic input with whatever the student previously saved
       if (live?.studentTopic) setTopicInput(live.studentTopic);
@@ -200,7 +209,7 @@ function StudentLobbyContent() {
             s.id !== live?.id &&
             s.status !== "COMPLETED" &&
             s.status !== "CANCELLED" &&
-            new Date(s.scheduledEndTime).getTime() > now
+            new Date(s.scheduledEndTime).getTime() > Date.now()
         )
       );
 
@@ -208,11 +217,13 @@ function StudentLobbyContent() {
       const cancelled = sessions.filter(
         (s) =>
           s.status === "CANCELLED" &&
-          new Date(s.scheduledEndTime).getTime() > now - 7 * 24 * 3600 * 1000
+          new Date(s.scheduledEndTime).getTime() > Date.now() - 7 * 24 * 3600 * 1000
       );
       setCancelledSessions(cancelled);
-    } catch { }
-  };
+    } catch { } finally {
+      isLoadingSessionsRef.current = false;
+    }
+  }, []);
 
   // Real-time Server-Sent Events (SSE) listener: instant session and topic synchronization
   useEffect(() => {
@@ -618,9 +629,6 @@ function StudentLobbyContent() {
                   initialSession={activeSession}
                   onStatusChange={(updated) => {
                     setActiveSession(updated);
-                    if (currentUser?.id) {
-                      loadStudentSessions(currentUser.id);
-                    }
                   }}
                 />
 

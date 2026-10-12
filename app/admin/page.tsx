@@ -61,6 +61,7 @@ import {
   HelpCircle,
   FileText,
   Mail,
+  ExternalLink,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import RescheduleModal from "@/components/reschedule-modal";
@@ -138,11 +139,15 @@ export default function AdminPage() {
   const [tutorRoleFilter, setTutorRoleFilter] = useState<"ALL" | "HEAD_TUTOR" | "TUTOR">("ALL");
   const [tutorSortBy, setTutorSortBy] = useState<"name_asc" | "name_desc" | "students_count" | "newest">("name_asc");
 
-  // Live / Next Lesson Quick Controls
+  // Live / Next Lesson Quick Controls (strictly scoped to Admin's own lessons)
   const [activeLesson, setActiveLesson] = useState<any>(null);
   const [teamsUrlInput, setTeamsUrlInput] = useState("");
   const [isUpdatingTeams, setIsUpdatingTeams] = useState(false);
   const [teamsSuccess, setTeamsSuccess] = useState("");
+  const [nextTeamsUrlInput, setNextTeamsUrlInput] = useState("");
+  const [isUpdatingNextTeams, setIsUpdatingNextTeams] = useState(false);
+  const [nextTeamsSuccess, setNextTeamsSuccess] = useState("");
+  const [studentScopeTab, setStudentScopeTab] = useState<"my" | "all">("my");
   const [actionMessage, setActionMessage] = useState("");
 
   // New Lesson Modal State (NO lesson topic input!)
@@ -313,9 +318,115 @@ export default function AdminPage() {
     [sessions]
   );
 
+  // Admin's own assigned sessions (strictly for their personal teaching queue)
+  const mySessions = useMemo(() => {
+    if (!currentUser?.id) return [];
+    return sessions.filter(
+      (s: any) => s.tutorId === currentUser.id || s.tutor?.id === currentUser.id
+    );
+  }, [sessions, currentUser?.id]);
+
+  // Automatically sync activeLesson from admin's own sessions (strictly scoped to admin!)
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setActiveLesson(null);
+      return;
+    }
+    const current = resolveActiveSession(mySessions, currentTime);
+    setActiveLesson(current || null);
+  }, [mySessions, currentTime, currentUser?.id]);
+
+  // Keep teamsUrlInput in sync when activeLesson changes
+  useEffect(() => {
+    setTeamsUrlInput(activeLesson?.teamsMeetingUrl || "");
+  }, [activeLesson?.id, activeLesson?.teamsMeetingUrl]);
+
+  // Uncompleted previous lessons that ended in the past for the admin but were never marked completed
+  const uncompletedPastLessons = useMemo(() => {
+    const now = currentTime;
+    return mySessions.filter(
+      (s: any) =>
+        s.status === "IN_PROGRESS" &&
+        new Date(s.scheduledEndTime).getTime() <= now
+    );
+  }, [mySessions, currentTime]);
+
+  // The next upcoming scheduled or delayed lesson after the active/live lesson (scoped to admin)
+  const nextLesson = useMemo(() => {
+    const now = currentTime;
+    if (!activeLesson) return null;
+    const activeStartMs = new Date(activeLesson.scheduledStartTime).getTime();
+
+    const upcoming = mySessions
+      .filter((s: any) => {
+        if (s.status === "COMPLETED" || s.status === "CANCELLED") return false;
+        if (s.id === activeLesson.id) return false;
+        const endMs = new Date(s.scheduledEndTime).getTime();
+        const startMs = new Date(s.scheduledStartTime).getTime();
+        if (endMs <= now) return false;
+        if (startMs < activeStartMs) return false;
+        return true;
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.scheduledStartTime).getTime() -
+          new Date(b.scheduledStartTime).getTime()
+      );
+
+    return upcoming[0] || null;
+  }, [mySessions, activeLesson?.id, activeLesson?.scheduledStartTime, currentTime]);
+
+  // Keep nextTeamsUrlInput in sync when nextLesson changes
+  useEffect(() => {
+    setNextTeamsUrlInput(nextLesson?.teamsMeetingUrl || "");
+  }, [nextLesson?.id, nextLesson?.teamsMeetingUrl]);
+
+  // Helper to retrieve extra notes & homework from the previous lesson for a student
+  const getPreviousLessonNotes = useCallback(
+    (session: any): string | null => {
+      if (!session) return null;
+      const tuteeId = session.tuteeId || session.tutee?.id;
+      if (!tuteeId) return null;
+
+      const currentStart = new Date(session.scheduledStartTime).getTime();
+
+      const pastForStudent = sessions
+        .filter((s: any) => {
+          const sTuteeId = s.tuteeId || s.tutee?.id;
+          if (sTuteeId !== tuteeId || s.id === session.id) return false;
+          if (s.status === "CANCELLED") return false;
+          const sStart = new Date(s.scheduledStartTime).getTime();
+          return sStart < currentStart && (s.status === "COMPLETED" || Boolean(s.feedbackNotes));
+        })
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime()
+        );
+
+      const previousLesson = pastForStudent[0];
+      return previousLesson?.feedbackNotes?.trim() || null;
+    },
+    [sessions]
+  );
+
+  const activeLessonPrevNotes = useMemo(
+    () => getPreviousLessonNotes(activeLesson),
+    [activeLesson, getPreviousLessonNotes]
+  );
+
+  const nextLessonPrevNotes = useMemo(
+    () => getPreviousLessonNotes(nextLesson),
+    [nextLesson, getPreviousLessonNotes]
+  );
+
   const activeLessonPrevTeamsUrl = useMemo(
     () => getPreviousLessonTeamsUrl(activeLesson),
     [activeLesson, getPreviousLessonTeamsUrl]
+  );
+
+  const nextLessonPrevTeamsUrl = useMemo(
+    () => getPreviousLessonTeamsUrl(nextLesson),
+    [nextLesson, getPreviousLessonTeamsUrl]
   );
 
   const selectedStudentPrevTeamsUrl = useMemo(() => {
@@ -639,7 +750,10 @@ export default function AdminPage() {
         const list: any[] = d.sessions || [];
         setSessions(list);
 
-        const current = resolveActiveSession(list, Date.now());
+        const mySess = currentUser?.id
+          ? list.filter((s: any) => s.tutorId === currentUser.id || s.tutor?.id === currentUser.id)
+          : [];
+        const current = resolveActiveSession(mySess, Date.now());
 
         if (current) {
           setActiveLesson(current);
