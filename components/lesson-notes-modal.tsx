@@ -93,7 +93,7 @@ export default function LessonNotesModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 relative transition-colors max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 sm:space-y-5 relative transition-colors max-h-[90vh] overflow-y-auto"
       >
         <button
           onClick={handleCloseAndAutoSave}

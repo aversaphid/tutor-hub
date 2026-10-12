@@ -946,9 +946,9 @@ export default function TutorDashboardPage() {
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b1120] transition-colors duration-200">
       <Navbar user={currentUser} />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8">
         {/* Header Banner */}
-        <div data-tour="tutor-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div data-tour="tutor-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20">
@@ -1021,59 +1021,64 @@ export default function TutorDashboardPage() {
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             onClick={() => setActiveTab("active")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "active"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "active"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Next Meeting &amp; Live Deck</span>
+            <Clock className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden text-[10px] leading-tight">Live</span>
+            <span className="hidden sm:inline text-xs">Next Meeting &amp; Live Deck</span>
           </button>
           <button
             data-tour="tutor-tab-students"
             onClick={() => setActiveTab("students")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "students"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "students"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>My Assigned Students ({assignedStudents.length})</span>
+            <Users className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden text-[10px] leading-tight">Students</span>
+            <span className="hidden sm:inline text-xs">My Assigned Students ({assignedStudents.length})</span>
           </button>
           <button
             data-tour="tutor-tab-lessons"
             onClick={() => setActiveTab("lessons")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "lessons"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "lessons"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             title={`${upcomingLessonsCount} upcoming lessons scheduled`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Upcoming Lessons ({upcomingLessonsCount})</span>
+            <Calendar className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden text-[10px] leading-tight">Lessons</span>
+            <span className="hidden sm:inline text-xs">Upcoming Lessons ({upcomingLessonsCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("resources")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "resources"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "resources"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Shared Resources</span>
+            <BookOpen className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden text-[10px] leading-tight">Library</span>
+            <span className="hidden sm:inline text-xs">Shared Resources</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "settings"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "settings"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Settings</span>
+            <Settings className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden text-[10px] leading-tight">Settings</span>
+            <span className="hidden sm:inline text-xs">Settings</span>
           </button>
         </div>
 
@@ -1309,7 +1314,7 @@ export default function TutorDashboardPage() {
                       </a>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="url"
                       value={teamsUrlInput}
@@ -1317,26 +1322,28 @@ export default function TutorDashboardPage() {
                       placeholder="https://teams.microsoft.com/l/meetup-join/..."
                       className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE]"
                     />
-                    {activeLessonPrevTeamsUrl && teamsUrlInput !== activeLessonPrevTeamsUrl && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {activeLessonPrevTeamsUrl && teamsUrlInput !== activeLessonPrevTeamsUrl && (
+                        <button
+                          type="button"
+                          onClick={handleUsePreviousTeamsUrl}
+                          disabled={isUpdatingTeams}
+                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
+                          title={`Set to link used in previous lesson: ${activeLessonPrevTeamsUrl}`}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                          <span>Use Previous Link</span>
+                        </button>
+                      )}
                       <button
-                        type="button"
-                        onClick={handleUsePreviousTeamsUrl}
+                        onClick={handleUpdateTeamsUrl}
                         disabled={isUpdatingTeams}
-                        className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
-                        title={`Set to link used in previous lesson: ${activeLessonPrevTeamsUrl}`}
+                        className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
                       >
-                        <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                        <span>Use Previous Link</span>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isUpdatingTeams ? "Saving..." : "Save Link"}</span>
                       </button>
-                    )}
-                    <button
-                      onClick={handleUpdateTeamsUrl}
-                      disabled={isUpdatingTeams}
-                      className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>{isUpdatingTeams ? "Saving..." : "Save Link"}</span>
-                    </button>
+                    </div>
                   </div>
                   {teamsSuccess && (
                     <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -1347,11 +1354,11 @@ export default function TutorDashboardPage() {
                 </div>
 
                 {/* Real-time Session Action Triggers */}
-                <div data-tour="tutor-lesson-controls" className="flex flex-wrap items-center gap-3 pt-2">
+                <div data-tour="tutor-lesson-controls" className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
                   {!isLessonLive && (
                     <button
                       onClick={handleStartLessonNow}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                      className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                     >
                       <Play className="w-4 h-4 fill-white" />
                       <span>Start Lesson Now (Play Chime)</span>
@@ -1408,7 +1415,7 @@ export default function TutorDashboardPage() {
                       setSessionToComplete(activeLesson);
                       setIsCompletionModalOpen(true);
                     }}
-                    className="ml-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    className="w-full sm:w-auto sm:ml-auto px-4 py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Complete Lesson &amp; Report</span>
@@ -1418,7 +1425,7 @@ export default function TutorDashboardPage() {
 
               {/* UP NEXT / FOLLOWING LESSON SECTION */}
               {nextLesson && (
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-blue-200 dark:border-blue-900/50 p-6 sm:p-7 shadow-sm space-y-6 transition-colors relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-blue-200 dark:border-blue-900/50 p-4 sm:p-7 shadow-sm space-y-4 sm:space-y-6 transition-colors relative overflow-hidden">
                   {/* Top gradient highlight bar */}
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#48A5EE] via-indigo-500 to-cyan-400" />
 
@@ -1597,7 +1604,7 @@ export default function TutorDashboardPage() {
                         </a>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="url"
                         value={nextTeamsUrlInput}
@@ -1605,27 +1612,29 @@ export default function TutorDashboardPage() {
                         placeholder="https://teams.microsoft.com/l/meetup-join/..."
                         className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE]"
                       />
-                      {nextLessonPrevTeamsUrl && nextTeamsUrlInput !== nextLessonPrevTeamsUrl && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {nextLessonPrevTeamsUrl && nextTeamsUrlInput !== nextLessonPrevTeamsUrl && (
+                          <button
+                            type="button"
+                            onClick={handleUsePreviousNextTeamsUrl}
+                            disabled={isUpdatingNextTeams}
+                            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
+                            title={`Set to link used in previous lesson: ${nextLessonPrevTeamsUrl}`}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                            <span>Use Previous Link</span>
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={handleUsePreviousNextTeamsUrl}
+                          onClick={handleUpdateNextTeamsUrl}
                           disabled={isUpdatingNextTeams}
-                          className="px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs disabled:opacity-50"
-                          title={`Set to link used in previous lesson: ${nextLessonPrevTeamsUrl}`}
+                          className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
                         >
-                          <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                          <span>Use Previous Link</span>
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{isUpdatingNextTeams ? "Saving..." : "Save Link"}</span>
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleUpdateNextTeamsUrl}
-                        disabled={isUpdatingNextTeams}
-                        className="px-4 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{isUpdatingNextTeams ? "Saving..." : "Save Link"}</span>
-                      </button>
+                      </div>
                     </div>
                     {nextTeamsSuccess && (
                       <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -1636,7 +1645,7 @@ export default function TutorDashboardPage() {
                   </div>
 
                   {/* Action Controls for Next Lesson */}
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
                     {/* Delay Action Controls */}
                     <div className="flex items-center gap-2">
                       <DelayDropdownMenu
@@ -1684,7 +1693,7 @@ export default function TutorDashboardPage() {
                     </button>
 
                     {/* Add to Calendar */}
-                    <div className="ml-auto">
+                    <div className="w-full sm:w-auto sm:ml-auto">
                       <AddToCalendar session={nextLesson} compact />
                     </div>
                   </div>
@@ -1722,8 +1731,8 @@ export default function TutorDashboardPage() {
 
         {/* TAB 2: MY ASSIGNED STUDENTS */}
         {activeTab === "students" && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4 transition-colors">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-5 shadow-sm space-y-3 transition-colors">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800 gap-2 sm:gap-3">
               <div>
                 <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
                   Students Assigned to You
@@ -1732,14 +1741,14 @@ export default function TutorDashboardPage() {
                   You can see your assigned students&apos; PINs and copy their direct magic access links.
                 </p>
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] shrink-0 self-start sm:self-auto">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#48A5EE]/10 text-[#48A5EE] shrink-0 self-start sm:self-auto">
                 {assignedStudents.length} Students
               </span>
             </div>
 
             {/* PIN Reset Success Toast / Message */}
             {pinResetSuccessMessage && (
-              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600" />
                 <span>{pinResetSuccessMessage}</span>
               </div>
@@ -1752,8 +1761,8 @@ export default function TutorDashboardPage() {
               );
               if (lockedStudents.length === 0) return null;
               return (
-                <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
                     <div>
                       <p className="font-bold text-rose-800 dark:text-rose-200">
@@ -1764,24 +1773,24 @@ export default function TutorDashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     {lockedStudents.map((s) => (
                       <button
                         key={s.id}
                         type="button"
                         onClick={() => handleResetPinLock(s)}
                         disabled={unlockingStudentId === s.id}
-                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                         title={`Reset PIN lock for ${s.name}`}
                       >
                         {unlockingStudentId === s.id ? (
                           <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <Loader2 className="w-3 h-3 animate-spin" />
                             <span>Unlocking...</span>
                           </>
                         ) : (
                           <>
-                            <Unlock className="w-3.5 h-3.5" />
+                            <Unlock className="w-3 h-3" />
                             <span>Unlock {s.name.split(" ")[0]}</span>
                           </>
                         )}
@@ -1795,18 +1804,18 @@ export default function TutorDashboardPage() {
             {/* Student Search Box */}
             {assignedStudents.length > 0 && (
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                   placeholder="Search your students by name, PIN, email..."
-                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
                 />
                 {studentSearchTerm && (
                   <button
                     onClick={() => setStudentSearchTerm("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1815,10 +1824,10 @@ export default function TutorDashboardPage() {
             )}
 
             {loading ? (
-              <div className="py-12 text-center text-xs text-slate-400">Loading assigned students...</div>
+              <div className="py-10 text-center text-xs text-slate-400">Loading assigned students...</div>
             ) : assignedStudents.length === 0 ? (
-              <div className="text-center py-12 px-4 space-y-2">
-                <Users className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+              <div className="text-center py-10 px-4 space-y-1.5">
+                <Users className="w-7 h-7 text-slate-300 dark:text-slate-600 mx-auto" />
                 <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
                   No Students Assigned Yet
                 </h4>
@@ -1850,10 +1859,10 @@ export default function TutorDashboardPage() {
                     return (
                     <div
                       key={student.id}
-                      className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                     >
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
                             {student.name}
                           </span>
@@ -1864,79 +1873,62 @@ export default function TutorDashboardPage() {
                             size="xs"
                           />
                           <span
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold font-mono"
+                            className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold font-mono"
                             title={`Your hourly pay rate for ${student.name}: ${typeof student.tutorPay === "number" ? formatCurrency(student.tutorPay) + "/hr" : "Rate not set"}`}
                           >
                             <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                             <span>{typeof student.tutorPay === "number" ? `${formatCurrency(student.tutorPay)}/hr` : "Rate not set"}</span>
                           </span>
                           {isLocked && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
-                              <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
-                              <span>PIN Locked ({lockMinutes}m remaining)</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
+                              <ShieldAlert className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                              <span>PIN Locked ({lockMinutes}m)</span>
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                          {(student.parentEmail || student.email) ? (
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                          {(student.parentEmail || student.email) && (
                             <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                               <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
                               <a
                                 href={`mailto:${student.parentEmail || student.email}`}
-                                className="hover:underline hover:text-[#48A5EE] font-medium"
+                                className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px]"
                                 title={`Contact Parent: ${student.parentEmail || student.email}`}
                               >
                                 {student.parentEmail || student.email}
                               </a>
                               <span className="text-[10px] text-slate-400">(Parent)</span>
                             </span>
-                          ) : (
-                            <span>Student Profile</span>
                           )}
-                          <span>•</span>
-                          <span className="text-[#48A5EE] font-medium">Assigned to You</span>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Tutor Pay Rate Pill */}
-                        <div
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200"
-                          title={`Your compensation rate for ${student.name}`}
-                        >
-                          <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Your Pay:</span>
-                          <strong className="text-xs font-mono font-bold text-emerald-900 dark:text-emerald-100">
-                            {typeof student.tutorPay === "number" ? `${formatCurrency(student.tutorPay)}/hr` : "—"}
-                          </strong>
-                        </div>
-
+                      <div className="flex flex-wrap items-center gap-1.5">
                         {/* Weekly Calendar Modal Button */}
                         <button
                           onClick={() => handleOpenCalendar(student)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/70 dark:border-slate-700"
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border border-slate-200/70 dark:border-slate-700"
                           title="Open Weekly Timetable"
                         >
-                          <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-                          <span>Weekly Calendar</span>
+                          <Calendar className="w-3 h-3 text-[#48A5EE]" />
+                          <span>Timetable</span>
                         </button>
 
                         {/* Visible PIN */}
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                          <Key className="w-3.5 h-3.5 text-[#48A5EE]" />
-                          <span className="text-xs text-slate-500 dark:text-slate-400">PIN:</span>
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <span className="text-[11px] text-slate-400">PIN:</span>
                           <strong className="text-xs font-mono font-bold text-slate-800 dark:text-slate-100">
                             {student.pin || "----"}
                           </strong>
                           <button
                             onClick={() => handleCopyPin(`stu-pin-${student.id}`, student.pin)}
-                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                            className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                             title="Copy PIN"
                           >
                             {copiedKey === `stu-pin-${student.id}` ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <Check className="w-3 h-3 text-emerald-500" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
+                              <Copy className="w-3 h-3" />
                             )}
                           </button>
                         </div>
@@ -1947,17 +1939,17 @@ export default function TutorDashboardPage() {
                             type="button"
                             onClick={() => handleResetPinLock(student)}
                             disabled={unlockingStudentId === student.id}
-                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                            className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                             title={`Reset PIN lock for ${student.name}`}
                           >
                             {unlockingStudentId === student.id ? (
                               <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <Loader2 className="w-3 h-3 animate-spin" />
                                 <span>Unlocking...</span>
                               </>
                             ) : (
                               <>
-                                <Unlock className="w-3.5 h-3.5" />
+                                <Unlock className="w-3 h-3" />
                                 <span>Unlock PIN</span>
                               </>
                             )}
@@ -1967,18 +1959,18 @@ export default function TutorDashboardPage() {
                         {/* 1-Click Copy Magic Link */}
                         <button
                           onClick={() => handleCopyLink(`stu-magic-${student.id}`, student.magicKey)}
-                          className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-[#48A5EE] hover:bg-[#3292dc] text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
                           title="Copy Student Magic Link"
                         >
                           {copiedKey === `stu-magic-${student.id}` ? (
                             <>
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Link Copied!</span>
+                              <Check className="w-3 h-3" />
+                              <span>Copied!</span>
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-3.5 h-3.5" />
-                              <span>Copy Magic Link</span>
+                              <Sparkles className="w-3 h-3" />
+                              <span>Magic Link</span>
                             </>
                           )}
                         </button>
@@ -2148,52 +2140,56 @@ export default function TutorDashboardPage() {
                 </div>
 
                 {/* Status Summary Pills */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:items-center gap-1 sm:gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                    className="px-3 py-1 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold hover:bg-[#48A5EE]/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold hover:bg-[#48A5EE]/20 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isUpcomingOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Upcoming: {upcomingList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Upcoming ({upcomingList.length})</span>
+                    <span className="hidden sm:inline">Upcoming: {upcomingList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                    className="px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isCompletedOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Awaiting Payment: {completedUnpaidList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Unpaid ({completedUnpaidList.length})</span>
+                    <span className="hidden sm:inline">Awaiting Payment: {completedUnpaidList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                    className="px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isCancelledOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Cancelled: {cancelledList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Cancelled ({cancelledList.length})</span>
+                    <span className="hidden sm:inline">Cancelled: {cancelledList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                    className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isArchivedOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Paid &amp; Archived: {archivedPaidList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Paid ({archivedPaidList.length})</span>
+                    <span className="hidden sm:inline">Paid &amp; Archived: {archivedPaidList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
                   </button>
                 </div>
               </div>
 
               {/* 1. UPCOMING LESSONS (Shown at top) */}
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
                 <button
                   type="button"
                   onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  className={`w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
                     }`}
                 >
                   <div>
@@ -2227,56 +2223,60 @@ export default function TutorDashboardPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
-                            <tr>
-                              <th className="px-4 py-3">Student &amp; Lesson</th>
-                              <th className="px-3 py-3">Date &amp; Time</th>
-                              <th className="px-2 py-3 text-center">Status</th>
-                              <th className="px-3 py-3">PIN &amp; Link</th>
-                              <th className="px-3 py-3 text-center">Cancel / Complete</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {upcomingList.map((s) => {
-                              const isRowLive =
-                                s.status === "IN_PROGRESS" ||
-                                (currentTime >= new Date(s.scheduledStartTime).getTime() &&
-                                  currentTime < new Date(s.scheduledEndTime).getTime() &&
-                                  s.status !== "COMPLETED" &&
-                                  s.status !== "CANCELLED");
+                      <>
+                        {/* Mobile Card List (No horizontal scrolling on phone) */}
+                        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                          {upcomingList.map((s) => {
+                            const isRowLive =
+                              s.status === "IN_PROGRESS" ||
+                              (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                s.status !== "COMPLETED" &&
+                                s.status !== "CANCELLED");
+                            const amounts = calculateSessionAmounts(s, billingDurationMode);
 
-                              return (
-                              <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-slate-800 dark:text-slate-100">
-                                      {s.tutee?.name}
+                            return (
+                              <div key={s.id} className="p-4 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors">
+                                {/* Header: Student name, Status badge & Pay */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                                        {s.tutee?.name}
+                                      </span>
+                                      <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                      {s.title}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isRowLive
+                                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                          : s.status === "DELAYED"
+                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                      }`}
+                                    >
+                                      {isRowLive
+                                        ? "LIVE"
+                                        : s.status === "DELAYED" && s.delayMinutes
+                                        ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status}
                                     </span>
-                                    <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold font-mono">
+                                      <DollarSign className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                      <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
+                                    </span>
                                   </div>
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
-                                    <span>{s.title}</span>
-                                    {(() => {
-                                      const amounts = calculateSessionAmounts(s, billingDurationMode);
-                                      return (
-                                        <span
-                                          className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold font-mono"
-                                          title={`Your payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
-                                        >
-                                          <DollarSign className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                          <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
-                                          {amounts.baseTutorRate > 0 && (
-                                            <span className="font-normal text-emerald-700/80 dark:text-emerald-400/80 text-[9px]">
-                                              ({formatCurrency(amounts.baseTutorRate)}/hr)
-                                            </span>
-                                          )}
-                                        </span>
-                                      );
-                                    })()}
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                </div>
+
+                                {/* Tags: Student topic, Admin note, Prev notes */}
+                                {(s.studentTopic || s.notes || getPreviousLessonNotes(s)) && (
+                                  <div className="flex flex-wrap items-center gap-1">
                                     {s.studentTopic && (
                                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
                                         <BookOpen className="w-2.5 h-2.5 shrink-0" />
@@ -2285,7 +2285,7 @@ export default function TutorDashboardPage() {
                                     )}
                                     {s.notes && (
                                       <div
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px] font-medium max-w-[280px] truncate"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px] font-medium max-w-full"
                                         title={`Admin note: ${s.notes}`}
                                       >
                                         <Info className="w-2.5 h-2.5 shrink-0 text-[#48A5EE]" />
@@ -2294,7 +2294,7 @@ export default function TutorDashboardPage() {
                                     )}
                                     {getPreviousLessonNotes(s) && (
                                       <div
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-[10px] font-medium max-w-[280px] truncate"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-[10px] font-medium max-w-full"
                                         title={`Previous extra notes & homework: ${getPreviousLessonNotes(s)}`}
                                       >
                                         <FileText className="w-2.5 h-2.5 shrink-0 text-purple-600 dark:text-purple-400" />
@@ -2302,148 +2302,320 @@ export default function TutorDashboardPage() {
                                       </div>
                                     )}
                                   </div>
-                                </td>
-                                <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                                  <div className="font-semibold text-slate-700 dark:text-slate-200">
-                                    {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                      weekday: "short",
-                                      month: "short",
-                                      day: "numeric",
-                                    })}{" "}
-                                    &bull;{" "}
-                                    {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
-                                  <div className="mt-1 flex items-center gap-2 font-sans">
-                                    {s.teamsMeetingUrl ? (
-                                      <a
-                                        href={s.teamsMeetingUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
-                                      >
-                                        <Video className="w-3 h-3" />
-                                        <span>Teams</span>
-                                      </a>
-                                    ) : (
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-slate-400 italic text-[10px]">No Teams</span>
-                                        {getPreviousLessonTeamsUrl(s) && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSetSessionPreviousTeamsUrl(s)}
-                                            className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline cursor-pointer flex items-center gap-0.5"
-                                            title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
-                                          >
-                                            <RotateCcw className="w-2.5 h-2.5" />
-                                            <span>+ Use Prev</span>
-                                          </button>
-                                        )}
-                                      </div>
-                                    )}
-                                    <AddToCalendar session={s} compact />
-                                  </div>
-                                </td>
-                                <td className="px-2 py-3 text-center whitespace-nowrap">
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
-                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                        : s.status === "DELAYED"
-                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                                      }`}
-                                  >
-                                    {isRowLive
-                                      ? "IN_PROGRESS"
-                                      : s.status === "DELAYED" && s.delayMinutes
-                                      ? `DELAYED (+${s.delayMinutes}m)`
-                                      : s.status}
-                                  </span>
-                                  {s.delayReason && (
-                                    <div
-                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[110px] mx-auto mt-0.5"
-                                      title={s.delayReason}
-                                    >
-                                      {s.delayReason}
+                                )}
+
+                                {/* Middle: Time, Teams Link & PIN */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-xs">
+                                  <div className="space-y-0.5">
+                                    <div className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 text-[11px]">
+                                      <Clock className="w-3 h-3 text-[#48A5EE]" />
+                                      <span>
+                                        {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                          weekday: "short",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}{" "}
+                                        &bull;{" "}
+                                        {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
                                     </div>
-                                  )}
-                                </td>
-                                <td className="px-3 py-3">
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                    <div className="flex items-center gap-2">
+                                      {s.teamsMeetingUrl ? (
+                                        <a
+                                          href={s.teamsMeetingUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                        >
+                                          <Video className="w-3 h-3" />
+                                          <span>Teams Link</span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 text-[10px]">
+                                          <span className="text-slate-400 italic">No Teams</span>
+                                          {getPreviousLessonTeamsUrl(s) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSetSessionPreviousTeamsUrl(s)}
+                                              className="font-bold text-purple-600 dark:text-purple-400 underline cursor-pointer"
+                                            >
+                                              + Use Prev
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      <AddToCalendar session={s} compact />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px]">
                                       PIN: {s.tutee?.pin || "----"}
                                     </span>
                                     <button
                                       onClick={() => handleCopyLink(`sess-${s.id}`, s.tutee?.magicKey)}
-                                      className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
-                                      title="Copy Magic Link"
+                                      className="px-2.5 py-1 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer"
                                     >
                                       {copiedKey === `sess-${s.id}` ? "Copied!" : "Link"}
                                     </button>
                                   </div>
-                                </td>
-                                <td className="px-3 py-3 text-center">
-                                  <div className="flex flex-col items-center gap-1 min-w-[90px]">
-                                    <button
-                                      onClick={() => {
-                                        setSessionToComplete(s);
-                                        setIsCompletionModalOpen(true);
-                                      }}
-                                      className="w-full px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap"
-                                      title="Complete Lesson & Submit Report"
-                                    >
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      <span>Complete</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenDelayModal(10, s)}
-                                      className="w-full px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800 whitespace-nowrap"
-                                      title="Delay this lesson (+5m, +10m, custom mins, or with reason)"
-                                    >
-                                      <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
-                                      <span>{s.status === "DELAYED" ? `Delayed (+${s.delayMinutes}m)` : "+ Delay / Reason"}</span>
-                                    </button>
-                                    {s.delayMinutes > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleResetStartTime(s)}
-                                        className="w-full px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700 whitespace-nowrap"
-                                        title={`Reset start time back to original schedule (removes ${s.delayMinutes}m delay)`}
-                                      >
-                                        <RotateCcw className="w-2.5 h-2.5 text-slate-500" />
-                                        <span>Reset Start</span>
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => handleCancelSession(s)}
-                                      className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"
-                                      title="Cancel this lesson"
-                                    >
-                                      <XCircle className="w-2.5 h-2.5 text-rose-500" />
-                                      <span>Cancel</span>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
+                                </div>
+
+                                {/* Actions Row */}
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <button
+                                    onClick={() => {
+                                      setSessionToComplete(s);
+                                      setIsCompletionModalOpen(true);
+                                    }}
+                                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Complete</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDelayModal(10, s)}
+                                    className="py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800"
+                                  >
+                                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                    <span>Delay</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelSession(s)}
+                                    className="py-2 px-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
                             );
                           })}
-                          </tbody>
-                        </table>
-                      </div>
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden sm:block overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
+                              <tr>
+                                <th className="px-4 py-3">Student &amp; Lesson</th>
+                                <th className="px-3 py-3">Date &amp; Time</th>
+                                <th className="px-2 py-3 text-center">Status</th>
+                                <th className="px-3 py-3">PIN &amp; Link</th>
+                                <th className="px-3 py-3 text-center">Cancel / Complete</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {upcomingList.map((s) => {
+                                const isRowLive =
+                                  s.status === "IN_PROGRESS" ||
+                                  (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                    currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                    s.status !== "COMPLETED" &&
+                                    s.status !== "CANCELLED");
+
+                                return (
+                                <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-slate-800 dark:text-slate-100">
+                                        {s.tutee?.name}
+                                      </span>
+                                      <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                                      <span>{s.title}</span>
+                                      {(() => {
+                                        const amounts = calculateSessionAmounts(s, billingDurationMode);
+                                        return (
+                                          <span
+                                            className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold font-mono"
+                                            title={`Your payout for this lesson: ${formatCurrency(amounts.tutorPay)} (${formatCurrency(amounts.baseTutorRate)}/hr × ${amounts.multiplier}h)`}
+                                          >
+                                            <DollarSign className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                            <span>Pay: {formatCurrency(amounts.tutorPay)}</span>
+                                            {amounts.baseTutorRate > 0 && (
+                                              <span className="font-normal text-emerald-700/80 dark:text-emerald-400/80 text-[9px]">
+                                                ({formatCurrency(amounts.baseTutorRate)}/hr)
+                                              </span>
+                                            )}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                                      {s.studentTopic && (
+                                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
+                                          <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                                          <span>{s.studentTopic}</span>
+                                        </div>
+                                      )}
+                                      {s.notes && (
+                                        <div
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px] font-medium max-w-[280px] truncate"
+                                          title={`Admin note: ${s.notes}`}
+                                        >
+                                          <Info className="w-2.5 h-2.5 shrink-0 text-[#48A5EE]" />
+                                          <span className="truncate">Admin note: {s.notes}</span>
+                                        </div>
+                                      )}
+                                      {getPreviousLessonNotes(s) && (
+                                        <div
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-[10px] font-medium max-w-[280px] truncate"
+                                          title={`Previous extra notes & homework: ${getPreviousLessonNotes(s)}`}
+                                        >
+                                          <FileText className="w-2.5 h-2.5 shrink-0 text-purple-600 dark:text-purple-400" />
+                                          <span className="truncate">Prev notes: {getPreviousLessonNotes(s)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                                    <div className="font-semibold text-slate-700 dark:text-slate-200">
+                                      {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                        weekday: "short",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}{" "}
+                                      &bull;{" "}
+                                      {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 font-sans">
+                                      {s.teamsMeetingUrl ? (
+                                        <a
+                                          href={s.teamsMeetingUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1 text-[11px]"
+                                        >
+                                          <Video className="w-3 h-3" />
+                                          <span>Teams</span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                          {getPreviousLessonTeamsUrl(s) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSetSessionPreviousTeamsUrl(s)}
+                                              className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline cursor-pointer flex items-center gap-0.5"
+                                              title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
+                                            >
+                                              <RotateCcw className="w-2.5 h-2.5" />
+                                              <span>+ Use Prev</span>
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      <AddToCalendar session={s} compact />
+                                    </div>
+                                  </td>
+                                  <td className="px-2 py-3 text-center whitespace-nowrap">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
+                                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                          : s.status === "DELAYED"
+                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                            : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                        }`}
+                                    >
+                                      {isRowLive
+                                        ? "IN_PROGRESS"
+                                        : s.status === "DELAYED" && s.delayMinutes
+                                        ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status}
+                                    </span>
+                                    {s.delayReason && (
+                                      <div
+                                        className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[110px] mx-auto mt-0.5"
+                                        title={s.delayReason}
+                                      >
+                                        {s.delayReason}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                      <span className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                        PIN: {s.tutee?.pin || "----"}
+                                      </span>
+                                      <button
+                                        onClick={() => handleCopyLink(`sess-${s.id}`, s.tutee?.magicKey)}
+                                        className="px-2 py-0.5 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
+                                        title="Copy Magic Link"
+                                      >
+                                        {copiedKey === `sess-${s.id}` ? "Copied!" : "Link"}
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
+                                    <div className="flex flex-col items-center gap-1 min-w-[90px]">
+                                      <button
+                                        onClick={() => {
+                                          setSessionToComplete(s);
+                                          setIsCompletionModalOpen(true);
+                                        }}
+                                        className="w-full px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer whitespace-nowrap"
+                                        title="Complete Lesson & Submit Report"
+                                      >
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        <span>Complete</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenDelayModal(10, s)}
+                                        className="w-full px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-amber-200 dark:border-amber-800 whitespace-nowrap"
+                                        title="Delay this lesson (+5m, +10m, custom mins, or with reason)"
+                                      >
+                                        <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                        <span>{s.status === "DELAYED" ? `Delayed (+${s.delayMinutes}m)` : "+ Delay / Reason"}</span>
+                                      </button>
+                                      {s.delayMinutes > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetStartTime(s)}
+                                          className="w-full px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+                                          title={`Reset start time back to original schedule (removes ${s.delayMinutes}m delay)`}
+                                        >
+                                          <RotateCcw className="w-2.5 h-2.5 text-slate-500" />
+                                          <span>Reset Start</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleCancelSession(s)}
+                                        className="w-full px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-semibold text-[10px] inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800 whitespace-nowrap"
+                                        title="Cancel this lesson"
+                                      >
+                                        <XCircle className="w-2.5 h-2.5 text-rose-500" />
+                                        <span>Cancel</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
               </div>
 
               {/* 2. COMPLETED (AWAITING PAYMENT) */}
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm transition-colors">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm transition-colors">
                 <button
                   type="button"
                   onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
+                  className={`w-full p-4 sm:p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
                     }`}
                 >
                   <div>
@@ -2493,7 +2665,7 @@ export default function TutorDashboardPage() {
                         {completedUnpaidList.map((s) => (
                           <div
                             key={s.id}
-                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
+                            className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 hover:bg-amber-50/20 dark:hover:bg-amber-950/10 transition-colors"
                           >
                             <div className="space-y-1.5 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
@@ -2608,11 +2780,11 @@ export default function TutorDashboardPage() {
               </div>
 
               {/* 3. CANCELLED LESSONS */}
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm transition-colors">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm transition-colors">
                 <button
                   type="button"
                   onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
+                  className={`w-full p-4 sm:p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
                     }`}
                 >
                   <div>
@@ -2640,7 +2812,7 @@ export default function TutorDashboardPage() {
                 </button>
 
                 {isCancelledOpen && (
-                  <div className="p-6 pt-2 space-y-3 border-t border-rose-100 dark:border-rose-900/50">
+                  <div className="p-4 sm:p-6 pt-2 space-y-3 border-t border-rose-100 dark:border-rose-900/50">
                     {cancelledList.length === 0 ? (
                       <div className="text-center py-6 text-xs text-slate-500 dark:text-slate-400">
                         No cancelled lessons.
@@ -2702,11 +2874,11 @@ export default function TutorDashboardPage() {
               </div>
 
               {/* 4. ARCHIVED (TUTOR PAID) */}
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
                 <button
                   type="button"
                   onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  className={`w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
                     }`}
                 >
                   <div>
@@ -2743,7 +2915,7 @@ export default function TutorDashboardPage() {
                         {archivedPaidList.map((s) => (
                           <div
                             key={s.id}
-                            className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                            className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                           >
                             <div className="space-y-1.5 flex-1">
                               <div className="flex flex-wrap items-center gap-2">

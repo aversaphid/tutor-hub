@@ -11,6 +11,15 @@ function sanitizeUrl(rawUrl: string): string {
   return `https://${trimmed}`;
 }
 
+function parseTags(raw?: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => t.toLowerCase() !== "general");
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,7 +55,7 @@ export async function PATCH(
       );
     }
 
-    const { title, url, description, category } = parseResult.data;
+    const { title, url, description, category, tags } = parseResult.data;
     const updateData: any = {};
 
     if (title !== undefined) updateData.title = title.trim();
@@ -65,8 +74,18 @@ export async function PATCH(
     if (description !== undefined) {
       updateData.description = description ? description.trim() : null;
     }
-    if (category !== undefined) {
-      updateData.category = category.trim() || "General";
+    if (tags !== undefined || category !== undefined) {
+      const resolvedTags = Array.isArray(tags)
+        ? tags.map((t) => t.trim()).filter(Boolean).filter((t) => t.toLowerCase() !== "general")
+        : parseTags(category);
+
+      if (resolvedTags.length === 0) {
+        return NextResponse.json(
+          { error: "Please select at least one related tag for this resource." },
+          { status: 400 }
+        );
+      }
+      updateData.category = resolvedTags.join(", ");
     }
 
     const updated = await prisma.resource.update({
@@ -85,7 +104,10 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      resource: updated,
+      resource: {
+        ...updated,
+        tags: parseTags(updated.category),
+      },
       message: "Resource updated successfully.",
     });
   } catch (err) {

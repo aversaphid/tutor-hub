@@ -130,31 +130,31 @@ export default function Navbar({ user }: NavbarProps) {
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md transition-colors duration-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2">
           {/* Brand */}
           <Link
             href="/"
-            className="flex items-center gap-3 group transition-transform hover:scale-[1.01]"
+            className="flex items-center gap-2 sm:gap-3 group transition-transform hover:scale-[1.01] shrink-0"
           >
-            <div className="w-11 h-11 relative rounded-full overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 shrink-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 relative rounded-full overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 shrink-0">
               <Image
                 src="/logo.png"
                 alt="LB Maths Tuition"
                 fill
-                sizes="44px"
+                sizes="(max-width: 640px) 36px, 44px"
                 className="object-cover"
                 priority
               />
             </div>
             <div>
-              <div className="font-extrabold text-lg tracking-tight text-slate-800 dark:text-slate-100 leading-tight">
+              <div className="font-extrabold text-sm sm:text-lg tracking-tight text-slate-800 dark:text-slate-100 leading-tight">
                 LB Maths Tuition
               </div>
             </div>
           </Link>
 
           {/* Time, Theme Toggle & Accessibility */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium">
               <Clock className="w-3.5 h-3.5 text-[#48A5EE]" />
               <span>{timeStr || "--:--"}</span>
@@ -199,24 +199,24 @@ export default function Navbar({ user }: NavbarProps) {
                 {isHeadTutor && pathname !== "/admin" && (
                   <Link
                     href="/admin"
-                    className="text-xs px-3.5 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold transition-all shadow-sm"
+                    className="text-xs px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold transition-all shadow-sm shrink-0"
                   >
-                    Admin Dashboard
+                    <span>Admin<span className="hidden sm:inline"> Dashboard</span></span>
                   </Link>
                 )}
 
                 {isRegularTutor && pathname !== "/tutor" && (
                   <Link
                     href="/tutor"
-                    className="text-xs px-3.5 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold transition-all shadow-sm"
+                    className="text-xs px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold transition-all shadow-sm shrink-0"
                   >
-                    Tutor Dashboard
+                    <span>Tutor<span className="hidden sm:inline"> Dashboard</span></span>
                   </Link>
                 )}
 
                 <button
                   onClick={handleOpenSettings}
-                  className="text-xs px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-xs px-2 sm:px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                   title="Account & Platform Settings"
                 >
                   <Settings className="w-3.5 h-3.5 text-[#48A5EE]" />
@@ -226,7 +226,7 @@ export default function Navbar({ user }: NavbarProps) {
                 <button
                   onClick={handleLogout}
                   title="Sign Out"
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -234,10 +234,10 @@ export default function Navbar({ user }: NavbarProps) {
             ) : (
               <button
                 onClick={() => setIsLoginModalOpen(true)}
-                className="py-2 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Tutor Login</span>
+                <span><span className="hidden sm:inline">Tutor </span>Login</span>
               </button>
             )}
           </div>

@@ -1562,7 +1562,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           startDate: new Date(0).toISOString(),
-          endDate: new Date(8640000000000000).toISOString(),
+          endDate: new Date("2099-12-31T23:59:59.999Z").toISOString(),
           sessionIds,
           tutorId: tutor?.id,
         }),
@@ -2226,7 +2226,7 @@ export default function AdminPage() {
 
         {/* NEXT / ACTIVE SCHEDULED MEETING DECK (With visible PIN and Magic Link) */}
         {activeLesson && (
-          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 border-2 border-[#48A5EE]/40 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-4 sm:p-6 border-2 border-[#48A5EE]/40 shadow-sm space-y-4">
             {/* 1. Header: Details on left, PIN & Magic Link card on right */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="space-y-1.5 min-w-0 flex-1">
@@ -2564,7 +2564,7 @@ export default function AdminPage() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="url"
                   placeholder="https://teams.microsoft.com/l/meetup-join/..."
@@ -2572,26 +2572,28 @@ export default function AdminPage() {
                   onChange={(e) => setTeamsUrlInput(e.target.value)}
                   className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
-                {activeLessonPrevTeamsUrl && teamsUrlInput !== activeLessonPrevTeamsUrl && (
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeLessonPrevTeamsUrl && teamsUrlInput !== activeLessonPrevTeamsUrl && (
+                    <button
+                      type="button"
+                      onClick={handleUsePreviousTeamsUrl}
+                      disabled={isUpdatingTeams}
+                      className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-bold text-xs shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      title={`Set to link used in previous lesson: ${activeLessonPrevTeamsUrl}`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                      <span>Use Previous Link</span>
+                    </button>
+                  )}
                   <button
-                    type="button"
-                    onClick={handleUsePreviousTeamsUrl}
+                    type="submit"
                     disabled={isUpdatingTeams}
-                    className="py-2 px-3.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-bold text-xs shadow-2xs transition-all cursor-pointer whitespace-nowrap disabled:opacity-50 flex items-center gap-1.5"
-                    title={`Set to link used in previous lesson: ${activeLessonPrevTeamsUrl}`}
+                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1"
                   >
-                    <RotateCcw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    <span>Use Previous Link</span>
+                    <Save className="w-3.5 h-3.5 inline mr-1" />
+                    <span>Save Link</span>
                   </button>
-                )}
-                <button
-                  type="submit"
-                  disabled={isUpdatingTeams}
-                  className="py-2 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm transition-all cursor-pointer whitespace-nowrap"
-                >
-                  <Save className="w-3.5 h-3.5 inline mr-1" />
-                  <span>Save Link</span>
-                </button>
+                </div>
               </div>
             </form>
           </div>
@@ -2643,81 +2645,97 @@ export default function AdminPage() {
         })()}
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="grid grid-cols-7 sm:flex sm:items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             onClick={() => setActiveTab("lessons")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "lessons"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "lessons"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             title={`${upcomingLessonsCount} upcoming lessons scheduled`}
           >
-            Lessons ({upcomingLessonsCount})
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Lessons</span>
+            <span className="hidden sm:inline text-xs">Lessons ({upcomingLessonsCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("students")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "students"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer relative ${activeTab === "students"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <span>Students &amp; PINs ({students.length})</span>
+            <div className="relative">
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              {lockedStudentsCount > 0 && (
+                <span className="sm:hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+              )}
+            </div>
+            <span className="sm:hidden text-[9px] leading-tight">Students</span>
+            <span className="hidden sm:inline text-xs">Students &amp; PINs ({students.length})</span>
             {lockedStudentsCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-extrabold animate-pulse">
+              <span className="hidden sm:inline px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-extrabold animate-pulse">
                 {lockedStudentsCount} locked
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab("tutors")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "tutors"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "tutors"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            Tutors ({tutors.length})
+            <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Tutors</span>
+            <span className="hidden sm:inline text-xs">Tutors ({tutors.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("resources")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "resources"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "resources"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Shared Resources</span>
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Library</span>
+            <span className="hidden sm:inline text-xs">Shared Resources</span>
           </button>
           <button
             onClick={() => {
               setActiveTab("audit");
               loadAuditLogs();
             }}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === "audit"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "audit"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            Activity Logs {auditLogsLoaded ? `(${auditLogs.length})` : ""}
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Logs</span>
+            <span className="hidden sm:inline text-xs">Activity Logs {auditLogsLoaded ? `(${auditLogs.length})` : ""}</span>
           </button>
           <button
             onClick={() => setActiveTab("analytics")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "analytics"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "analytics"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Business Analytics</span>
+            <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Stats</span>
+            <span className="hidden sm:inline text-xs">Business Analytics</span>
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "settings"
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-0.5 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "settings"
                 ? "bg-[#48A5EE] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Settings</span>
+            <Settings className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden text-[9px] leading-tight">Settings</span>
+            <span className="hidden sm:inline text-xs">Settings</span>
           </button>
         </div>
 
@@ -2952,52 +2970,56 @@ export default function AdminPage() {
                 </div>
 
                 {/* Status Summary Pills */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:items-center gap-1 sm:gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                    className="px-3 py-1 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold hover:bg-[#48A5EE]/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-[#48A5EE]/10 text-[#48A5EE] font-bold hover:bg-[#48A5EE]/20 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isUpcomingOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Upcoming: {upcomingList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Upcoming ({upcomingList.length})</span>
+                    <span className="hidden sm:inline">Upcoming: {upcomingList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isUpcomingOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                    className="px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isCompletedOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Pending Tutor Payout: {completedUnpaidList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Unpaid ({completedUnpaidList.length})</span>
+                    <span className="hidden sm:inline">Pending Tutor Payout: {completedUnpaidList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isCompletedOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                    className="px-3 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isCancelledOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Cancelled: {cancelledList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Cancelled ({cancelledList.length})</span>
+                    <span className="hidden sm:inline">Cancelled: {cancelledList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isCancelledOpen ? "rotate-180" : ""}`} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                    className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="py-1 px-1 sm:px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer text-center text-[10px] sm:text-xs"
                     title={isArchivedOpen ? "Click to collapse" : "Click to expand"}
                   >
-                    <span>Archived &amp; Paid: {archivedPaidList.length}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
+                    <span className="sm:hidden leading-tight">Paid ({archivedPaidList.length})</span>
+                    <span className="hidden sm:inline">Archived &amp; Paid: {archivedPaidList.length}</span>
+                    <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 transition-transform duration-200 ${isArchivedOpen ? "rotate-180" : ""}`} />
                   </button>
                 </div>
               </div>
 
               {/* 1. UPCOMING LESSONS (Shown at top) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+              <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <button
                   type="button"
                   onClick={() => setIsUpcomingOpen(!isUpcomingOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  className={`w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isUpcomingOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
                     }`}
                 >
                   <div>
@@ -3031,192 +3053,52 @@ export default function AdminPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
-                            <tr>
-                              <th className="px-3.5 py-2.5">Student &amp; Tutor</th>
-                              <th className="px-3 py-2.5">Date &amp; Time</th>
-                              <th className="px-3 py-2.5 text-center">Status &amp; Attendance</th>
-                              <th className="px-3 py-2.5 text-center">PIN &amp; Delay</th>
-                              <th className="px-3 py-2.5 text-center">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {upcomingList.map((s) => {
-                              const isRowLive =
-                                s.status === "IN_PROGRESS" ||
-                                (currentTime >= new Date(s.scheduledStartTime).getTime() &&
-                                  currentTime < new Date(s.scheduledEndTime).getTime() &&
-                                  s.status !== "COMPLETED" &&
-                                  s.status !== "CANCELLED");
+                      <>
+                        {/* Mobile Card List (No horizontal scrolling on phone) */}
+                        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                          {upcomingList.map((s) => {
+                            const isRowLive =
+                              s.status === "IN_PROGRESS" ||
+                              (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                s.status !== "COMPLETED" &&
+                                s.status !== "CANCELLED");
 
-                              return (
-                              <tr
+                            return (
+                              <div
                                 key={s.id}
-                                onClick={(e) => {
-                                  if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
-                                  handleOpenReschedule(s);
-                                }}
-                                className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group/row"
-                                title="Click on lesson to edit time or reschedule"
+                                className="p-4 space-y-3 hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition-colors"
                               >
-                                {/* 1. Student & Tutor */}
-                                <td className="px-3.5 py-2.5">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenReschedule(s)}
-                                      className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1"
-                                      title="Click to edit lesson time or reschedule"
-                                    >
-                                      <span>{s.tutee?.name}</span>
-                                      <CalendarClock className="w-3 h-3 opacity-0 group-hover:opacity-100 text-[#48A5EE] transition-opacity shrink-0" />
-                                    </button>
-                                    <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
-                                  </div>
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap">
-                                    <span className="font-semibold text-slate-600 dark:text-slate-300">
-                                      with {formatTutorName(s.tutor?.name)}
-                                    </span>
-                                    {s.title && s.title !== "Maths Tuition" && (
-                                      <>
-                                        <span className="text-slate-300 dark:text-slate-600">&bull;</span>
-                                        <span className="truncate max-w-[130px]" title={s.title}>{s.title}</span>
-                                      </>
-                                    )}
-                                  </div>
-
-                                  {/* Compact Personal Reminder & Notes */}
-                                  <div className="flex flex-wrap items-center gap-1 mt-1">
-                                    {s.adminReminder ? (
-                                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
-                                        <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                        <span className="font-medium truncate max-w-[95px]" title={s.adminReminder}>
-                                          {s.adminReminder}
-                                        </span>
-                                        <button
-                                          onClick={() => {
-                                            setReminderModalSession(s);
-                                            setEditReminderText(s.adminReminder || "");
-                                          }}
-                                          className="text-[9px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
-                                          title="Edit Reminder"
-                                        >
-                                          Edit
-                                        </button>
-                                      </div>
-                                    ) : (
+                                {/* 1. Student Name, Tutor, Online Badge & Live Status */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <button
-                                        onClick={() => {
-                                          setReminderModalSession(s);
-                                          setEditReminderText("");
-                                        }}
-                                        className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                        title="Add personal reminder"
+                                        type="button"
+                                        onClick={() => handleOpenReschedule(s)}
+                                        className="text-left font-bold text-slate-800 dark:text-slate-100 text-sm hover:text-[#48A5EE] transition-colors cursor-pointer"
                                       >
-                                        <Bell className="w-2.5 h-2.5" />
-                                        <span>+ Remind</span>
+                                        {s.tutee?.name}
                                       </button>
-                                    )}
-
-                                    {s.notes ? (
-                                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
-                                        <FileText className="w-2.5 h-2.5 text-[#48A5EE] shrink-0" />
-                                        <span className="font-medium truncate max-w-[95px]" title={s.notes}>
-                                          {s.notes}
-                                        </span>
-                                        <button
-                                          onClick={() => {
-                                            setNotesModalSession(s);
-                                            setEditNotesText(s.notes || "");
-                                          }}
-                                          className="text-[9px] text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer font-bold"
-                                          title="Edit Notes"
-                                        >
-                                          Edit
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        onClick={() => {
-                                          setNotesModalSession(s);
-                                          setEditNotesText("");
-                                        }}
-                                        className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
-                                        title="Add notes"
-                                      >
-                                        <FileText className="w-2.5 h-2.5" />
-                                        <span>+ Note</span>
-                                      </button>
-                                    )}
+                                      <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                      with <span className="text-slate-700 dark:text-slate-200 font-semibold">{formatTutorName(s.tutor?.name)}</span>
+                                      {s.title && s.title !== "Maths Tuition" && (
+                                        <span className="ml-1 text-slate-400">({s.title})</span>
+                                      )}
+                                    </div>
                                   </div>
-                                </td>
 
-                                {/* 2. Date & Time */}
-                                <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenReschedule(s)}
-                                    className="text-left font-semibold text-slate-700 dark:text-slate-200 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1 font-mono"
-                                    title="Click to edit lesson time or reschedule"
-                                  >
-                                    <span>
-                                      {new Date(s.scheduledStartTime).toLocaleDateString([], {
-                                        weekday: "short",
-                                        month: "short",
-                                        day: "numeric",
-                                      })}{" "}
-                                      &bull;{" "}
-                                      {new Date(s.scheduledStartTime).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
-                                    <CalendarClock className="w-3 h-3 text-slate-400 group-hover:text-[#48A5EE] transition-colors shrink-0" />
-                                  </button>
-                                  <div className="mt-1 flex items-center gap-2 font-sans text-[10px]">
-                                    {s.teamsMeetingUrl ? (
-                                      <a
-                                        href={s.teamsMeetingUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1"
-                                        title="Open Microsoft Teams Meeting"
-                                      >
-                                        <Video className="w-3 h-3" />
-                                        <span>Teams</span>
-                                      </a>
-                                    ) : (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-slate-400 italic text-[10px]">No Teams</span>
-                                        {getPreviousLessonTeamsUrl(s) && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSetSessionPreviousTeamsUrl(s)}
-                                            className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline cursor-pointer flex items-center gap-0.5"
-                                            title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
-                                          >
-                                            <RotateCcw className="w-2.5 h-2.5" />
-                                            <span>+ Prev</span>
-                                          </button>
-                                        )}
-                                      </div>
-                                    )}
-                                    <AddToCalendar session={s} compact />
-                                  </div>
-                                </td>
-
-                                {/* 3. Status & Attendance */}
-                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                                  <div className="inline-flex items-center gap-1">
+                                  <div className="flex flex-col items-end gap-1 shrink-0">
                                     <span
-                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isRowLive
                                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                           : s.status === "DELAYED"
-                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                            : "bg-[#48A5EE]/15 text-[#48A5EE]"
-                                        }`}
+                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                          : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                      }`}
                                     >
                                       {isRowLive
                                         ? "LIVE NOW"
@@ -3224,160 +3106,576 @@ export default function AdminPage() {
                                         ? `DELAYED (+${s.delayMinutes}m)`
                                         : s.status}
                                     </span>
+                                    {s.delayReason && (
+                                      <span className="text-[10px] text-amber-700 dark:text-amber-400 max-w-[120px] truncate" title={s.delayReason}>
+                                        {s.delayReason}
+                                      </span>
+                                    )}
                                   </div>
-                                  {s.delayReason && (
-                                    <div
-                                      className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[120px] mx-auto mt-0.5"
-                                      title={s.delayReason}
-                                    >
-                                      {s.delayReason}
+                                </div>
+
+                                {/* 2. Personal Reminder & Notes */}
+                                {(s.adminReminder || s.notes) && (
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {s.adminReminder && (
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                        <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                        <span className="font-medium truncate max-w-[180px]" title={s.adminReminder}>
+                                          {s.adminReminder}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setReminderModalSession(s);
+                                            setEditReminderText(s.adminReminder || "");
+                                          }}
+                                          className="text-[9px] text-amber-700 dark:text-amber-300 underline font-bold cursor-pointer ml-0.5"
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    )}
+                                    {s.notes && (
+                                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
+                                        <FileText className="w-2.5 h-2.5 text-[#48A5EE] shrink-0" />
+                                        <span className="font-medium truncate max-w-[180px]" title={s.notes}>
+                                          {s.notes}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setNotesModalSession(s);
+                                            setEditNotesText(s.notes || "");
+                                          }}
+                                          className="text-[9px] text-blue-700 dark:text-blue-300 underline font-bold cursor-pointer ml-0.5"
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* 3. Time, Teams Link & PIN */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+                                  <div className="space-y-0.5">
+                                    <div className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 text-[11px] font-mono">
+                                      <Clock className="w-3 h-3 text-[#48A5EE]" />
+                                      <span>
+                                        {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                          weekday: "short",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}{" "}
+                                        &bull;{" "}
+                                        {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
                                     </div>
-                                  )}
-                                  {/* Compact Confirmation Toggles */}
-                                  <div className="flex items-center justify-center gap-1.5 mt-1">
+                                    <div className="flex items-center gap-2 text-[11px]">
+                                      {s.teamsMeetingUrl ? (
+                                        <a
+                                          href={s.teamsMeetingUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1"
+                                        >
+                                          <Video className="w-3 h-3" />
+                                          <span>Teams Link</span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 text-[10px]">
+                                          <span className="text-slate-400 italic">No Teams</span>
+                                          {getPreviousLessonTeamsUrl(s) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSetSessionPreviousTeamsUrl(s)}
+                                              className="font-bold text-purple-600 dark:text-purple-400 underline cursor-pointer"
+                                            >
+                                              + Use Prev
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      <AddToCalendar session={s} compact />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px]">
+                                      PIN: {s.tutee?.pin || "----"}
+                                    </span>
+                                    <button
+                                      onClick={() => copyMagicLink(s.tutee?.magicKey)}
+                                      className="px-2.5 py-1 rounded-lg bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[11px] transition-colors cursor-pointer"
+                                    >
+                                      {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* 4. Attendance Toggles & Delay */}
+                                <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+                                  <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
-                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tutorConfirmed
+                                      className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                                        s.tutorConfirmed
                                           ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
-                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
-                                        }`}
-                                      title={`Tutor attendance: ${s.tutorConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                                      }`}
                                     >
                                       <span>Tutor</span>
-                                      <span className={s.tutorConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tutorConfirmed ? "✓" : "—"}</span>
+                                      <span className={s.tutorConfirmed ? "text-emerald-600 dark:text-emerald-400 font-extrabold" : ""}>
+                                        {s.tutorConfirmed ? "✓" : "—"}
+                                      </span>
                                     </button>
 
                                     <button
                                       type="button"
                                       onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
-                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tuteeConfirmed
+                                      className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${
+                                        s.tuteeConfirmed
                                           ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
-                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
-                                        }`}
-                                      title={`Student attendance: ${s.tuteeConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                                      }`}
                                     >
                                       <span>Student</span>
-                                      <span className={s.tuteeConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tuteeConfirmed ? "✓" : "—"}</span>
+                                      <span className={s.tuteeConfirmed ? "text-emerald-600 dark:text-emerald-400 font-extrabold" : ""}>
+                                        {s.tuteeConfirmed ? "✓" : "—"}
+                                      </span>
                                     </button>
                                   </div>
-                                </td>
 
-                                {/* 4. PIN & Delay */}
-                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
-                                      PIN: {s.tutee?.pin || "----"}
-                                    </span>
-                                    <button
-                                      onClick={() => copyMagicLink(s.tutee?.magicKey)}
-                                      className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
-                                      title="Copy Magic Link"
-                                    >
-                                      {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
-                                    </button>
-                                  </div>
-                                  <div className="flex items-center justify-center gap-1 mt-1">
+                                  <div className="flex items-center gap-1">
                                     <button
                                       type="button"
                                       onClick={() => handleOpenDelayModal(s.delayMinutes || 10, s)}
-                                      className={`px-1.5 py-0.5 rounded-md font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border ${
+                                      className={`px-2 py-1 rounded-lg font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border ${
                                         Boolean(s.delayMinutes && s.delayMinutes > 0)
-                                          ? "bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
-                                          : "bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                          ? "bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                                          : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                       }`}
-                                      title={Boolean(s.delayMinutes && s.delayMinutes > 0) ? `Change delay (currently +${s.delayMinutes}m)` : "Add custom delay or reason"}
                                     >
                                       <FastForward className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
                                       <span>{Boolean(s.delayMinutes && s.delayMinutes > 0) ? `+${s.delayMinutes}m` : "+ Delay"}</span>
                                     </button>
-                                    {Boolean(s.delayMinutes && s.delayMinutes > 0) ? (
+                                    {Boolean(s.delayMinutes && s.delayMinutes > 0) && (
                                       <button
                                         type="button"
                                         onClick={() => handleResetStartTime(s)}
                                         disabled={isResettingStartTime}
-                                        className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-semibold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
-                                        title="Reset start time to original scheduled time"
+                                        className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-[10px] border border-slate-200 dark:border-slate-700 cursor-pointer disabled:opacity-50"
                                       >
-                                        <RotateCcw className="w-2.5 h-2.5 text-slate-500 shrink-0" />
-                                        <span>Reset</span>
+                                        <RotateCcw className="w-2.5 h-2.5 text-slate-500" />
                                       </button>
-                                    ) : null}
+                                    )}
                                   </div>
-                                </td>
+                                </div>
 
-                                {/* 5. Actions */}
-                                <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                                  <div className="flex flex-col items-center gap-1 min-w-[130px]">
-                                    <div className="flex items-center gap-1 w-full justify-center">
-                                      <button
-                                        onClick={() => handleOpenReschedule(s)}
-                                        className="flex-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
-                                        title="Reschedule this lesson"
-                                      >
-                                        <CalendarClock className="w-2.5 h-2.5 text-purple-500 shrink-0" />
-                                        <span>Reschedule</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleCancelSession(s)}
-                                        className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-rose-200 dark:border-rose-800"
-                                        title="Cancel this lesson"
-                                      >
-                                        <XCircle className="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                        <span>Cancel</span>
-                                      </button>
-                                    </div>
-                                    <div className="flex items-center gap-1 w-full justify-center">
-                                      <button
-                                        onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
-                                        className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5"
-                                        title="Schedule next week (+7 days)"
-                                      >
-                                        <Repeat className="w-2.5 h-2.5 shrink-0" />
-                                        <span>+1w</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
-                                        className="px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-purple-200 dark:border-purple-800"
-                                        title="Schedule biweekly (+14 days)"
-                                      >
-                                        <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
-                                        <span>+2w</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleOpenSessionAudit(s)}
-                                        className="p-1 rounded-md text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
-                                        title="View Lesson Audit Trail"
-                                      >
-                                        <History className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteSession(s.id, s.title)}
-                                        className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                                        title="Delete Lesson Permanently"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
+                                {/* 5. Action Buttons Row */}
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <button
+                                    onClick={() => handleOpenReschedule(s)}
+                                    className="flex-1 py-1.5 px-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-purple-200 dark:border-purple-800"
+                                  >
+                                    <CalendarClock className="w-3.5 h-3.5 text-purple-500" />
+                                    <span>Reschedule</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                    className="py-1.5 px-2.5 rounded-xl bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                    title="Schedule next week (+7 days)"
+                                  >
+                                    <Repeat className="w-3 h-3" />
+                                    <span>+1w</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                    className="py-1.5 px-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-bold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-purple-200 dark:border-purple-800"
+                                    title="Schedule biweekly (+14 days)"
+                                  >
+                                    <Repeat className="w-3 h-3 text-purple-500" />
+                                    <span>+2w</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelSession(s)}
+                                    className="py-1.5 px-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-bold text-xs inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-rose-200 dark:border-rose-800"
+                                    title="Cancel this lesson"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>Cancel</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenSessionAudit(s)}
+                                    className="p-1.5 rounded-xl text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                    title="View Audit Trail"
+                                  >
+                                    <History className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSession(s.id, s.title)}
+                                    className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                    title="Delete Lesson Permanently"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             );
                           })}
-                          </tbody>
-                        </table>
-                      </div>
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden sm:block overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
+                              <tr>
+                                <th className="px-3.5 py-2.5">Student &amp; Tutor</th>
+                                <th className="px-3 py-2.5">Date &amp; Time</th>
+                                <th className="px-3 py-2.5 text-center">Status &amp; Attendance</th>
+                                <th className="px-3 py-2.5 text-center">PIN &amp; Delay</th>
+                                <th className="px-3 py-2.5 text-center">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {upcomingList.map((s) => {
+                                const isRowLive =
+                                  s.status === "IN_PROGRESS" ||
+                                  (currentTime >= new Date(s.scheduledStartTime).getTime() &&
+                                    currentTime < new Date(s.scheduledEndTime).getTime() &&
+                                    s.status !== "COMPLETED" &&
+                                    s.status !== "CANCELLED");
+
+                                return (
+                                <tr
+                                  key={s.id}
+                                  onClick={(e) => {
+                                    if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+                                    handleOpenReschedule(s);
+                                  }}
+                                  className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group/row"
+                                  title="Click on lesson to edit time or reschedule"
+                                >
+                                  {/* 1. Student & Tutor */}
+                                  <td className="px-3.5 py-2.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenReschedule(s)}
+                                        className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1"
+                                        title="Click to edit lesson time or reschedule"
+                                      >
+                                        <span>{s.tutee?.name}</span>
+                                        <CalendarClock className="w-3 h-3 opacity-0 group-hover:opacity-100 text-[#48A5EE] transition-opacity shrink-0" />
+                                      </button>
+                                      <OnlineBadge isOnline={isOnline(s.tutee?.id)} size="xs" showOffline={false} />
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap">
+                                      <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                        with {formatTutorName(s.tutor?.name)}
+                                      </span>
+                                      {s.title && s.title !== "Maths Tuition" && (
+                                        <>
+                                          <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+                                          <span className="truncate max-w-[130px]" title={s.title}>{s.title}</span>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {/* Compact Personal Reminder & Notes */}
+                                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                                      {s.adminReminder ? (
+                                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[10px]">
+                                          <Bell className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                          <span className="font-medium truncate max-w-[95px]" title={s.adminReminder}>
+                                            {s.adminReminder}
+                                          </span>
+                                          <button
+                                            onClick={() => {
+                                              setReminderModalSession(s);
+                                              setEditReminderText(s.adminReminder || "");
+                                            }}
+                                            className="text-[9px] text-amber-700 dark:text-amber-300 underline hover:text-amber-900 cursor-pointer font-bold"
+                                            title="Edit Reminder"
+                                          >
+                                            Edit
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setReminderModalSession(s);
+                                            setEditReminderText("");
+                                          }}
+                                          className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                          title="Add personal reminder"
+                                        >
+                                          <Bell className="w-2.5 h-2.5" />
+                                          <span>+ Remind</span>
+                                        </button>
+                                      )}
+
+                                      {s.notes ? (
+                                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-[10px]">
+                                          <FileText className="w-2.5 h-2.5 text-[#48A5EE] shrink-0" />
+                                          <span className="font-medium truncate max-w-[95px]" title={s.notes}>
+                                            {s.notes}
+                                          </span>
+                                          <button
+                                            onClick={() => {
+                                              setNotesModalSession(s);
+                                              setEditNotesText(s.notes || "");
+                                            }}
+                                            className="text-[9px] text-blue-700 dark:text-blue-300 underline hover:text-blue-900 cursor-pointer font-bold"
+                                            title="Edit Notes"
+                                          >
+                                            Edit
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setNotesModalSession(s);
+                                            setEditNotesText("");
+                                          }}
+                                          className="inline-flex items-center gap-0.5 text-[10px] text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                          title="Add notes"
+                                        >
+                                          <FileText className="w-2.5 h-2.5" />
+                                          <span>+ Note</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* 2. Date & Time */}
+                                  <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 text-[11px] whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenReschedule(s)}
+                                      className="text-left font-semibold text-slate-700 dark:text-slate-200 hover:text-[#48A5EE] dark:hover:text-[#48A5EE] transition-colors cursor-pointer group flex items-center gap-1 font-mono"
+                                      title="Click to edit lesson time or reschedule"
+                                    >
+                                      <span>
+                                        {new Date(s.scheduledStartTime).toLocaleDateString([], {
+                                          weekday: "short",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}{" "}
+                                        &bull;{" "}
+                                        {new Date(s.scheduledStartTime).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                      <CalendarClock className="w-3 h-3 text-slate-400 group-hover:text-[#48A5EE] transition-colors shrink-0" />
+                                    </button>
+                                    <div className="mt-1 flex items-center gap-2 font-sans text-[10px]">
+                                      {s.teamsMeetingUrl ? (
+                                        <a
+                                          href={s.teamsMeetingUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[#48A5EE] font-semibold hover:underline inline-flex items-center gap-1"
+                                          title="Open Microsoft Teams Meeting"
+                                        >
+                                          <Video className="w-3 h-3" />
+                                          <span>Teams</span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-slate-400 italic text-[10px]">No Teams</span>
+                                          {getPreviousLessonTeamsUrl(s) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSetSessionPreviousTeamsUrl(s)}
+                                              className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline cursor-pointer flex items-center gap-0.5"
+                                              title={`Set to link from previous lesson: ${getPreviousLessonTeamsUrl(s)}`}
+                                            >
+                                              <RotateCcw className="w-2.5 h-2.5" />
+                                              <span>+ Prev</span>
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                      <AddToCalendar session={s} compact />
+                                    </div>
+                                  </td>
+
+                                  {/* 3. Status & Attendance */}
+                                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                    <div className="inline-flex items-center gap-1">
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isRowLive
+                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                            : s.status === "DELAYED"
+                                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                              : "bg-[#48A5EE]/15 text-[#48A5EE]"
+                                          }`}
+                                      >
+                                        {isRowLive
+                                          ? "LIVE NOW"
+                                          : s.status === "DELAYED" && s.delayMinutes
+                                          ? `DELAYED (+${s.delayMinutes}m)`
+                                          : s.status}
+                                      </span>
+                                    </div>
+                                    {s.delayReason && (
+                                      <div
+                                        className="text-[10px] text-amber-700 dark:text-amber-400 truncate max-w-[120px] mx-auto mt-0.5"
+                                        title={s.delayReason}
+                                      >
+                                        {s.delayReason}
+                                      </div>
+                                    )}
+                                    {/* Compact Confirmation Toggles */}
+                                    <div className="flex items-center justify-center gap-1.5 mt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleConfirmation(s.id, "tutor", Boolean(s.tutorConfirmed))}
+                                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tutorConfirmed
+                                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+                                          }`}
+                                        title={`Tutor attendance: ${s.tutorConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
+                                      >
+                                        <span>Tutor</span>
+                                        <span className={s.tutorConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tutorConfirmed ? "✓" : "—"}</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleConfirmation(s.id, "tutee", Boolean(s.tuteeConfirmed))}
+                                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer border ${s.tuteeConfirmed
+                                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+                                          }`}
+                                        title={`Student attendance: ${s.tuteeConfirmed ? "Confirmed ✓" : "Pending —"}. Click to toggle.`}
+                                      >
+                                        <span>Student</span>
+                                        <span className={s.tuteeConfirmed ? "text-emerald-600 dark:text-emerald-400" : ""}>{s.tuteeConfirmed ? "✓" : "—"}</span>
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  {/* 4. PIN & Delay */}
+                                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[10px]">
+                                        PIN: {s.tutee?.pin || "----"}
+                                      </span>
+                                      <button
+                                        onClick={() => copyMagicLink(s.tutee?.magicKey)}
+                                        className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer"
+                                        title="Copy Magic Link"
+                                      >
+                                        {copiedKey === s.tutee?.magicKey ? "Copied!" : "Link"}
+                                      </button>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-1 mt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenDelayModal(s.delayMinutes || 10, s)}
+                                        className={`px-1.5 py-0.5 rounded-md font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border ${
+                                          Boolean(s.delayMinutes && s.delayMinutes > 0)
+                                            ? "bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                                            : "bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                        }`}
+                                        title={Boolean(s.delayMinutes && s.delayMinutes > 0) ? `Change delay (currently +${s.delayMinutes}m)` : "Add custom delay or reason"}
+                                      >
+                                        <FastForward className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                        <span>{Boolean(s.delayMinutes && s.delayMinutes > 0) ? `+${s.delayMinutes}m` : "+ Delay"}</span>
+                                      </button>
+                                      {Boolean(s.delayMinutes && s.delayMinutes > 0) ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetStartTime(s)}
+                                          disabled={isResettingStartTime}
+                                          className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-semibold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
+                                          title="Reset start time to original scheduled time"
+                                        >
+                                          <RotateCcw className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                                          <span>Reset</span>
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  </td>
+
+                                  {/* 5. Actions */}
+                                  <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                                    <div className="flex flex-col items-center gap-1 min-w-[130px]">
+                                      <div className="flex items-center gap-1 w-full justify-center">
+                                        <button
+                                          onClick={() => handleOpenReschedule(s)}
+                                          className="flex-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-purple-200 dark:border-purple-800"
+                                          title="Reschedule this lesson"
+                                        >
+                                          <CalendarClock className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                          <span>Reschedule</span>
+                                        </button>
+                                        <button
+                                          onClick={() => handleCancelSession(s)}
+                                          className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-0.5 border border-rose-200 dark:border-rose-800"
+                                          title="Cancel this lesson"
+                                        >
+                                          <XCircle className="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                          <span>Cancel</span>
+                                        </button>
+                                      </div>
+                                      <div className="flex items-center gap-1 w-full justify-center">
+                                        <button
+                                          onClick={() => handleScheduleSameTimeNextWeek(s, 1)}
+                                          className="px-1.5 py-0.5 rounded-md bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 text-[#48A5EE] font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5"
+                                          title="Schedule next week (+7 days)"
+                                        >
+                                          <Repeat className="w-2.5 h-2.5 shrink-0" />
+                                          <span>+1w</span>
+                                        </button>
+                                        <button
+                                          onClick={() => handleScheduleSameTimeNextWeek(s, 2)}
+                                          className="px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-[10px] transition-colors cursor-pointer flex items-center gap-0.5 border border-purple-200 dark:border-purple-800"
+                                          title="Schedule biweekly (+14 days)"
+                                        >
+                                          <Repeat className="w-2.5 h-2.5 text-purple-500 shrink-0" />
+                                          <span>+2w</span>
+                                        </button>
+                                        <button
+                                          onClick={() => handleOpenSessionAudit(s)}
+                                          className="p-1 rounded-md text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                                          title="View Lesson Audit Trail"
+                                        >
+                                          <History className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSession(s.id, s.title)}
+                                          className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                          title="Delete Lesson Permanently"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
               </div>
 
               {/* 2. COMPLETED (TUTOR NOT PAID) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm">
+              <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-amber-200 dark:border-amber-800/80 overflow-hidden shadow-sm">
                 <button
                   type="button"
                   onClick={() => setIsCompletedOpen(!isCompletedOpen)}
-                  className={`w-full p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
+                  className={`w-full p-4 sm:p-5 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-100/40 dark:hover:bg-amber-900/30 transition-colors text-left cursor-pointer ${isCompletedOpen ? "border-b border-amber-200 dark:border-amber-800/80" : ""
                     }`}
                 >
                   <div>
@@ -3804,11 +4102,11 @@ export default function AdminPage() {
               </div>
 
               {/* 3. CANCELLED LESSONS */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm">
+              <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/60 overflow-hidden shadow-sm">
                 <button
                   type="button"
                   onClick={() => setIsCancelledOpen(!isCancelledOpen)}
-                  className={`w-full p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
+                  className={`w-full p-4 sm:p-5 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-rose-100/40 dark:hover:bg-rose-900/30 transition-colors text-left cursor-pointer ${isCancelledOpen ? "border-b border-rose-200 dark:border-rose-900/60" : ""
                     }`}
                 >
                   <div>
@@ -3938,11 +4236,11 @@ export default function AdminPage() {
               </div>
 
               {/* 4. ARCHIVED (TUTOR PAID) */}
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+              <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <button
                   type="button"
                   onClick={() => setIsArchivedOpen(!isArchivedOpen)}
-                  className={`w-full p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
+                  className={`w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors text-left cursor-pointer ${isArchivedOpen ? "border-b border-slate-100 dark:border-slate-800" : ""
                     }`}
                 >
                   <div>
@@ -4127,8 +4425,8 @@ export default function AdminPage() {
 
         {/* TAB 2: STUDENTS, ASSIGNED TUTORS & MAGIC LINKS */}
         {activeTab === "students" && (
-          <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="p-3.5 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div>
                 <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2 flex-wrap">
                   <Users className="w-4 h-4 text-[#48A5EE]" />
@@ -4137,10 +4435,10 @@ export default function AdminPage() {
                     {filteredStudents.length !== students.length ? ` of ${students.length}` : ""})
                   </span>
                   {flaggedStudentsCount > 0 && (
-                    <span className="ml-1 px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1">
+                    <span className="ml-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 text-[11px] font-bold border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 text-rose-500" />
                       <span>
-                        {flaggedStudentsCount} Flagged for Deletion (90d+ No Lessons)
+                        {flaggedStudentsCount} Flagged (90d+)
                       </span>
                     </span>
                   )}
@@ -4155,7 +4453,7 @@ export default function AdminPage() {
                   setNewUserRole("TUTEE");
                   setIsNewUserOpen(true);
                 }}
-                className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+                className="py-2 px-3.5 sm:py-2.5 sm:px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Add Student</span>
@@ -4164,7 +4462,7 @@ export default function AdminPage() {
 
             {/* PIN Reset Success Toast / Message */}
             {pinResetSuccessMessage && (
-              <div className="mx-5 mt-4 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
+              <div className="mx-3.5 sm:mx-5 mt-3 p-2.5 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600" />
                 <span>{pinResetSuccessMessage}</span>
               </div>
@@ -4177,8 +4475,8 @@ export default function AdminPage() {
               );
               if (lockedList.length === 0) return null;
               return (
-                <div className="mx-5 mt-4 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5">
+                <div className="mx-3.5 sm:mx-5 mt-3 p-2.5 sm:p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
                     <div>
                       <p className="font-bold text-rose-800 dark:text-rose-200">
@@ -4189,24 +4487,24 @@ export default function AdminPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     {lockedList.map((s) => (
                       <button
                         key={s.id}
                         type="button"
                         onClick={() => handleResetPinLock(s)}
                         disabled={unlockingStudentId === s.id}
-                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                         title={`Reset PIN lock for ${s.name}`}
                       >
                         {unlockingStudentId === s.id ? (
                           <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <Loader2 className="w-3 h-3 animate-spin" />
                             <span>Unlocking...</span>
                           </>
                         ) : (
                           <>
-                            <Unlock className="w-3.5 h-3.5" />
+                            <Unlock className="w-3 h-3" />
                             <span>Unlock {s.name.split(" ")[0]}</span>
                           </>
                         )}
@@ -4218,21 +4516,21 @@ export default function AdminPage() {
             })()}
 
             {/* Filter and Search Bar */}
-            <div className="p-4 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
+            <div className="p-2.5 sm:p-3.5 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
               {/* Search input */}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="relative flex-1 min-w-[180px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
-                  placeholder="Search student, PIN, magic key, tutor..."
-                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                  placeholder="Search student, PIN, tutor..."
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
                 />
                 {studentSearchTerm && (
                   <button
                     onClick={() => setStudentSearchTerm("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -4240,13 +4538,12 @@ export default function AdminPage() {
               </div>
 
               {/* Filter by Tutor */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={studentTutorFilter}
                   onChange={(e) => setStudentTutorFilter(e.target.value)}
                   aria-label="Filter students by tutor"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="ALL">All Tutors ({tutors.length})</option>
                   <option value="UNASSIGNED">Unassigned Only</option>
@@ -4259,56 +4556,53 @@ export default function AdminPage() {
               </div>
 
               {/* Filter by Account Status */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={studentStatusFilter}
                   onChange={(e) => setStudentStatusFilter(e.target.value as any)}
                   aria-label="Filter students by account status"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
-                  <option value="ALL">All Account Statuses</option>
-                  <option value="ACTIVE">Active (Taking Lessons) ({activeStudents.length})</option>
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active ({activeStudents.length})</option>
                   <option value="INACTIVE">
-                    Inactive (On Break / Holiday) ({students.length - activeStudents.length})
+                    On Break ({students.length - activeStudents.length})
                   </option>
                   <option value="PIN_LOCKED">
-                    🔒 PIN Locked ({lockedStudentsCount})
+                    🔒 Locked ({lockedStudentsCount})
                   </option>
                   <option value="FLAGGED">
-                    ⚠️ Flagged for Deletion ({flaggedStudentsCount})
+                    ⚠️ Flagged ({flaggedStudentsCount})
                   </option>
                 </select>
               </div>
 
               {/* Filter by Lesson Status */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={studentLessonFilter}
                   onChange={(e) => setStudentLessonFilter(e.target.value as any)}
                   aria-label="Filter students by lesson status"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
-                  <option value="ALL">All Lesson Statuses</option>
-                  <option value="HAS_UPCOMING">Has Upcoming Lessons</option>
-                  <option value="NO_UPCOMING">No Upcoming Lessons</option>
+                  <option value="ALL">All Lessons</option>
+                  <option value="HAS_UPCOMING">Has Upcoming</option>
+                  <option value="NO_UPCOMING">No Upcoming</option>
                 </select>
               </div>
 
               {/* Sort by */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={studentSortBy}
                   onChange={(e) => setStudentSortBy(e.target.value as any)}
                   aria-label="Sort students"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="name_asc">Name (A-Z)</option>
                   <option value="name_desc">Name (Z-A)</option>
-                  <option value="tutor">Assigned Tutor</option>
-                  <option value="newest">Recently Added</option>
+                  <option value="tutor">Tutor</option>
+                  <option value="newest">Recent</option>
                 </select>
               </div>
 
@@ -4322,7 +4616,7 @@ export default function AdminPage() {
                     setStudentLessonFilter("ALL");
                     setStudentSortBy("name_asc");
                   }}
-                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer px-1"
                 >
                   <X className="w-3 h-3" />
                   <span>Reset</span>
@@ -4332,46 +4626,36 @@ export default function AdminPage() {
 
             {/* UK GDPR & Privacy Policy Inactivity Deletion Notice */}
             {flaggedStudentsCount > 0 && (
-              <div className="mx-4 my-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 mt-0.5 shrink-0">
-                    <ShieldCheck className="w-4 h-4 text-amber-700 dark:text-amber-300" />
-                  </div>
-                  <div>
-                    <div className="font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5 flex-wrap">
-                      <span>Data Retention Policy Alert: {flaggedStudentsCount} Student{flaggedStudentsCount > 1 ? "s" : ""} Flagged for Deletion</span>
-                      <span className="px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-mono text-[10px]">
-                        No lessons for &ge; 90 days
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                      Under UK GDPR storage limitation (Art. 5(1)(e)) and our Privacy Policy, students who haven&apos;t done lessons for an extended period must not have personal credentials or profiles kept indefinitely. Inactive status is for temporary breaks, but prolonged inactivity flags profiles for permanent database erasure.
-                    </p>
+              <div className="mx-3.5 sm:mx-5 my-2.5 p-2.5 sm:p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0" />
+                  <div className="font-bold text-amber-950 dark:text-amber-200 flex items-center gap-1.5 flex-wrap">
+                    <span>{flaggedStudentsCount} Student{flaggedStudentsCount > 1 ? "s" : ""} Flagged for Retention Deletion (&ge; 90d without lessons)</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setStudentStatusFilter(studentStatusFilter === "FLAGGED" ? "ALL" : "FLAGGED")}
-                    className="py-1 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                    className="py-1 px-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
-                    {studentStatusFilter === "FLAGGED" ? "Show All Students" : "Filter Flagged Only"}
+                    {studentStatusFilter === "FLAGGED" ? "Show All" : "Filter Flagged"}
                   </button>
                 </div>
               </div>
             )}
 
             {students.length === 0 ? (
-              <div className="text-center py-12 px-4 space-y-2">
-                <Users className="w-8 h-8 text-slate-400 mx-auto" />
+              <div className="text-center py-10 px-4 space-y-1.5">
+                <Users className="w-7 h-7 text-slate-400 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Students Yet</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Click &quot;Add Student&quot; above to create students and assign them to a tutor.
                 </p>
               </div>
             ) : filteredStudents.length === 0 ? (
-              <div className="text-center py-12 px-4 space-y-3">
-                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+              <div className="text-center py-10 px-4 space-y-2">
+                <Search className="w-7 h-7 text-slate-400 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Students Found</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   No students match your search criteria. Try modifying your search or clearing filters.
@@ -4383,7 +4667,7 @@ export default function AdminPage() {
                     setStudentLessonFilter("ALL");
                     setStudentSortBy("name_asc");
                   }}
-                  className="py-1.5 px-3 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
+                  className="py-1 px-2.5 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
                 >
                   Reset All Filters
                 </button>
@@ -4393,13 +4677,12 @@ export default function AdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
                     <tr>
-                      <th className="px-3 py-2.5">Student</th>
-                      <th className="px-3 py-2.5">Assigned Tutor</th>
-                      <th className="px-3 py-2.5">Rates (Fee / Pay)</th>
-                      <th className="px-3 py-2.5">PIN</th>
-                      <th className="px-3 py-2.5">Magic Link</th>
-                      <th className="px-2 py-2.5 text-center">Status</th>
-                      <th className="px-3 py-2.5 text-right">Actions</th>
+                      <th className="px-3 py-2">Student</th>
+                      <th className="px-2.5 py-2">Assigned Tutor</th>
+                      <th className="px-2.5 py-2">Fee / Pay</th>
+                      <th className="px-2.5 py-2">Access &amp; PIN</th>
+                      <th className="px-2 py-2 text-center">Status</th>
+                      <th className="px-3 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -4408,21 +4691,21 @@ export default function AdminPage() {
                       return (
                       <tr key={st.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
                         {/* 1. Student Name & Live/Upcoming Badge */}
-                        <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                          <div className="flex flex-col gap-1">
+                        <td className="px-3 py-2 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={st.active === false ? "text-slate-500 dark:text-slate-400" : ""}>
                                 {st.name}
                               </span>
                               <OnlineBadge isOnline={isOnline(st.id)} label="Online" offlineLabel="Offline" size="xs" />
                               {st.pinLockedUntil && new Date(st.pinLockedUntil).getTime() > currentTime && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[10px] font-bold animate-pulse">
                                   <ShieldAlert className="w-2.5 h-2.5 text-rose-600 shrink-0" />
-                                  <span>PIN Locked ({Math.max(1, Math.ceil((new Date(st.pinLockedUntil).getTime() - currentTime) / 60000))}m)</span>
+                                  <span>Locked ({Math.max(1, Math.ceil((new Date(st.pinLockedUntil).getTime() - currentTime) / 60000))}m)</span>
                                 </span>
                               )}
                               {sessions.some((s) => s.tuteeId === st.id && (s.status === "IN_PROGRESS" || (currentTime >= new Date(s.scheduledStartTime).getTime() && currentTime < new Date(s.scheduledEndTime).getTime() && s.status !== "COMPLETED" && s.status !== "CANCELLED"))) ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 animate-pulse">
                                   ● Live
                                 </span>
                               ) : sessions.some(
@@ -4431,7 +4714,7 @@ export default function AdminPage() {
                                   (s.status === "SCHEDULED" || s.status === "DELAYED") &&
                                   new Date(s.scheduledEndTime).getTime() > currentTime
                               ) ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
+                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
                                   Upcoming
                                 </span>
                               ) : null}
@@ -4441,28 +4724,28 @@ export default function AdminPage() {
                                 <Mail className="w-3 h-3 text-slate-400 shrink-0" />
                                 <a
                                   href={`mailto:${st.parentEmail || st.email}`}
-                                  className="hover:text-[#48A5EE] hover:underline truncate max-w-[200px]"
+                                  className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px]"
                                   title={`Contact Parent/Guardian: ${st.parentEmail || st.email}`}
                                 >
                                   {st.parentEmail || st.email}
                                 </a>
                               </div>
                             )}
-                            {/* Inactivity Deletion Flag (Policy: no lessons for retention threshold) */}
+                            {/* Inactivity Deletion Flag */}
                             {inactivity.isFlaggedForRetention && (
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-[10px] font-bold w-fit"
-                                title={`Flagged for Deletion: No lessons conducted for ${inactivity.daysSinceLastLesson} days (Policy threshold: 90 days). In abidance with UK GDPR Art. 5(1)(e) & Privacy Policy.`}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-[10px] font-bold w-fit"
+                                title={`Flagged for Deletion: No lessons conducted for ${inactivity.daysSinceLastLesson} days (Policy threshold: 90 days).`}
                               >
                                 <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
-                                <span>Flagged for Deletion ({inactivity.daysSinceLastLesson}d no lessons)</span>
+                                <span>Flagged ({inactivity.daysSinceLastLesson}d)</span>
                               </span>
                             )}
                           </div>
                         </td>
 
                         {/* 2. Assigned Tutor */}
-                        <td className="px-3 py-2.5 whitespace-nowrap">
+                        <td className="px-2.5 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             {st.assignedTutor ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs border border-emerald-200/60 dark:border-emerald-800/60">
@@ -4488,7 +4771,7 @@ export default function AdminPage() {
                         </td>
 
                         {/* 3. Combined Rates (Fee / Pay) */}
-                        <td className="px-3 py-2.5 whitespace-nowrap">
+                        <td className="px-2.5 py-2 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5 text-[11px] font-mono leading-tight">
                             <div className="flex items-center gap-1">
                               <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-tighter">Fee:</span>
@@ -4505,10 +4788,10 @@ export default function AdminPage() {
                           </div>
                         </td>
 
-                        {/* 4. PIN */}
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700">
+                        {/* 4. Access & PIN (Compressed) */}
+                        <td className="px-2.5 py-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700">
                               {st.pin || "----"}
                             </span>
                             {st.pin && (
@@ -4520,7 +4803,7 @@ export default function AdminPage() {
                                     setTimeout(() => setCopiedKey(null), 2000);
                                   } catch { }
                                 }}
-                                className="p-1 text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
+                                className="p-0.5 text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer"
                                 title="Copy PIN"
                               >
                                 {copiedKey === `pin-${st.id}` ? (
@@ -4530,39 +4813,28 @@ export default function AdminPage() {
                                 )}
                               </button>
                             )}
-                          </div>
-                        </td>
-
-                        {/* 5. Shown Magic Link */}
-                        <td className="px-3 py-2.5 font-mono text-[11px] text-[#48A5EE] whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              onClick={() => copyMagicLink(st.magicKey)}
-                              className="select-all hover:underline cursor-pointer truncate max-w-[170px] inline-block"
-                              title={`Click to copy: /student?key=${st.magicKey}`}
-                            >
-                              /student?key={st.magicKey}
-                            </span>
+                            <span className="text-slate-300 dark:text-slate-700">|</span>
                             <button
                               onClick={() => copyMagicLink(st.magicKey)}
-                              className="p-1 text-slate-400 hover:text-[#48A5EE] transition-colors cursor-pointer shrink-0"
-                              title="Copy Magic Link"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#48A5EE] hover:underline cursor-pointer"
+                              title={`Copy direct magic link: /student?key=${st.magicKey}`}
                             >
+                              <span>Link</span>
                               {copiedKey === st.magicKey ? (
                                 <Check className="w-3 h-3 text-emerald-600" />
                               ) : (
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-2.5 h-2.5 text-slate-400" />
                               )}
                             </button>
                           </div>
                         </td>
 
-                        {/* 6. Status Toggle (Active vs Break / Holiday) */}
-                        <td className="px-2 py-2.5 text-center whitespace-nowrap">
+                        {/* 5. Status Toggle */}
+                        <td className="px-2 py-2 text-center whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => handleToggleUserActive(st.id, st.active !== false)}
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${st.active !== false
                                 ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/80"
                                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700"
                               }`}
@@ -4577,8 +4849,8 @@ export default function AdminPage() {
                           </button>
                         </td>
 
-                        {/* 7. Streamlined Actions */}
-                        <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                        {/* 6. Streamlined Actions */}
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
                             {st.pinLockedUntil && new Date(st.pinLockedUntil).getTime() > currentTime && (
                               <button
@@ -4661,8 +4933,8 @@ export default function AdminPage() {
 
         {/* TAB 3: TUTORS */}
         {activeTab === "tutors" && (
-          <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            <div className="p-3.5 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div>
                 <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#48A5EE]" />
@@ -4681,7 +4953,7 @@ export default function AdminPage() {
                   setNewUserRole("TUTOR");
                   setIsNewUserOpen(true);
                 }}
-                className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+                className="py-2 px-3.5 sm:py-2.5 sm:px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Add Tutor</span>
@@ -4689,21 +4961,21 @@ export default function AdminPage() {
             </div>
 
             {/* Filter and Search Bar */}
-            <div className="p-4 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
+            <div className="p-2.5 sm:p-3.5 bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
               {/* Search input */}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="relative flex-1 min-w-[180px]">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={tutorSearchTerm}
                   onChange={(e) => setTutorSearchTerm(e.target.value)}
                   placeholder="Search tutor name, email, student..."
-                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                  className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-[#48A5EE] text-slate-800 dark:text-slate-100 placeholder-slate-400"
                 />
                 {tutorSearchTerm && (
                   <button
                     onClick={() => setTutorSearchTerm("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -4711,21 +4983,20 @@ export default function AdminPage() {
               </div>
 
               {/* Filter by Student */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={tutorStudentFilter}
                   onChange={(e) => setTutorStudentFilter(e.target.value)}
                   aria-label="Filter tutors by student"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="ALL">All Students</option>
-                  <option value="HAS_STUDENTS">Has Students Assigned</option>
-                  <option value="NO_STUDENTS">No Students Assigned</option>
+                  <option value="HAS_STUDENTS">Has Students</option>
+                  <option value="NO_STUDENTS">No Students</option>
                   <optgroup label="Specific Student">
                     {students.map((st) => (
                       <option key={st.id} value={st.id}>
-                        Student: {st.name}
+                        {st.name}
                       </option>
                     ))}
                   </optgroup>
@@ -4733,13 +5004,12 @@ export default function AdminPage() {
               </div>
 
               {/* Filter by Role */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={tutorRoleFilter}
                   onChange={(e) => setTutorRoleFilter(e.target.value as any)}
                   aria-label="Filter tutors by role"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="ALL">All Roles</option>
                   <option value="HEAD_TUTOR">Admin Only</option>
@@ -4748,18 +5018,17 @@ export default function AdminPage() {
               </div>
 
               {/* Sort by */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-1 shrink-0">
                 <select
                   value={tutorSortBy}
                   onChange={(e) => setTutorSortBy(e.target.value as any)}
                   aria-label="Sort tutors"
-                  className="py-2 px-3 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
+                  className="py-1.5 px-2.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#48A5EE] cursor-pointer"
                 >
                   <option value="name_asc">Name (A-Z)</option>
                   <option value="name_desc">Name (Z-A)</option>
-                  <option value="students_count">Most Students Assigned</option>
-                  <option value="newest">Recently Added</option>
+                  <option value="students_count">Most Students</option>
+                  <option value="newest">Recent</option>
                 </select>
               </div>
 
@@ -4772,7 +5041,7 @@ export default function AdminPage() {
                     setTutorRoleFilter("ALL");
                     setTutorSortBy("name_asc");
                   }}
-                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                  className="text-xs font-semibold text-[#48A5EE] hover:underline flex items-center gap-1 shrink-0 cursor-pointer px-1"
                 >
                   <X className="w-3 h-3" />
                   <span>Reset</span>
@@ -4781,16 +5050,16 @@ export default function AdminPage() {
             </div>
 
             {tutors.length === 0 ? (
-              <div className="text-center py-12 px-4 space-y-2">
-                <Users className="w-8 h-8 text-slate-400 mx-auto" />
+              <div className="text-center py-10 px-4 space-y-1.5">
+                <Users className="w-7 h-7 text-slate-400 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Tutors Yet</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Click &quot;Add Tutor&quot; above to create tutor accounts.
                 </p>
               </div>
             ) : filteredTutors.length === 0 ? (
-              <div className="text-center py-12 px-4 space-y-3">
-                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+              <div className="text-center py-10 px-4 space-y-2">
+                <Search className="w-7 h-7 text-slate-400 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">No Tutors Found</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   No tutors match your search criteria. Try modifying your search or clearing filters.
@@ -4802,7 +5071,7 @@ export default function AdminPage() {
                     setTutorRoleFilter("ALL");
                     setTutorSortBy("name_asc");
                   }}
-                  className="py-1.5 px-3 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
+                  className="py-1 px-2.5 rounded-lg bg-[#48A5EE]/10 text-[#48A5EE] font-bold text-xs hover:bg-[#48A5EE]/20 transition-colors cursor-pointer"
                 >
                   Reset All Filters
                 </button>
@@ -4812,59 +5081,54 @@ export default function AdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px]">
                     <tr>
-                      <th className="px-3 py-2.5">Tutor Name</th>
-                      <th className="px-3 py-2.5">Email / Handle</th>
-                      <th className="px-3 py-2.5">Role</th>
-                      <th className="px-3 py-2.5">Assigned Students</th>
-                      <th className="px-3 py-2.5">Status</th>
-                      <th className="px-3 py-2.5 text-right">Actions</th>
+                      <th className="px-3 py-2">Tutor &amp; Role</th>
+                      <th className="px-3 py-2">Assigned Students</th>
+                      <th className="px-2.5 py-2">Status</th>
+                      <th className="px-3 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredTutors.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
-                        <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span>{formatTutorName(t.name)}</span>
-                            <OnlineBadge isOnline={isOnline(t.id)} label="Online" offlineLabel="Offline" size="xs" />
+                        {/* 1. Tutor Name, Role & Email (Combined) */}
+                        <td className="px-3 py-2 font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{formatTutorName(t.name)}</span>
+                              <span
+                                className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${t.role === "HEAD_TUTOR"
+                                    ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"
+                                    : "bg-[#48A5EE]/10 text-[#48A5EE]"
+                                  }`}
+                              >
+                                {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
+                              </span>
+                              <OnlineBadge isOnline={isOnline(t.id)} label="Online" offlineLabel="Offline" size="xs" />
+                            </div>
+                            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono font-normal">
+                              {t.email}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">
-                          {t.email}
-                        </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${t.role === "HEAD_TUTOR"
-                                ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"
-                                : "bg-[#48A5EE]/10 text-[#48A5EE]"
-                              }`}
-                          >
-                            {t.role === "HEAD_TUTOR" ? "Admin" : "Tutor"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
-                              {t.assignedStudents?.length || 0} student
-                              {t.assignedStudents?.length === 1 ? "" : "s"}
+
+                        {/* 2. Assigned Students (Compact) */}
+                        <td className="px-3 py-2">
+                          <div className="flex flex-col gap-0.5 max-w-xs">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                              {t.assignedStudents?.length || 0} student{t.assignedStudents?.length === 1 ? "" : "s"}
                             </span>
                             {t.assignedStudents && t.assignedStudents.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 mt-0.5">
-                                {t.assignedStudents.map((st: any) => (
-                                  <span
-                                    key={st.id}
-                                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60"
-                                  >
-                                    {st.name}
-                                  </span>
-                                ))}
-                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate" title={t.assignedStudents.map((st: any) => st.name).join(", ")}>
+                                {t.assignedStudents.map((st: any) => st.name).join(", ")}
+                              </p>
                             ) : (
                               <span className="text-[10px] text-slate-400 italic">None assigned</span>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">
+
+                        {/* 3. Status */}
+                        <td className="px-2.5 py-2 whitespace-nowrap">
                           {t.role === "HEAD_TUTOR" || t.email === "luke@lbmathstuition.co.uk" ? (
                             <span
                               className="px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default"
@@ -4897,7 +5161,9 @@ export default function AdminPage() {
                             </button>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-right whitespace-nowrap">
+
+                        {/* 4. Actions */}
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => handleOpenCalendar(t)}

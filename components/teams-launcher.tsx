@@ -83,7 +83,7 @@ export default function TeamsLauncher({
       }`}
     >
       {/* Top Banner */}
-      <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+      <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div
@@ -115,7 +115,7 @@ export default function TeamsLauncher({
       </div>
 
       {/* Main Content */}
-      <div className="p-6 space-y-5">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
         {!isUnlocked ? (
           <div className="text-center py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">

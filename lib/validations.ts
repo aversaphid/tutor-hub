@@ -109,12 +109,17 @@ export const ToggleUserActiveSchema = z.object({
 });
 
 // Batch archive sessions by date range or tutor
-export const BatchArchiveSessionsSchema = z.object({
-  startDate: z.string().datetime({ message: "Invalid ISO start date" }),
-  endDate: z.string().datetime({ message: "Invalid ISO end date" }),
-  sessionIds: z.array(z.string()).optional(),
-  tutorId: z.string().optional(),
-});
+export const BatchArchiveSessionsSchema = z
+  .object({
+    startDate: z.string().datetime({ message: "Invalid ISO start date" }).optional(),
+    endDate: z.string().datetime({ message: "Invalid ISO end date" }).optional(),
+    sessionIds: z.array(z.string()).optional(),
+    tutorId: z.string().optional(),
+  })
+  .refine(
+    (data) => (data.sessionIds && data.sessionIds.length > 0) || (data.startDate && data.endDate),
+    { message: "Either sessionIds or both startDate and endDate must be provided" }
+  );
 
 // Admin update user password
 export const AdminUpdateUserPasswordSchema = z.object({
@@ -178,13 +183,15 @@ export const CreateResourceSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(150),
   url: z.string().trim().min(1, "URL is required").max(1000),
   description: z.string().trim().max(1000).optional().nullable(),
-  category: z.string().trim().max(50).optional().default("General"),
+  category: z.string().trim().max(200).optional(),
+  tags: z.array(z.string().trim().min(1).max(50)).min(1, "Please select at least one tag").optional(),
 });
 
 export const UpdateResourceSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(150).optional(),
   url: z.string().trim().min(1, "URL is required").max(1000).optional(),
   description: z.string().trim().max(1000).optional().nullable(),
-  category: z.string().trim().max(50).optional(),
+  category: z.string().trim().max(200).optional(),
+  tags: z.array(z.string().trim().min(1).max(50)).optional(),
 });
 

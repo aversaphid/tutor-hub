@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     }
 
     const { startDate, endDate, sessionIds, tutorId } = parseResult.data;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = startDate ? new Date(startDate) : new Date(0);
+    const end = endDate ? new Date(endDate) : new Date("2099-12-31T23:59:59.999Z");
 
     const where: any = {
       tutorPaid: false,

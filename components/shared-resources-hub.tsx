@@ -14,7 +14,6 @@ import {
   Tag,
   Filter,
   ArrowUpDown,
-  Sparkles,
   FolderOpen,
   X,
   AlertCircle,
@@ -27,6 +26,7 @@ export interface ResourceItem {
   url: string;
   description?: string | null;
   category: string;
+  tags?: string[];
   createdById: string;
   createdBy?: {
     id: string;
@@ -47,17 +47,15 @@ interface SharedResourcesHubProps {
   hideHeaderBanner?: boolean;
 }
 
-const PRESET_CATEGORIES = [
-  "All",
+export const PRESET_TAGS = [
   "Past Papers",
   "Worksheets",
   "Online Tools",
   "Formulas & Specs",
   "Starters & Plenaries",
-  "General",
 ];
 
-const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string; darkBg: string }> = {
+export const TAG_COLORS: Record<string, { bg: string; text: string; border: string; darkBg: string }> = {
   "Past Papers": {
     bg: "bg-purple-100",
     text: "text-purple-800",
@@ -88,13 +86,30 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     border: "border-rose-200",
     darkBg: "dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800",
   },
-  General: {
-    bg: "bg-slate-100",
-    text: "text-slate-800",
-    border: "border-slate-200",
-    darkBg: "dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
-  },
 };
+
+export const DEFAULT_TAG_STYLE = {
+  bg: "bg-indigo-100",
+  text: "text-indigo-800",
+  border: "border-indigo-200",
+  darkBg: "dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800",
+};
+
+export function getTagStyle(tag: string) {
+  return TAG_COLORS[tag] || DEFAULT_TAG_STYLE;
+}
+
+export function getResourceTags(item: ResourceItem): string[] {
+  if (Array.isArray(item.tags) && item.tags.length > 0) {
+    return item.tags.filter((t) => t.toLowerCase() !== "general");
+  }
+  if (!item.category) return [];
+  return item.category
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => t.toLowerCase() !== "general");
+}
 
 export default function SharedResourcesHub({
   currentUser,
@@ -107,15 +122,16 @@ export default function SharedResourcesHub({
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title" | "category">("newest");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title">("newest");
 
   // Modal State for Add / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ResourceItem | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formUrl, setFormUrl] = useState("");
-  const [formCategory, setFormCategory] = useState("General");
+  const [formTags, setFormTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,7 +173,8 @@ export default function SharedResourcesHub({
     setEditingResource(null);
     setFormTitle("");
     setFormUrl("");
-    setFormCategory("General");
+    setFormTags([]);
+    setCustomTagInput("");
     setFormDescription("");
     setFormError("");
     setIsModalOpen(true);
@@ -167,10 +184,30 @@ export default function SharedResourcesHub({
     setEditingResource(item);
     setFormTitle(item.title);
     setFormUrl(item.url);
-    setFormCategory(item.category || "General");
+    setFormTags(getResourceTags(item));
+    setCustomTagInput("");
     setFormDescription(item.description || "");
     setFormError("");
     setIsModalOpen(true);
+  };
+
+  const toggleFormTag = (tag: string) => {
+    setFormTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleAddCustomTag = () => {
+    const trimmed = customTagInput.trim();
+    if (!trimmed) return;
+    if (trimmed.toLowerCase() === "general") {
+      setFormError("The 'General' tag has been deprecated. Please choose a specific tag.");
+      return;
+    }
+    if (!formTags.includes(trimmed)) {
+      setFormTags((prev) => [...prev, trimmed]);
+    }
+    setCustomTagInput("");
   };
 
   const handleSaveResource = async (e: React.FormEvent) => {
@@ -186,20 +223,27 @@ export default function SharedResourcesHub({
       setFormError("Please enter a web link or URL.");
       return;
     }
+    if (formTags.length === 0) {
+      setFormError("Please select at least one related tag for this resource.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      const payload = {
+        title: formTitle.trim(),
+        url: formUrl.trim(),
+        tags: formTags,
+        category: formTags.join(", "),
+        description: formDescription.trim() || null,
+      };
+
       if (editingResource) {
         // Update
         const res = await fetch(`/api/resources/${editingResource.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formTitle.trim(),
-            url: formUrl.trim(),
-            category: formCategory.trim() || "General",
-            description: formDescription.trim() || null,
-          }),
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();
@@ -209,19 +253,14 @@ export default function SharedResourcesHub({
         }
 
         setIsModalOpen(false);
-        showNotification(`Updated "${data.resource.title}".`);
+        showNotification(`Updated "${data.resource?.title || formTitle}".`);
         loadResources();
       } else {
         // Create
         const res = await fetch("/api/resources", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formTitle.trim(),
-            url: formUrl.trim(),
-            category: formCategory.trim() || "General",
-            description: formDescription.trim() || null,
-          }),
+          body: JSON.stringify(payload),
         });
 
         const data = await res.json();
@@ -231,7 +270,7 @@ export default function SharedResourcesHub({
         }
 
         setIsModalOpen(false);
-        showNotification(`Added "${data.resource.title}" to shared library!`);
+        showNotification(`Added "${data.resource?.title || formTitle}" to shared library!`);
         loadResources();
       }
     } catch {
@@ -283,20 +322,55 @@ export default function SharedResourcesHub({
     }
   };
 
+  // Toggle filter tag
+  const toggleFilterTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  // All distinct tags across resources + preset tags
+  const allAvailableTags = useMemo(() => {
+    const tagSet = new Set<string>(PRESET_TAGS);
+    for (const r of resources) {
+      const tags = getResourceTags(r);
+      for (const t of tags) {
+        tagSet.add(t);
+      }
+    }
+    return Array.from(tagSet);
+  }, [resources]);
+
+  // Tag counts
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of resources) {
+      const tags = getResourceTags(r);
+      for (const t of tags) {
+        counts[t] = (counts[t] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [resources]);
+
   // Filtered and sorted list
   const filteredResources = useMemo(() => {
     return resources
       .filter((r) => {
-        const matchesCategory =
-          selectedCategory === "All" || r.category === selectedCategory;
+        const itemTags = getResourceTags(r);
+        const matchesTags =
+          selectedTags.length === 0 ||
+          selectedTags.some((selected) => itemTags.includes(selected));
+
         const q = searchTerm.toLowerCase().trim();
         const matchesSearch =
           !q ||
           r.title.toLowerCase().includes(q) ||
           (r.description && r.description.toLowerCase().includes(q)) ||
           r.url.toLowerCase().includes(q) ||
-          r.category.toLowerCase().includes(q);
-        return matchesCategory && matchesSearch;
+          itemTags.some((t) => t.toLowerCase().includes(q));
+
+        return matchesTags && matchesSearch;
       })
       .sort((a, b) => {
         if (sortBy === "newest") {
@@ -308,21 +382,9 @@ export default function SharedResourcesHub({
         if (sortBy === "title") {
           return a.title.localeCompare(b.title);
         }
-        if (sortBy === "category") {
-          return a.category.localeCompare(b.category);
-        }
         return 0;
       });
-  }, [resources, selectedCategory, searchTerm, sortBy]);
-
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: resources.length };
-    for (const r of resources) {
-      counts[r.category] = (counts[r.category] || 0) + 1;
-    }
-    return counts;
-  }, [resources]);
+  }, [resources, selectedTags, searchTerm, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -348,7 +410,7 @@ export default function SharedResourcesHub({
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
                 A shared repository of useful links, past papers, worksheets, formulas, and online tools
-                accessible to all tutors, students, and administrators.
+                tagged for easy discovery across all tutors, students, and administrators.
               </p>
             </div>
 
@@ -366,7 +428,7 @@ export default function SharedResourcesHub({
         </div>
       )}
 
-      {/* Search, Category Filter & Sorting Toolbar */}
+      {/* Search, Multi-Tag Filter & Sorting Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 transition-colors">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Search bar */}
@@ -376,14 +438,14 @@ export default function SharedResourcesHub({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search resources by title, description, or domain..."
+              placeholder="Search resources by title, description, URL, or tag..."
               className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -399,37 +461,61 @@ export default function SharedResourcesHub({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
+              className="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#48A5EE] cursor-pointer"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="title">Title (A-Z)</option>
-              <option value="category">Category</option>
             </select>
           </div>
         </div>
 
-        {/* Category Filter Pills */}
+        {/* Multi-Tag Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
           <span className="text-[11px] font-semibold text-slate-400 mr-1 flex items-center gap-1">
             <Filter className="w-3 h-3" />
-            <span>Category:</span>
+            <span>Tags:</span>
           </span>
-          {PRESET_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat;
-            const count = categoryCounts[cat] || 0;
+
+          {/* "All" Button */}
+          <button
+            type="button"
+            onClick={() => setSelectedTags([])}
+            className={`text-xs px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              selectedTags.length === 0
+                ? "bg-[#48A5EE] text-white shadow-sm"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+            }`}
+          >
+            <span>All</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                selectedTags.length === 0
+                  ? "bg-white/20 text-white"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              }`}
+            >
+              {resources.length}
+            </span>
+          </button>
+
+          {/* Individual Tag Pills */}
+          {allAvailableTags.map((tag) => {
+            const isSelected = selectedTags.includes(tag);
+            const count = tagCounts[tag] || 0;
             return (
               <button
-                key={cat}
+                key={tag}
                 type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`text-xs px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                onClick={() => toggleFilterTag(tag)}
+                className={`text-xs px-2.5 py-1 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   isSelected
                     ? "bg-[#48A5EE] text-white shadow-sm"
                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
-                <span>{cat}</span>
+                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                <span>{tag}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                     isSelected
@@ -442,6 +528,18 @@ export default function SharedResourcesHub({
               </button>
             );
           })}
+
+          {/* Clear active tag filters if any are selected */}
+          {selectedTags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedTags([])}
+              className="text-[11px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-1.5 cursor-pointer flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear filters ({selectedTags.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -469,26 +567,26 @@ export default function SharedResourcesHub({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-              {searchTerm || selectedCategory !== "All"
+              {searchTerm || selectedTags.length > 0
                 ? "No resources match your filters"
                 : "No shared resources yet"}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              {searchTerm || selectedCategory !== "All"
-                ? "Try searching for something else or reset your category filters."
+              {searchTerm || selectedTags.length > 0
+                ? "Try searching for something else or reset your active tag filters."
                 : currentUser.role === "TUTEE"
                 ? "Your tutors will share past paper links, online calculators, formula sheets, and revision tools here."
                 : "Add useful past paper links, online calculators, formula sheets, and teaching tools to build up the team's library."}
             </p>
           </div>
-          {searchTerm || selectedCategory !== "All" ? (
+          {searchTerm || selectedTags.length > 0 ? (
             <button
               type="button"
               onClick={() => {
                 setSearchTerm("");
-                setSelectedCategory("All");
+                setSelectedTags([]);
               }}
-              className="text-xs font-bold px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="text-xs font-bold px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Clear Filters
             </button>
@@ -509,8 +607,7 @@ export default function SharedResourcesHub({
             const canManage =
               currentUser.role !== "TUTEE" &&
               (currentUser.role === "HEAD_TUTOR" || currentUser.id === item.createdById);
-            const categoryStyle =
-              CATEGORY_COLORS[item.category] || CATEGORY_COLORS.General;
+            const itemTags = getResourceTags(item);
             const domain = getDomain(item.url);
 
             return (
@@ -519,16 +616,36 @@ export default function SharedResourcesHub({
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#48A5EE]/50 dark:hover:border-[#48A5EE]/50 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group space-y-4"
               >
                 <div className="space-y-3">
-                  {/* Top bar: Category Badge + Manage buttons */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${categoryStyle.bg} ${categoryStyle.text} ${categoryStyle.border} ${categoryStyle.darkBg}`}
-                    >
-                      {item.category}
-                    </span>
+                  {/* Top bar: Multiple Tag Badges + Manage buttons */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 flex-1 pr-1">
+                      {itemTags.length > 0 ? (
+                        itemTags.map((tag) => {
+                          const style = getTagStyle(tag);
+                          const isTagActive = selectedTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleFilterTag(tag)}
+                              title={`Filter by ${tag}`}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-transform hover:scale-105 cursor-pointer ${
+                                isTagActive
+                                  ? "ring-2 ring-[#48A5EE] "
+                                  : ""
+                              } ${style.bg} ${style.text} ${style.border} ${style.darkBg}`}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">No tags</span>
+                      )}
+                    </div>
 
                     {canManage && (
-                      <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(item)}
@@ -707,29 +824,67 @@ export default function SharedResourcesHub({
                 </p>
               </div>
 
-              {/* Category */}
+              {/* Multiple Related Tags Selection */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Category
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_CATEGORIES.filter((c) => c !== "All").map((cat) => {
-                    const isSelected = formCategory === cat;
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-[#48A5EE]" />
+                    <span>Related Tags <span className="text-red-500">*</span></span>
+                  </label>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {formTags.length} selected
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Select as many related tags as needed:
+                </p>
+
+                {/* Preset & Active Tag Chips */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {Array.from(new Set([...PRESET_TAGS, ...formTags])).map((tag) => {
+                    const isSelected = formTags.includes(tag);
                     return (
                       <button
-                        key={cat}
+                        key={tag}
                         type="button"
-                        onClick={() => setFormCategory(cat)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                        onClick={() => toggleFormTag(tag)}
+                        className={`text-xs px-2.5 py-1 rounded-xl border font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                           isSelected
-                            ? "bg-[#48A5EE]/15 border-[#48A5EE] text-[#48A5EE] font-semibold dark:bg-[#48A5EE]/25"
+                            ? "bg-[#48A5EE] border-[#48A5EE] text-white shadow-xs font-bold"
                             : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60"
                         }`}
                       >
-                        {cat}
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        <span>{tag}</span>
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Add Custom Tag */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddCustomTag();
+                      }
+                    }}
+                    placeholder="Add custom tag (press Enter)..."
+                    maxLength={30}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomTag}
+                    disabled={!customTagInput.trim()}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer disabled:opacity-40 transition-colors"
+                  >
+                    + Add
+                  </button>
                 </div>
               </div>
 

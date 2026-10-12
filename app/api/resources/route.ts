@@ -14,6 +14,15 @@ function sanitizeUrl(rawUrl: string): string {
   return `https://${trimmed}`;
 }
 
+function parseTags(raw?: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => t.toLowerCase() !== "general");
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -36,13 +45,13 @@ export async function GET(request: Request) {
     if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
-    const category = searchParams.get("category");
+    const tagFilter = searchParams.get("tag") || searchParams.get("category");
     const query = searchParams.get("q")?.trim().toLowerCase();
 
     const where: any = {};
 
-    if (category && category !== "ALL") {
-      where.category = category;
+    if (tagFilter && tagFilter !== "ALL" && tagFilter.toLowerCase() !== "general") {
+      where.category = { contains: tagFilter };
     }
 
     if (query) {
@@ -50,6 +59,7 @@ export async function GET(request: Request) {
         { title: { contains: query } },
         { description: { contains: query } },
         { url: { contains: query } },
+        { category: { contains: query } },
       ];
     }
 
@@ -67,8 +77,13 @@ export async function GET(request: Request) {
       },
     });
 
-    const etagSeed = resources
-      .map((r) => `${r.id}-${new Date(r.updatedAt).getTime()}`)
+    const formattedResources = resources.map((r) => ({
+      ...r,
+      tags: parseTags(r.category),
+    }));
+
+    const etagSeed = formattedResources
+      .map((r) => `${r.id}-${new Date(r.updatedAt).getTime()}-${r.category}`)
       .join(":");
     const etag = `"${crypto.createHash("md5").update(etagSeed).digest("hex")}"`;
 
@@ -84,7 +99,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(
-      { resources },
+      { resources: formattedResources },
       {
         headers: {
           ETag: etag,
@@ -118,7 +133,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { title, url, description, category } = parseResult.data;
+    const { title, url, description, category, tags } = parseResult.data;
     const sanitizedUrl = sanitizeUrl(url);
 
     // Basic check for valid URL structure
@@ -131,12 +146,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const resolvedTags = Array.isArray(tags) && tags.length > 0
+      ? tags.map((t) => t.trim()).filter(Boolean).filter((t) => t.toLowerCase() !== "general")
+      : parseTags(category);
+
+    if (resolvedTags.length === 0) {
+      return NextResponse.json(
+        { error: "Please select at least one related tag for this resource." },
+        { status: 400 }
+      );
+    }
+
+    const categoryString = resolvedTags.join(", ");
+
     const resource = await prisma.resource.create({
       data: {
         title: title.trim(),
         url: sanitizedUrl,
         description: description?.trim() || null,
-        category: category?.trim() || "General",
+        category: categoryString,
         createdById: user.id,
       },
       include: {
@@ -152,7 +180,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      resource,
+      resource: {
+        ...resource,
+        tags: resolvedTags,
+      },
       message: "Resource link added to library.",
     });
   } catch (err) {

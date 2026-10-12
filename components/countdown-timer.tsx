@@ -200,14 +200,14 @@ export default function CountdownTimer({
             : `Maths lesson starts in ${timeLeft.hours > 0 ? `${timeLeft.hours} hours, ` : ""
             }${timeLeft.minutes} minutes and ${timeLeft.seconds} seconds`
         }
-        className={`rounded-3xl border p-6 bg-white dark:bg-slate-900 transition-all ${isLiveNow
+        className={`rounded-3xl border p-4 sm:p-6 bg-white dark:bg-slate-900 transition-all ${isLiveNow
             ? "border-emerald-500 dark:border-emerald-500/80 shadow-lg shadow-emerald-500/10"
             : session.status === "DELAYED"
               ? "border-amber-400 dark:border-amber-500/80 shadow-md"
               : "border-slate-200 dark:border-slate-800 shadow-sm"
           }`}
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
           {/* Lesson Overview */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
