@@ -43,7 +43,7 @@ export default function FindOpenSlotModal({
   const [selectedTutorId, setSelectedTutorId] = useState("");
   const [daysAhead, setDaysAhead] = useState<7 | 14>(7);
   const [timeWindow, setTimeWindow] = useState<"ALL" | "AFTERNOON" | "MORNING" | "WEEKEND">("AFTERNOON");
-  const [slotDuration, setSlotDuration] = useState<60 | 30 | 90>(60);
+  const [slotDuration, setSlotDuration] = useState<30 | 60 | 90 | 120>(60);
 
   const [isLoading, setIsLoading] = useState(false);
   const [existingSessions, setExistingSessions] = useState<any[]>([]);
@@ -415,12 +415,13 @@ export default function FindOpenSlotModal({
               </label>
               <select
                 value={slotDuration}
-                onChange={(e) => setSlotDuration(parseInt(e.target.value, 10) as 60 | 30 | 90)}
+                onChange={(e) => setSlotDuration(parseInt(e.target.value, 10) as 30 | 60 | 90 | 120)}
                 className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE]"
               >
                 <option value={60}>1 Hour</option>
                 <option value={30}>30 Mins</option>
                 <option value={90}>1.5 Hours</option>
+                <option value={120}>2 Hours</option>
               </select>
             </div>
           </div>

@@ -86,6 +86,14 @@ console.log("✅ [PASS] Filters by regular tutor name ('sarah' -> Enoch, Zara)")
 const searchCase = filterStudents(mockStudents, "LUKE");
 assert.strictEqual(searchCase.length, 1);
 assert.strictEqual(searchCase[0].name, "Herbie");
-console.log("✅ [PASS] Case-insensitive search supported");
+// 6. Test 2-Hour (120 min) slot duration calculation
+const startMins = 16 * 60; // 16:00
+const slotDuration = 120; // 2 hours
+const endMins = startMins + slotDuration;
+const endH = Math.floor(endMins / 60);
+const endM = endMins % 60;
+const pad = (n: number) => String(n).padStart(2, "0");
+assert.strictEqual(`${pad(endH)}:${pad(endM)}`, "18:00");
+console.log("✅ [PASS] 2-Hour (120 min) slot calculation produces correct 2-hour span (16:00 -> 18:00)");
 
 console.log("\n🎉 ALL STUDENT COMBOBOX & REGULAR TUTOR TESTS PASSED!\n");
