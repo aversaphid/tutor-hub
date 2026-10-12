@@ -27,6 +27,7 @@ import {
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import { getSessionTutorPay, calculateSessionAmounts } from "@/lib/billing";
 import TimeSelect from "@/components/time-select";
+import StudentCombobox from "@/components/student-combobox";
 
 interface UserWeeklyCalendarModalProps {
   isOpen: boolean;
@@ -344,7 +345,7 @@ export default function UserWeeklyCalendarModal({
       setQuickAddTutorId(targetUser.assignedTutorId || currentUserId || (activeTutors[0]?.id ?? ""));
     } else {
       setQuickAddTutorId(targetUser.id);
-      setQuickAddStudentId(activeStudents[0]?.id ?? "");
+      setQuickAddStudentId("");
     }
 
     setIsQuickAddOpen(true);
@@ -502,6 +503,10 @@ export default function UserWeeklyCalendarModal({
     e.preventDefault();
     setQuickAddError("");
 
+    if (!quickAddStudentId) {
+      setQuickAddError("Please select a student.");
+      return;
+    }
     if (!quickAddDate || !quickAddStartTime || !quickAddEndTime) {
       setQuickAddError("Please specify date, start time, and end time.");
       return;
@@ -1596,7 +1601,10 @@ export default function UserWeeklyCalendarModal({
               </div>
               <button
                 type="button"
-                onClick={() => setIsQuickAddOpen(false)}
+                onClick={() => {
+                  setQuickAddStudentId("");
+                  setIsQuickAddOpen(false);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1651,18 +1659,21 @@ export default function UserWeeklyCalendarModal({
                 <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
                   Student
                 </label>
-                <select
+                <StudentCombobox
                   disabled={isStudent}
+                  students={activeStudents}
                   value={quickAddStudentId}
-                  onChange={(e) => setQuickAddStudentId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE] disabled:opacity-80"
-                >
-                  {activeStudents.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id, _st, regTutorId) => {
+                    setQuickAddStudentId(id);
+                    if (!isStudent && regTutorId && !quickAddTutorId) {
+                      setQuickAddTutorId(regTutorId);
+                    }
+                  }}
+                  tutors={tutors}
+                  sessions={allSessions}
+                  preferredTutorId={quickAddTutorId || targetUser?.id || currentUserId}
+                  placeholder="Choose student..."
+                />
               </div>
 
               {/* Tutor Selector */}
@@ -1785,7 +1796,10 @@ export default function UserWeeklyCalendarModal({
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsQuickAddOpen(false)}
+                  onClick={() => {
+                    setQuickAddStudentId("");
+                    setIsQuickAddOpen(false);
+                  }}
                   className="py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel

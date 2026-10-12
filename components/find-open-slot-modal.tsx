@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatTutorName } from "@/lib/format";
+import StudentCombobox from "@/components/student-combobox";
 
 interface FindOpenSlotModalProps {
   isOpen: boolean;
@@ -72,15 +73,19 @@ export default function FindOpenSlotModal({
   // Sync initial student and tutor selection when modal opens
   useEffect(() => {
     if (isOpen) {
-      const initialStudent =
-        activeStudents.find((s) => s.id === preselectedStudentId) || activeStudents[0];
-      if (initialStudent) {
-        setSelectedStudentId(initialStudent.id);
-        const assigned =
-          activeTutors.find((t) => t.id === initialStudent.assignedTutorId) || activeTutors[0];
-        if (assigned) setSelectedTutorId(assigned.id);
-      } else if (activeTutors.length > 0) {
-        setSelectedTutorId(activeTutors[0].id);
+      if (preselectedStudentId) {
+        const initialStudent = activeStudents.find((s) => s.id === preselectedStudentId);
+        if (initialStudent) {
+          setSelectedStudentId(initialStudent.id);
+          const assigned =
+            activeTutors.find((t) => t.id === initialStudent.assignedTutorId) || activeTutors[0];
+          if (assigned) setSelectedTutorId(assigned.id);
+        }
+      } else {
+        setSelectedStudentId("");
+        if (activeTutors.length > 0) {
+          setSelectedTutorId(activeTutors[0].id);
+        }
       }
     }
   }, [isOpen, preselectedStudentId, activeStudents, activeTutors]);
@@ -310,17 +315,22 @@ export default function FindOpenSlotModal({
             <label className="block text-slate-600 dark:text-slate-300 font-bold mb-1">
               Student
             </label>
-            <select
+            <StudentCombobox
+              students={activeStudents}
               value={selectedStudentId}
-              onChange={(e) => handleStudentChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-[#48A5EE]"
-            >
-              {activeStudents.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              onChange={(id, _st, regTutorId) => {
+                setSelectedStudentId(id);
+                if (regTutorId) {
+                  setSelectedTutorId(regTutorId);
+                } else {
+                  const stud = activeStudents.find((s) => s.id === id);
+                  if (stud?.assignedTutorId) setSelectedTutorId(stud.assignedTutorId);
+                }
+              }}
+              tutors={tutors}
+              preferredTutorId={selectedTutorId}
+              placeholder="Choose student..."
+            />
           </div>
 
           {/* Tutor Selector */}

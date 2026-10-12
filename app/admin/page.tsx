@@ -79,6 +79,7 @@ const RevenueAnalyticsHub = dynamic(() => import("@/components/revenue-analytics
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
 import TimeSelect from "@/components/time-select";
+import StudentCombobox from "@/components/student-combobox";
 import { useRouter } from "next/navigation";
 import { resolveActiveSession } from "@/lib/session-utils";
 import { useOnlinePresence } from "@/hooks/use-presence";
@@ -1128,11 +1129,14 @@ export default function AdminPage() {
   };
 
   // When student is selected in Schedule Modal, auto-select their normal assigned tutor
-  const handleStudentSelectInModal = (stId: string) => {
+  const handleStudentSelectInModal = (stId: string, _st?: any, regularTutorId?: string) => {
     setSelectedStudentId(stId);
+    if (!stId) return;
     const st = students.find((s) => s.id === stId);
     if (st && st.assignedTutorId) {
       setSelectedTutorId(st.assignedTutorId);
+    } else if (regularTutorId) {
+      setSelectedTutorId(regularTutorId);
     } else if (currentUser) {
       setSelectedTutorId(currentUser.id);
     }
@@ -1286,8 +1290,10 @@ export default function AdminPage() {
   // Schedule Lesson (Conflict Engine) - Supports bulk recurring weekly or biweekly!
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
-    setConflictError("");
-
+    if (!selectedStudentId) {
+      setConflictError("Please select a student.");
+      return;
+    }
     if (!lessonDate || !lessonStartTime || !lessonEndTime) {
       setConflictError("Please select date, start time, and end time.");
       return;
@@ -2328,7 +2334,10 @@ export default function AdminPage() {
               <span>Find Open Slot</span>
             </button>
             <button
-              onClick={() => setIsNewLessonOpen(true)}
+              onClick={() => {
+                setSelectedStudentId("");
+                setIsNewLessonOpen(true);
+              }}
               className="py-2.5 px-4 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <CalendarPlus className="w-4 h-4" />
@@ -6046,19 +6055,16 @@ export default function AdminPage() {
                   <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
                     Select Student *
                   </label>
-                  <select
+                  <StudentCombobox
                     required
+                    students={activeStudents}
                     value={selectedStudentId}
-                    onChange={(e) => handleStudentSelectInModal(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
-                  >
-                    <option value="">Choose student</option>
-                    {activeStudents.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.name} {st.assignedTutor ? `(Tutor: ${formatTutorName(st.assignedTutor.name)})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(id, st, regTutorId) => handleStudentSelectInModal(id, st, regTutorId)}
+                    tutors={tutors}
+                    sessions={sessions}
+                    preferredTutorId={selectedTutorId || currentUser?.id}
+                    placeholder="Choose student..."
+                  />
                 </div>
 
                 <div>
@@ -6301,7 +6307,10 @@ export default function AdminPage() {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsNewLessonOpen(false)}
+                  onClick={() => {
+                    setSelectedStudentId("");
+                    setIsNewLessonOpen(false);
+                  }}
                   className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                 >
                   Cancel
