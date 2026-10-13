@@ -51,46 +51,23 @@ export function useOnlinePresence(currentUserId?: string) {
 
     fetchOnlineUsers();
 
-    // 2. Client heartbeat for currently logged in user
-    let heartbeatInterval: NodeJS.Timeout | null = null;
-    const sendHeartbeat = () => {
-      if (!currentUserIdRef.current) return;
-      fetch("/api/presence", { method: "POST" }).catch(() => {});
-    };
-
-    if (currentUserId) {
-      sendHeartbeat();
-      heartbeatInterval = setInterval(sendHeartbeat, 25_000);
-    }
-
-    // 3. Heartbeat on window focus or visibility change to visible (throttled to at most once every 15s)
+    // 2. Refresh online users on window focus or visibility change to visible (throttled to at most once every 20s)
     let lastVisibilityCheck = 0;
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         const now = Date.now();
-        if (now - lastVisibilityCheck < 15_000) return;
+        if (now - lastVisibilityCheck < 20_000) return;
         lastVisibilityCheck = now;
-        sendHeartbeat();
         fetchOnlineUsers();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleVisibilityChange);
 
-    // 4. Send leave beacon on tab unload/close
-    const handleBeforeUnload = () => {
-      if (currentUserIdRef.current && typeof navigator !== "undefined" && navigator.sendBeacon) {
-        navigator.sendBeacon("/api/presence/leave");
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
     return () => {
       isMounted = false;
-      if (heartbeatInterval) clearInterval(heartbeatInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleVisibilityChange);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [currentUserId]);
 

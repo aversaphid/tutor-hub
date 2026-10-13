@@ -739,14 +739,15 @@ export default function AdminPage() {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     try {
-      const nowTs = Date.now();
       const [sessRes, usersRes, settingsRes] = await Promise.all([
-        fetch(`/api/sessions?_t=${nowTs}`, { cache: "no-store" }),
-        fetch(`/api/admin/users?_t=${nowTs}`, { cache: "no-store" }),
-        fetch(`/api/admin/settings?_t=${nowTs}`, { cache: "no-store" }),
+        fetch("/api/sessions"),
+        fetch("/api/admin/users"),
+        fetch("/api/admin/settings"),
       ]);
 
-      if (sessRes.ok) {
+      if (sessRes.status === 304) {
+        // Sessions have not changed, existing state is up to date
+      } else if (sessRes.ok) {
         const d = await sessRes.json();
         const list: any[] = d.sessions || [];
         setSessions(list);
@@ -763,13 +764,13 @@ export default function AdminPage() {
           setActiveLesson(null);
         }
       }
-      if (usersRes.ok) {
+      if (usersRes.status !== 304 && usersRes.ok) {
         const d = await usersRes.json();
         const allUsers: any[] = d.users || [];
         setStudents(allUsers.filter((u) => u.role === "TUTEE"));
         setTutors(allUsers.filter((u) => u.role === "TUTOR" || u.role === "HEAD_TUTOR"));
       }
-      if (settingsRes.ok) {
+      if (settingsRes.status !== 304 && settingsRes.ok) {
         const d = await settingsRes.json();
         if (typeof d.subwaySurfersEnabled === "boolean") {
           setSubwaySurfersEnabled(d.subwaySurfersEnabled);

@@ -17,8 +17,8 @@ if (!globalStore.__tutorHubPresence) {
 
 const presenceMap = globalStore.__tutorHubPresence;
 
-// Considered online if active SSE connection OR seen within 45 seconds
-export const PRESENCE_TIMEOUT_MS = 45_000;
+// Considered online if active SSE connection OR seen within 60 seconds
+export const PRESENCE_TIMEOUT_MS = 60_000;
 
 export function recordUserConnected(
   userId: string,

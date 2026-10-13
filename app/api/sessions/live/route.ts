@@ -8,7 +8,7 @@ import { sanitizeSessionForRole } from "@/lib/session-sanitizer";
 export const dynamic = "force-dynamic";
 
 let lastLiveAutoStartCheck = 0;
-const LIVE_AUTO_START_INTERVAL_MS = 10_000;
+const LIVE_AUTO_START_INTERVAL_MS = 60_000;
 
 async function checkAndAutoStartSessions() {
   const nowMs = Date.now();
@@ -18,6 +18,30 @@ async function checkAndAutoStartSessions() {
   lastLiveAutoStartCheck = nowMs;
   const now = new Date();
   try {
+    const zombieCutoff = new Date(now.getTime() - 3 * 3600 * 1000);
+
+    // Fast read check: only perform write queries if at least one candidate session requires transitioning
+    const hasCandidate = await prisma.session.findFirst({
+      where: {
+        OR: [
+          {
+            status: { in: ["SCHEDULED", "DELAYED"] },
+            scheduledStartTime: { lte: now },
+            scheduledEndTime: { gt: now },
+          },
+          {
+            status: "IN_PROGRESS",
+            scheduledEndTime: { lt: zombieCutoff },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!hasCandidate) {
+      return;
+    }
+
     // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
     const started = await prisma.session.updateMany({
       where: {
@@ -46,7 +70,7 @@ async function checkAndAutoStartSessions() {
     const resolved = await prisma.session.updateMany({
       where: {
         status: "IN_PROGRESS",
-        scheduledEndTime: { lt: new Date(now.getTime() - 3 * 3600 * 1000) },
+        scheduledEndTime: { lt: zombieCutoff },
       },
       data: {
         status: "COMPLETED",

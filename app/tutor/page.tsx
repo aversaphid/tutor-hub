@@ -13,6 +13,7 @@ import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import LessonCountdownBadge from "@/components/lesson-countdown-badge";
+import NotesHistoryModal from "@/components/notes-history-modal";
 import {
   Calendar,
   Users,
@@ -126,6 +127,15 @@ export default function TutorDashboardPage() {
 
   // Lesson Notes Popup Modal
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+
+  // Notes & Homework History Modal
+  const [isNotesHistoryOpen, setIsNotesHistoryOpen] = useState(false);
+  const [notesHistoryStudent, setNotesHistoryStudent] = useState<{ id: string; name: string } | null>(null);
+
+  const openNotesHistoryForStudent = (student: { id: string; name: string }) => {
+    setNotesHistoryStudent(student);
+    setIsNotesHistoryOpen(true);
+  };
 
   // Delay Reason Modal
   const [delayModal, setDelayModal] = useState<{
@@ -342,6 +352,8 @@ export default function TutorDashboardPage() {
     return () => clearTimeout(timer);
   }, [activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
+  const isSseConnectedRef = useRef(false);
+
   // Real-time Server-Sent Events (SSE) listener: instant sync with zero polling overhead
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
@@ -352,6 +364,9 @@ export default function TutorDashboardPage() {
     const connectSSE = () => {
       try {
         es = new EventSource("/api/events");
+        es.onopen = () => {
+          isSseConnectedRef.current = true;
+        };
         es.addEventListener("session-update", () => {
           loadMySessions();
         });
@@ -368,18 +383,20 @@ export default function TutorDashboardPage() {
           } catch {}
         });
         es.onerror = () => {
+          isSseConnectedRef.current = false;
           es?.close();
           es = null;
           retryTimeout = setTimeout(connectSSE, 10000);
         };
       } catch {
-        // Graceful fallback to background polling
+        isSseConnectedRef.current = false;
       }
     };
 
     connectSSE();
 
     return () => {
+      isSseConnectedRef.current = false;
       if (retryTimeout) clearTimeout(retryTimeout);
       if (es) es.close();
     };
@@ -396,14 +413,17 @@ export default function TutorDashboardPage() {
       // Don't poll when tab is hidden
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
-      // Relaxed interval: 20s when active/soon, 60s when idle
       const now = Date.now();
       const isLiveOrSoon =
         activeLesson &&
         (activeLesson.status === "IN_PROGRESS" ||
           new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
 
-      const delay = isLiveOrSoon ? 20000 : 60000;
+      // If SSE is connected, relax polling to 60s (live) / 120s (idle). If disconnected, fall back to 30s / 60s.
+      const isSse = isSseConnectedRef.current;
+      const delay = isSse
+        ? (isLiveOrSoon ? 60000 : 120000)
+        : (isLiveOrSoon ? 30000 : 60000);
 
       pollTimer = setTimeout(async () => {
         await loadMySessions();
@@ -469,7 +489,8 @@ export default function TutorDashboardPage() {
 
   const loadAssignedStudents = async () => {
     try {
-      const res = await fetch("/api/admin/users", { cache: "no-store" });
+      const res = await fetch("/api/admin/users");
+      if (res.status === 304) return;
       if (!res.ok) return;
       const data = await res.json();
       setAssignedStudents(data.users || []);
@@ -483,6 +504,7 @@ export default function TutorDashboardPage() {
     isLoadingSessionsRef.current = true;
     try {
       const res = await fetch("/api/sessions");
+      if (res.status === 304) return;
       if (!res.ok) return;
       const data = await res.json();
       const sessions = data.sessions || [];
@@ -1401,6 +1423,24 @@ export default function TutorDashboardPage() {
                     )}
                   </button>
 
+                  {/* Notes & Homework History Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeLesson?.tutee) {
+                        openNotesHistoryForStudent({
+                          id: activeLesson.tuteeId || activeLesson.tutee.id,
+                          name: activeLesson.tutee.name || "Student",
+                        });
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    title={`View past notes and homework history for ${activeLesson.tutee?.name || "Student"}`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                    <span>History</span>
+                  </button>
+
                   <button
                     onClick={() => handleCancelSession(activeLesson)}
                     className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
@@ -1912,6 +1952,16 @@ export default function TutorDashboardPage() {
                         >
                           <Calendar className="w-3 h-3 text-[#48A5EE]" />
                           <span>Timetable</span>
+                        </button>
+
+                        {/* Notes & Homework History Button */}
+                        <button
+                          onClick={() => openNotesHistoryForStudent(student)}
+                          className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border border-purple-200 dark:border-purple-800"
+                          title="View Past Notes & Homework History for this student"
+                        >
+                          <BookOpen className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>Notes</span>
                         </button>
 
                         {/* Visible PIN */}
@@ -3195,6 +3245,14 @@ export default function TutorDashboardPage() {
         isOpen={isNotesModalOpen}
         onClose={() => setIsNotesModalOpen(false)}
         session={activeLesson}
+        onOpenHistory={() => {
+          if (activeLesson?.tutee) {
+            openNotesHistoryForStudent({
+              id: activeLesson.tuteeId || activeLesson.tutee.id,
+              name: activeLesson.tutee.name || "Student",
+            });
+          }
+        }}
         onSaved={(newNotes) => {
           setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
           setMySessions((prev: any[]) =>
@@ -3202,6 +3260,25 @@ export default function TutorDashboardPage() {
           );
           setActionMessage("Lesson notes & homework saved!");
           setTimeout(() => setActionMessage(""), 3000);
+        }}
+      />
+
+      {/* Notes & Homework History Modal */}
+      <NotesHistoryModal
+        isOpen={isNotesHistoryOpen}
+        onClose={() => {
+          setIsNotesHistoryOpen(false);
+          setNotesHistoryStudent(null);
+        }}
+        student={notesHistoryStudent}
+        canEdit={true}
+        onNotesUpdated={(sessionId, newNotes) => {
+          if (activeLesson?.id === sessionId) {
+            setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
+          }
+          setMySessions((prev: any[]) =>
+            prev.map((s) => (s.id === sessionId ? { ...s, feedbackNotes: newNotes } : s))
+          );
         }}
       />
 

@@ -36,6 +36,7 @@ import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import ExamCountdownModal from "@/components/exam-countdown-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import SharedResourcesModal from "@/components/shared-resources-modal";
+import NotesHistoryModal from "@/components/notes-history-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
 
 function StudentLobbyContent() {
@@ -57,6 +58,7 @@ function StudentLobbyContent() {
   const [isExamCountdownOpen, setIsExamCountdownOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
+  const [isNotesHistoryOpen, setIsNotesHistoryOpen] = useState(false);
   const [copiedTutorEmail, setCopiedTutorEmail] = useState(false);
 
   // Student topic for lesson
@@ -195,6 +197,7 @@ function StudentLobbyContent() {
 
     try {
       const res = await fetch(`/api/sessions?tuteeId=${tuteeId}&active=true`);
+      if (res.status === 304) return;
       if (!res.ok) return;
       const data = await res.json();
       const sessions: any[] = data.sessions || [];
@@ -225,6 +228,8 @@ function StudentLobbyContent() {
     }
   }, []);
 
+  const isSseConnectedRef = useRef(false);
+
   // Real-time Server-Sent Events (SSE) listener: instant session and topic synchronization
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
@@ -235,22 +240,27 @@ function StudentLobbyContent() {
     const connectSSE = () => {
       try {
         es = new EventSource("/api/events");
+        es.onopen = () => {
+          isSseConnectedRef.current = true;
+        };
         es.addEventListener("session-update", () => {
           loadStudentSessions(currentUser.id);
         });
         es.onerror = () => {
+          isSseConnectedRef.current = false;
           es?.close();
           es = null;
           retryTimeout = setTimeout(connectSSE, 10000);
         };
       } catch {
-        // Fallback to polling
+        isSseConnectedRef.current = false;
       }
     };
 
     connectSSE();
 
     return () => {
+      isSseConnectedRef.current = false;
       if (retryTimeout) clearTimeout(retryTimeout);
       if (es) es.close();
     };
@@ -270,14 +280,17 @@ function StudentLobbyContent() {
         return;
       }
 
-      // Relaxed interval: 20s if a lesson is starting soon or in progress, otherwise 60s
       const now = Date.now();
       const isStartingSoonOrLive =
         activeSession &&
         (activeSession.status === "IN_PROGRESS" ||
           new Date(activeSession.scheduledStartTime).getTime() - now < 5 * 60 * 1000);
 
-      const delay = isStartingSoonOrLive ? 20000 : 60000;
+      // If SSE is connected, relax polling to 60s (live) / 120s (idle). If disconnected, fall back to 30s / 60s.
+      const isSse = isSseConnectedRef.current;
+      const delay = isSse
+        ? (isStartingSoonOrLive ? 60000 : 120000)
+        : (isStartingSoonOrLive ? 30000 : 60000);
 
       timer = setTimeout(async () => {
         await loadStudentSessions(currentUser.id);
@@ -571,6 +584,15 @@ function StudentLobbyContent() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setIsNotesHistoryOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                  title="View past lesson notes & homework history"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Notes &amp; Homework</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsResourcesOpen(true)}
                   className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
                   title="Open Shared Resources & Revision Library"
@@ -653,9 +675,19 @@ function StudentLobbyContent() {
                       </p>
                     )}
                     {activeSession.feedbackNotes && (
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        <strong>Tutor Notes:</strong> {activeSession.feedbackNotes}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          <strong>Tutor Notes:</strong> {activeSession.feedbackNotes}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsNotesHistoryOpen(true)}
+                          className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <BookOpen className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>View Full Notes &amp; Homework History &rarr;</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -858,6 +890,14 @@ function StudentLobbyContent() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsNotesHistoryOpen(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Notes &amp; Homework History</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsResourcesOpen(true)}
                 className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
               >
@@ -973,6 +1013,13 @@ function StudentLobbyContent() {
           role: "TUTEE",
           magicKey: magicKey || currentUser?.magicKey,
         }}
+      />
+
+      {/* Notes & Homework History Modal */}
+      <NotesHistoryModal
+        isOpen={isNotesHistoryOpen}
+        onClose={() => setIsNotesHistoryOpen(false)}
+        student={currentUser ? { id: currentUser.id, name: currentUser.name } : null}
       />
 
       <Footer />

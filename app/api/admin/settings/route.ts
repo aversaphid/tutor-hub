@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { invalidateSettingsCache } from "@/lib/settings-cache";
+import {
+  getCachedSubwaySurfersSetting,
+  setCachedSubwaySurfersSetting,
+  getCachedBillingDurationMode,
+  setCachedBillingDurationMode,
+  invalidateSettingsCache,
+} from "@/lib/settings-cache";
 import { DEFAULT_BILLING_DURATION_MODE, BillingDurationMode } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +19,16 @@ export async function GET() {
   }
 
   try {
+    const cachedSubway = getCachedSubwaySurfersSetting();
+    const cachedBilling = getCachedBillingDurationMode();
+
+    if (cachedSubway !== null && cachedBilling !== null) {
+      return NextResponse.json({
+        subwaySurfersEnabled: cachedSubway,
+        billingDurationMode: cachedBilling,
+      });
+    }
+
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: { in: ["subwaySurfersEnabled", "billingDurationMode"] },
@@ -22,9 +38,16 @@ export async function GET() {
     const subwaySetting = settings.find((s) => s.key === "subwaySurfersEnabled");
     const billingSetting = settings.find((s) => s.key === "billingDurationMode");
 
+    const subwaySurfersEnabled = subwaySetting ? subwaySetting.value === "true" : true;
+    const billingDurationMode =
+      (billingSetting?.value as BillingDurationMode) || DEFAULT_BILLING_DURATION_MODE;
+
+    setCachedSubwaySurfersSetting(subwaySurfersEnabled);
+    setCachedBillingDurationMode(billingDurationMode);
+
     return NextResponse.json({
-      subwaySurfersEnabled: subwaySetting ? subwaySetting.value === "true" : true,
-      billingDurationMode: (billingSetting?.value as BillingDurationMode) || DEFAULT_BILLING_DURATION_MODE,
+      subwaySurfersEnabled,
+      billingDurationMode,
     });
   } catch (error) {
     console.error("Failed to fetch admin settings:", error);

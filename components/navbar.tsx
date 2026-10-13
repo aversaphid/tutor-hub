@@ -78,12 +78,12 @@ export default function Navbar({ user }: NavbarProps) {
       fetch("/api/presence", { method: "POST" }).catch(() => {});
     };
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 25_000);
+    const interval = setInterval(sendHeartbeat, 40_000);
     let lastVisibleTime = 0;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         const now = Date.now();
-        if (now - lastVisibleTime < 15_000) return;
+        if (now - lastVisibleTime < 20_000) return;
         lastVisibleTime = now;
         sendHeartbeat();
       }
