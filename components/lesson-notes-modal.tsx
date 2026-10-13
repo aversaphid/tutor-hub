@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, FileText, Check, Loader2, Info, Sparkles, BookOpen } from "lucide-react";
+import { X, FileText, Check, Loader2, Info, Sparkles } from "lucide-react";
 
 interface LessonNotesModalProps {
   isOpen: boolean;
   onClose: () => void;
   session: any;
   onSaved: (newNotes: string) => void;
-  onOpenHistory?: () => void;
 }
 
 export default function LessonNotesModal({
@@ -16,7 +15,6 @@ export default function LessonNotesModal({
   onClose,
   session,
   onSaved,
-  onOpenHistory,
 }: LessonNotesModalProps) {
   const [notes, setNotes] = useState(session?.feedbackNotes || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -107,25 +105,11 @@ export default function LessonNotesModal({
 
         {/* Header */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
               <span>Lesson Notes &amp; Homework</span>
             </span>
-            {onOpenHistory && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenHistory();
-                }}
-                className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer pr-6"
-                title="View full notes & homework history for this student"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>View Notes History &rarr;</span>
-              </button>
-            )}
           </div>
           <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
             Notes for {session.tutee?.name || "Student"}

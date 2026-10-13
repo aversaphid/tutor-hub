@@ -1423,24 +1423,6 @@ export default function TutorDashboardPage() {
                     )}
                   </button>
 
-                  {/* Notes & Homework History Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (activeLesson?.tutee) {
-                        openNotesHistoryForStudent({
-                          id: activeLesson.tuteeId || activeLesson.tutee.id,
-                          name: activeLesson.tutee.name || "Student",
-                        });
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    title={`View past notes and homework history for ${activeLesson.tutee?.name || "Student"}`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                    <span>History</span>
-                  </button>
-
                   <button
                     onClick={() => handleCancelSession(activeLesson)}
                     className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
@@ -3245,14 +3227,6 @@ export default function TutorDashboardPage() {
         isOpen={isNotesModalOpen}
         onClose={() => setIsNotesModalOpen(false)}
         session={activeLesson}
-        onOpenHistory={() => {
-          if (activeLesson?.tutee) {
-            openNotesHistoryForStudent({
-              id: activeLesson.tuteeId || activeLesson.tutee.id,
-              name: activeLesson.tutee.name || "Student",
-            });
-          }
-        }}
         onSaved={(newNotes) => {
           setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
           setMySessions((prev: any[]) =>

@@ -14,7 +14,6 @@ import {
   Save,
   Loader2,
   Clock,
-  Printer,
   Sparkles,
 } from "lucide-react";
 import { formatTutorName } from "@/lib/format";
@@ -258,13 +257,6 @@ export default function NotesHistoryModal({
               }`}
             >
               Homework Only
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-              title="Print Notes History"
-            >
-              <Printer className="w-4 h-4" />
             </button>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, Key, User, Clock, Eye, Settings, HelpCircle } from "lucide-react";
+import { LogOut, Key, User, Clock, Eye, Settings, HelpCircle, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import ChangePasswordModal from "./change-password-modal";
 import TutorLoginModal from "./tutor-login-modal";
@@ -192,6 +192,16 @@ export default function Navbar({ user }: NavbarProps) {
                 <HelpCircle className="w-4 h-4 text-[#48A5EE]" />
               </button>
             )}
+
+            {/* Install PWA App Button */}
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("trigger-pwa-install"))}
+              className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#48A5EE]"
+              title="Install LB Maths App"
+              aria-label="Install LB Maths App"
+            >
+              <Download className="w-4 h-4 text-[#48A5EE]" />
+            </button>
           </div>
 
           {/* Right Action: Tutor Login or Staff Menu */}
