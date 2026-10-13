@@ -136,7 +136,21 @@ async function setup() {
     );
   `);
 
-  // 6. Create Indexes
+  // 6. Create PushSubscription table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS "PushSubscription" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "userId" TEXT NOT NULL,
+      "endpoint" TEXT NOT NULL UNIQUE,
+      "p256dh" TEXT NOT NULL,
+      "auth" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `);
+
+  // 7. Create Indexes
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");`);
   await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "User_magicKey_key" ON "User"("magicKey");`);
   await client.execute(`CREATE INDEX IF NOT EXISTS "User_role_idx" ON "User"("role");`);
@@ -157,6 +171,9 @@ async function setup() {
   await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_category_idx" ON "Resource"("category");`);
   await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_createdAt_idx" ON "Resource"("createdAt");`);
   await client.execute(`CREATE INDEX IF NOT EXISTS "Resource_createdById_idx" ON "Resource"("createdById");`);
+
+  await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");`);
+  await client.execute(`CREATE INDEX IF NOT EXISTS "PushSubscription_userId_idx" ON "PushSubscription"("userId");`);
 
   console.log("✅ All tables and indexes created on Turso.");
 

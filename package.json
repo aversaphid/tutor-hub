@@ -24,7 +24,8 @@
     "test:stability": "node node_modules/tsx/dist/cli.mjs test/verify-lesson-request-stability.ts",
     "test:combobox": "node node_modules/tsx/dist/cli.mjs test/verify-student-combobox.ts",
     "test:notes-history": "node node_modules/tsx/dist/cli.mjs test/verify-notes-history.ts",
-    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts && node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts && node node_modules/tsx/dist/cli.mjs test/verify-optimisation-suite.ts && node node_modules/tsx/dist/cli.mjs test/verify-previous-lesson-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-edit-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-prev-teams-url.ts && node node_modules/tsx/dist/cli.mjs test/verify-presence.ts && node node_modules/tsx/dist/cli.mjs test/verify-drag-drop-reschedule.ts && node node_modules/tsx/dist/cli.mjs test/verify-live-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-settle-by-tutor.ts && node node_modules/tsx/dist/cli.mjs test/verify-resource-tags.ts && node node_modules/tsx/dist/cli.mjs test/verify-lesson-request-stability.ts && node node_modules/tsx/dist/cli.mjs test/verify-student-combobox.ts && node node_modules/tsx/dist/cli.mjs test/verify-notes-history.ts"
+    "test:web-push": "node node_modules/tsx/dist/cli.mjs test/verify-web-push.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-casio-engine.ts && node node_modules/tsx/dist/cli.mjs scripts/test-casio-buttons.ts && node node_modules/tsx/dist/cli.mjs scripts/test-retention-flag.ts && node node_modules/tsx/dist/cli.mjs scripts/test-historical-rates.ts && node node_modules/tsx/dist/cli.mjs test/verify-optimisation-suite.ts && node node_modules/tsx/dist/cli.mjs test/verify-previous-lesson-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-edit-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-prev-teams-url.ts && node node_modules/tsx/dist/cli.mjs test/verify-presence.ts && node node_modules/tsx/dist/cli.mjs test/verify-drag-drop-reschedule.ts && node node_modules/tsx/dist/cli.mjs test/verify-live-notes.ts && node node_modules/tsx/dist/cli.mjs test/verify-settle-by-tutor.ts && node node_modules/tsx/dist/cli.mjs test/verify-resource-tags.ts && node node_modules/tsx/dist/cli.mjs test/verify-lesson-request-stability.ts && node node_modules/tsx/dist/cli.mjs test/verify-student-combobox.ts && node node_modules/tsx/dist/cli.mjs test/verify-notes-history.ts && node node_modules/tsx/dist/cli.mjs test/verify-web-push.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -39,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.46.0",
@@ -48,6 +50,7 @@
     "react-dom": "19.2.8",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {

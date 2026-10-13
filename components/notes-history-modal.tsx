@@ -15,6 +15,8 @@ import {
   Loader2,
   Clock,
   Sparkles,
+  Info,
+  ShieldCheck,
 } from "lucide-react";
 import { formatTutorName } from "@/lib/format";
 
@@ -111,13 +113,17 @@ export default function NotesHistoryModal({
       const topic = (item.studentTopic || "").toLowerCase();
       const tutor = (item.tutor?.name || "").toLowerCase();
       const title = (item.title || "").toLowerCase();
+      const adminNotes = (item.notes || "").toLowerCase();
+      const adminReminder = (item.adminReminder || "").toLowerCase();
 
       return (
         notes.includes(q) ||
         covered.includes(q) ||
         topic.includes(q) ||
         tutor.includes(q) ||
-        title.includes(q)
+        title.includes(q) ||
+        adminNotes.includes(q) ||
+        adminReminder.includes(q)
       );
     });
   }, [history, filterMode, searchTerm]);
@@ -458,6 +464,27 @@ export default function NotesHistoryModal({
                   ) : (
                     <div className="text-[11px] text-slate-400 dark:text-slate-500 italic">
                       No homework or extra notes entered for this session.
+                    </div>
+                  )}
+
+                  {/* Staff-only Admin Notes / Instructions for Tutors */}
+                  {Boolean(item.notes || item.adminReminder) && (
+                    <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/60 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wider">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#48A5EE]" />
+                        <span>Admin Note for Tutor (Hidden from Student)</span>
+                      </div>
+                      {item.notes && (
+                        <p className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed whitespace-pre-wrap">
+                          {item.notes}
+                        </p>
+                      )}
+                      {item.adminReminder && (
+                        <div className="text-[11px] text-blue-800/90 dark:text-blue-300/90 flex items-start gap-1 pt-0.5">
+                          <span className="font-semibold">Reminder:</span>
+                          <span>{item.adminReminder}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

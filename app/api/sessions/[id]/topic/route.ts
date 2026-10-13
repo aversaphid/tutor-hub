@@ -47,6 +47,18 @@ export async function PATCH(
       broadcastSessionUpdate({ type: "TOPIC_UPDATED", sessionId: id });
     } catch {}
 
+    // Send push notification to tutor about the student's lesson topic
+    if (updated.studentTopic) {
+      try {
+        const { sendPushToUser } = await import("@/lib/web-push");
+        sendPushToUser(existing.tutorId, {
+          title: "Student Lesson Topic",
+          body: `${user.name} wants to focus on: "${updated.studentTopic}"`,
+          url: "/tutor",
+        }).catch(() => {});
+      } catch {}
+    }
+
     return NextResponse.json({ success: true, studentTopic: updated.studentTopic });
   } catch (err) {
     console.error("Topic PATCH error:", err);

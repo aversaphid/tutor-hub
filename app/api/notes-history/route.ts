@@ -76,7 +76,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Student not found." }, { status: 404 });
     }
 
-    // Fetch sessions that have feedbackNotes or feedbackCovered or notes
+    const isStaff = user.role === "TUTOR" || user.role === "HEAD_TUTOR";
+
+    // Fetch sessions that have feedbackNotes or feedbackCovered or admin notes (for staff)
     const rawSessions = await prisma.session.findMany({
       where: {
         tuteeId: targetStudentId,
@@ -84,6 +86,7 @@ export async function GET(request: Request) {
         OR: [
           { feedbackNotes: { not: null } },
           { feedbackCovered: { not: null } },
+          ...(isStaff ? [{ notes: { not: null } }, { adminReminder: { not: null } }] : []),
         ],
       },
       select: {
@@ -98,6 +101,7 @@ export async function GET(request: Request) {
         feedbackNotes: true,
         studentTopic: true,
         notes: true,
+        adminReminder: true,
         tutor: {
           select: {
             id: true,
@@ -116,16 +120,28 @@ export async function GET(request: Request) {
       },
     });
 
-    // Filter to entries that have non-empty feedbackNotes or feedbackCovered
-    const history = rawSessions.filter((s) => {
-      const hasNotes = Boolean(s.feedbackNotes && s.feedbackNotes.trim().length > 0);
-      const hasCovered = Boolean(s.feedbackCovered && s.feedbackCovered.trim().length > 0);
-      return hasNotes || hasCovered;
-    });
+    // Filter to entries that have non-empty notes or feedback (and strip admin fields for students)
+    const history = rawSessions
+      .filter((s) => {
+        const hasNotes = Boolean(s.feedbackNotes && s.feedbackNotes.trim().length > 0);
+        const hasCovered = Boolean(s.feedbackCovered && s.feedbackCovered.trim().length > 0);
+        const hasAdminNotes = isStaff && Boolean(s.notes && s.notes.trim().length > 0);
+        const hasAdminReminder = isStaff && Boolean(s.adminReminder && s.adminReminder.trim().length > 0);
+        return hasNotes || hasCovered || hasAdminNotes || hasAdminReminder;
+      })
+      .map((s) => {
+        if (!isStaff) {
+          // Strictly strip admin fields for students
+          const { notes, adminReminder, ...studentSafe } = s;
+          return studentSafe;
+        }
+        return s;
+      });
 
     return NextResponse.json({
       student: studentInfo,
       history,
+      isStaff,
       totalCount: history.length,
     });
   } catch (error) {

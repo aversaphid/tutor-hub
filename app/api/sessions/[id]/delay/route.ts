@@ -94,6 +94,17 @@ export async function POST(
       broadcastSessionUpdate({ type: "SESSION_DELAYED", sessionId: id });
     } catch {}
 
+    // Send Web Push notification to student
+    try {
+      const { sendPushToUser } = await import("@/lib/web-push");
+      const tutorName = updated.tutor?.name || "Your tutor";
+      sendPushToUser(session.tuteeId, {
+        title: "Lesson Delayed",
+        body: `${tutorName} has delayed your lesson by ${delayMinutes} minutes${reason ? ` (${reason})` : ""}.`,
+        url: "/student",
+      }).catch(() => {});
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: updated,

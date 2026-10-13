@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAccessibility } from "@/lib/accessibility";
 import { playSampleSound } from "@/lib/audio-cues";
+import PushNotificationToggle from "./push-notification-toggle";
 
 interface AccessibilityModalProps {
   isOpen: boolean;
@@ -329,6 +330,11 @@ export default function AccessibilityModal({ isOpen, onClose }: AccessibilityMod
                   />
                 </button>
               </div>
+            </div>
+
+            {/* Web Push Notifications */}
+            <div className="pt-2">
+              <PushNotificationToggle />
             </div>
           </div>
 

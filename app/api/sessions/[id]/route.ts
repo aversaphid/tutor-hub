@@ -273,6 +273,24 @@ export async function PATCH(
       broadcastSessionUpdate({ type: "SESSION_UPDATED", sessionId: id });
     } catch {}
 
+    // Send Web Push notification if Teams link was added or session cancelled
+    try {
+      const { sendPushToUser } = await import("@/lib/web-push");
+      if (updates.teamsMeetingUrl && updates.teamsMeetingUrl.trim()) {
+        sendPushToUser(existing.tuteeId, {
+          title: "Teams Meeting Link Ready",
+          body: `${updated.tutor?.name || "Your tutor"} has added the Teams link for your lesson. Click to join!`,
+          url: "/student",
+        }).catch(() => {});
+      } else if (updates.status === "CANCELLED") {
+        sendPushToUser(existing.tuteeId, {
+          title: "Lesson Cancelled",
+          body: `Your lesson has been cancelled${updates.notes ? `: ${updates.notes}` : "."}`,
+          url: "/student",
+        }).catch(() => {});
+      }
+    } catch {}
+
     return NextResponse.json({
       success: true,
       session: sanitizeSessionForRole(updated, user.role),

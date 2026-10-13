@@ -72,3 +72,58 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Web Push Notification Listeners
+self.addEventListener("push", (event) => {
+  let data = {
+    title: "LB Maths Tuition",
+    body: "You have a new update regarding your maths lesson.",
+    url: "/",
+    icon: "/icon-192.png",
+    badge: "/favicon.ico",
+    tag: "lbmaths-lesson-alert",
+  };
+
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || "/icon-192.png",
+    badge: data.badge || "/favicon.ico",
+    tag: data.tag || "lbmaths-alert",
+    data: {
+      url: data.url || "/",
+      ...data.data,
+    },
+    vibrate: [200, 100, 200],
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client && client.url.includes(self.location.origin)) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+

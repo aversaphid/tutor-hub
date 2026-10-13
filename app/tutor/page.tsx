@@ -74,6 +74,7 @@ import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
 import { useOnlinePresence } from "@/hooks/use-presence";
 import OnlineBadge from "@/components/online-badge";
+import PushNotificationToggle from "@/components/push-notification-toggle";
 
 export default function TutorDashboardPage() {
   const router = useRouter();
@@ -3064,6 +3065,9 @@ export default function TutorDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Web Push Notifications Settings Card */}
+              <PushNotificationToggle userRole="TUTOR" />
 
               {/* Change Password Form */}
               <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4">

@@ -37,6 +37,7 @@ import ExamCountdownModal from "@/components/exam-countdown-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import SharedResourcesModal from "@/components/shared-resources-modal";
 import NotesHistoryModal from "@/components/notes-history-modal";
+import PushNotificationToggle from "@/components/push-notification-toggle";
 import { resolveActiveSession } from "@/lib/session-utils";
 
 function StudentLobbyContent() {
@@ -494,7 +495,8 @@ function StudentLobbyContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <PushNotificationToggle userRole="TUTEE" compact />
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("open-tutorial"))}
               className="text-xs px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-[#48A5EE] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800/40"
@@ -569,9 +571,9 @@ function StudentLobbyContent() {
         {/* Live Lesson Section */}
         {activeSession ? (
           <div className="space-y-3">
-            {/* Top Toolbar: All study tabs strictly on ONE line */}
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
+            {/* Top Toolbar: Study tabs with full unobstructed horizontal width */}
+            <div className="px-1 min-w-0">
+              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
                 <button
                   type="button"
                   data-tour="student-exams"
@@ -621,26 +623,9 @@ function StudentLobbyContent() {
                   <span>Casio fx-83GTX</span>
                 </button>
                 <div data-tour="student-calendar" className="shrink-0">
-                  <AddToCalendar session={activeSession} label="Add to Personal Calendar" />
+                  <AddToCalendar session={activeSession} label="Add to Calendar" />
                 </div>
               </div>
-
-              {/* Scheduled date/time tag on far right */}
-              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0 ml-auto whitespace-nowrap">
-                <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
-                <span>
-                  {new Date(activeSession.scheduledStartTime).toLocaleDateString([], {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}{" "}
-                  at{" "}
-                  {new Date(activeSession.scheduledStartTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </span>
             </div>
 
             {/* 2-Column Responsive Dashboard Grid (Fits comfortably without scrolling!) */}
@@ -879,11 +864,11 @@ function StudentLobbyContent() {
                 When your tutor books your next maths session, the countdown and meeting room will appear here automatically.
               </p>
             </div>
-            <div className="pt-2 flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
               <button
                 type="button"
                 onClick={() => setIsExamCountdownOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 shadow-2xs transition-colors cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Exam Countdown</span>
@@ -891,15 +876,15 @@ function StudentLobbyContent() {
               <button
                 type="button"
                 onClick={() => setIsNotesHistoryOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer"
               >
                 <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                <span>Notes &amp; Homework History</span>
+                <span>Notes &amp; Homework</span>
               </button>
               <button
                 type="button"
                 onClick={() => setIsResourcesOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 shadow-2xs transition-colors cursor-pointer"
               >
                 <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                 <span>Shared Resources</span>
@@ -907,7 +892,7 @@ function StudentLobbyContent() {
               <button
                 type="button"
                 onClick={() => setIsFormulaSheetOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>Formula Sheet</span>
@@ -915,7 +900,7 @@ function StudentLobbyContent() {
               <button
                 type="button"
                 onClick={() => setIsCalculatorOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
               >
                 <Calculator className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>Casio fx-83GTX</span>
@@ -923,15 +908,16 @@ function StudentLobbyContent() {
               <button
                 type="button"
                 onClick={() => setIsCalendarSubOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#48A5EE] bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 border border-[#48A5EE]/30 shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#48A5EE] bg-[#48A5EE]/10 hover:bg-[#48A5EE]/20 border border-[#48A5EE]/30 shadow-2xs transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Sync to Calendar</span>
               </button>
             </div>
 
-            {/* Parent / Guardian Contact Email Card */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 max-w-md mx-auto text-left">
+            {/* Parent / Guardian Contact Email Card & Push Notifications Card */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 max-w-md mx-auto text-left space-y-3">
+              <PushNotificationToggle userRole="TUTEE" />
               {renderParentEmailCard()}
             </div>
 
