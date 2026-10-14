@@ -18,7 +18,59 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-export function proxy(request: NextRequest) {
+const SECRET =
+  process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? ""
+    : "dev_fallback_session_secret_lb_maths_tuition_hub_32_chars");
+
+// Cryptographically verify token signature in middleware using Web Crypto API
+async function verifyToken(tokenStr?: string): Promise<{ sub: string; role: string; tv?: number; exp?: number } | null> {
+  if (!tokenStr || typeof tokenStr !== "string") return null;
+  const parts = tokenStr.split(".");
+  if (parts.length !== 2) return null;
+  const [data, signature] = parts;
+  if (!data || !signature) return null;
+
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const expectedSigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+
+    const bytes = new Uint8Array(expectedSigBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const expectedBase64 = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+    if (signature.length !== expectedBase64.length) return null;
+    let mismatch = 0;
+    for (let i = 0; i < signature.length; i++) {
+      mismatch |= signature.charCodeAt(i) ^ expectedBase64.charCodeAt(i);
+    }
+    if (mismatch !== 0) return null;
+
+    const base64 = data.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(base64);
+    const parsed = JSON.parse(json);
+    if (!parsed.sub || !parsed.role) return null;
+    if (parsed.exp && typeof parsed.exp === "number" && Date.now() > parsed.exp) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. CSRF Protection for state-changing API requests
@@ -28,10 +80,16 @@ export function proxy(request: NextRequest) {
     const hostHeader = request.headers.get("host");
     const forwardedHost = request.headers.get("x-forwarded-host");
 
+    const cleanHost = (host: string) => host.split(":")[0].toLowerCase().trim();
+    const allowedHost = hostHeader ? cleanHost(hostHeader) : "";
+    const allowedForwarded = forwardedHost ? cleanHost(forwardedHost) : "";
+
     const matchesAllowedHost = (hostname: string) => {
-      if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) return true;
-      if (hostHeader && (hostname === hostHeader || hostHeader.startsWith(hostname + ":") || hostname.startsWith(hostHeader.split(":")[0]))) return true;
-      if (forwardedHost && (hostname === forwardedHost || forwardedHost.startsWith(hostname + ":") || hostname.startsWith(forwardedHost.split(":")[0]))) return true;
+      const clean = cleanHost(hostname);
+      if (!clean) return false;
+      if (clean === "localhost" || clean === "127.0.0.1") return true;
+      if (allowedHost && clean === allowedHost) return true;
+      if (allowedForwarded && clean === allowedForwarded) return true;
       return false;
     };
 
@@ -77,27 +135,7 @@ export function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get("th_auth_token")?.value;
-
-  // Safely extract token payload and expiration
-  const getPayload = (tokenStr?: string) => {
-    if (!tokenStr) return null;
-    const parts = tokenStr.split(".");
-    if (parts.length !== 2) return null;
-    try {
-      const base64 = parts[0].replace(/-/g, "+").replace(/_/g, "/");
-      const json = atob(base64);
-      const parsed = JSON.parse(json);
-      if (!parsed.sub || !parsed.role) return null;
-      if (parsed.exp && typeof parsed.exp === "number" && Date.now() > parsed.exp) {
-        return null;
-      }
-      return parsed;
-    } catch {
-      return null;
-    }
-  };
-
-  const payload = getPayload(token);
+  const payload = await verifyToken(token);
 
   // 2. Guard /admin routes (Head Tutor only)
   if (pathname.startsWith("/admin")) {

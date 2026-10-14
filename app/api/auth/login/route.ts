@@ -67,7 +67,11 @@ export async function POST(request: Request) {
       },
     });
 
+    // Constant-time dummy hash to normalize bcrypt verification latency and prevent timing attacks
+    const DUMMY_HASH = "$2b$10$e8kZ1f7kPq4zFqT1qE5wxeV8qM1qJ6uO5iU8wX2zQ1yP4rS5tU6vW";
+
     if (!user || !user.passwordHash || (!user.active && user.role !== "HEAD_TUTOR")) {
+      await verifyPassword(password, DUMMY_HASH);
       const fail = recordFailedDualPasswordAttempt(ip, rawIdentifier);
       return NextResponse.json(
         { error: "Invalid email or password.", remainingAttempts: fail.remainingAttempts },

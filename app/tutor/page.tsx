@@ -368,8 +368,17 @@ export default function TutorDashboardPage() {
         es = new EventSource("/api/events");
         es.onopen = () => {
           isSseConnectedRef.current = true;
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = true;
+          }
         };
-        es.addEventListener("session-update", () => {
+        es.addEventListener("session-update", (e: any) => {
+          try {
+            const data = e.data ? JSON.parse(e.data) : null;
+            if (data?.type === "SETTINGS_UPDATED") {
+              window.dispatchEvent(new CustomEvent("th_settings_updated", { detail: data }));
+            }
+          } catch {}
           loadMySessions();
         });
         es.addEventListener("presence-snapshot", (e: any) => {
@@ -386,12 +395,18 @@ export default function TutorDashboardPage() {
         });
         es.onerror = () => {
           isSseConnectedRef.current = false;
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = false;
+          }
           es?.close();
           es = null;
           retryTimeout = setTimeout(connectSSE, 10000);
         };
       } catch {
         isSseConnectedRef.current = false;
+        if (typeof window !== "undefined") {
+          (window as any).__th_sse_active = false;
+        }
       }
     };
 
@@ -399,6 +414,9 @@ export default function TutorDashboardPage() {
 
     return () => {
       isSseConnectedRef.current = false;
+      if (typeof window !== "undefined") {
+        (window as any).__th_sse_active = false;
+      }
       if (retryTimeout) clearTimeout(retryTimeout);
       if (es) es.close();
     };
@@ -409,6 +427,7 @@ export default function TutorDashboardPage() {
     if (!currentUser?.id) return;
 
     let pollTimer: NodeJS.Timeout | null = null;
+    let lastVisibilityLoadTime = 0;
 
     const scheduleNextPoll = () => {
       if (pollTimer) clearTimeout(pollTimer);
@@ -435,7 +454,11 @@ export default function TutorDashboardPage() {
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        loadMySessions();
+        const now = Date.now();
+        if (now - lastVisibilityLoadTime > 15_000) {
+          lastVisibilityLoadTime = now;
+          loadMySessions();
+        }
         scheduleNextPoll();
       } else if (pollTimer) {
         clearTimeout(pollTimer);

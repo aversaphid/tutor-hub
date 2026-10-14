@@ -141,11 +141,11 @@ export async function POST(request: Request) {
         }
         finalPin = trimmedPin;
       } else {
-        // Auto-generate a unique 4-digit PIN
+        // Auto-generate a unique 4-digit PIN using cryptographically secure random integers
         let candidatePin = "";
         let attempts = 0;
         while (attempts < 50) {
-          candidatePin = Math.floor(1000 + Math.random() * 9000).toString();
+          candidatePin = crypto.randomInt(1000, 10000).toString();
           const exists = await prisma.user.findFirst({ where: { pin: candidatePin, role: "TUTEE" } });
           if (!exists) break;
           attempts++;
@@ -153,12 +153,12 @@ export async function POST(request: Request) {
         finalPin = candidatePin;
       }
 
-      // Generate a unique magic link for the student
+      // Generate a unique magic link for the student with 64-bit cryptographic entropy
       const cleanName = name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
       let candidateKey = "";
       let attempts = 0;
       while (attempts < 50) {
-        const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+        const randomHex = crypto.randomBytes(8).toString("hex").toUpperCase();
         candidateKey = `STU-${cleanName}-${randomHex}`;
         const keyExists = await prisma.user.findFirst({ where: { magicKey: candidateKey } });
         if (!keyExists) break;
@@ -254,7 +254,7 @@ export async function PATCH(request: Request) {
       }
 
       const cleanName = targetUser.name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
-      const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+      const randomHex = crypto.randomBytes(8).toString("hex").toUpperCase();
       const newMagicKey = `STU-${cleanName}-${randomHex}`;
 
       const updated = await prisma.user.update({
@@ -392,7 +392,7 @@ export async function PATCH(request: Request) {
     if (cycleMagicKey) {
       const studentTargetName = (name && name.trim()) || (await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } }))?.name || "STU";
       const cleanName = studentTargetName.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5) || "STU";
-      const randomHex = crypto.randomBytes(3).toString("hex").toUpperCase();
+      const randomHex = crypto.randomBytes(8).toString("hex").toUpperCase();
       updateData.magicKey = `STU-${cleanName}-${randomHex}`;
     }
 

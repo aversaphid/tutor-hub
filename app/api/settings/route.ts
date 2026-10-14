@@ -8,41 +8,44 @@ import {
 } from "@/lib/settings-cache";
 import { DEFAULT_BILLING_DURATION_MODE, BillingDurationMode } from "@/lib/billing";
 
+import crypto from "crypto";
+
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const cachedSubway = getCachedSubwaySurfersSetting();
-    const cachedBilling = getCachedBillingDurationMode();
+    let enabled = getCachedSubwaySurfersSetting();
+    let billingMode = getCachedBillingDurationMode();
 
-    if (cachedSubway !== null && cachedBilling !== null) {
-      return NextResponse.json(
-        {
-          subwaySurfersEnabled: cachedSubway,
-          billingDurationMode: cachedBilling,
+    if (enabled === null || billingMode === null) {
+      const settings = await prisma.systemSetting.findMany({
+        where: {
+          key: { in: ["subwaySurfersEnabled", "billingDurationMode"] },
         },
-        {
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        }
-      );
+      });
+
+      const subwaySetting = settings.find((s) => s.key === "subwaySurfersEnabled");
+      const billingSetting = settings.find((s) => s.key === "billingDurationMode");
+
+      enabled = subwaySetting ? subwaySetting.value === "true" : true;
+      billingMode = (billingSetting?.value as BillingDurationMode) || DEFAULT_BILLING_DURATION_MODE;
+
+      setCachedSubwaySurfersSetting(enabled);
+      setCachedBillingDurationMode(billingMode);
     }
 
-    const settings = await prisma.systemSetting.findMany({
-      where: {
-        key: { in: ["subwaySurfersEnabled", "billingDurationMode"] },
-      },
-    });
+    const etag = `"${crypto.createHash("md5").update(`subway:${enabled}:billing:${billingMode}`).digest("hex")}"`;
+    const ifNoneMatch = request.headers.get("if-none-match");
 
-    const subwaySetting = settings.find((s) => s.key === "subwaySurfersEnabled");
-    const billingSetting = settings.find((s) => s.key === "billingDurationMode");
-
-    const enabled = subwaySetting ? subwaySetting.value === "true" : true;
-    const billingMode = (billingSetting?.value as BillingDurationMode) || DEFAULT_BILLING_DURATION_MODE;
-
-    setCachedSubwaySurfersSetting(enabled);
-    setCachedBillingDurationMode(billingMode);
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+        },
+      });
+    }
 
     return NextResponse.json(
       {
@@ -51,7 +54,8 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
+          ETag: etag,
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
         },
       }
     );

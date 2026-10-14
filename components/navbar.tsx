@@ -71,19 +71,26 @@ export default function Navbar({ user }: NavbarProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Presence heartbeat for any logged-in user on any page
+  // Presence heartbeat for any logged-in user on any page (fallback when SSE is disconnected)
   useEffect(() => {
     if (!user?.id) return;
+    const isSseActive = () => typeof window !== "undefined" && Boolean((window as any).__th_sse_active);
+
     const sendHeartbeat = () => {
+      // The SSE connection already sends keep-alive and records heartbeat server-side every 25s.
+      // Only fire manual HTTP heartbeat if SSE is down or disconnected.
+      if (isSseActive()) return;
       fetch("/api/presence", { method: "POST" }).catch(() => {});
     };
+
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 40_000);
+    const interval = setInterval(sendHeartbeat, 60_000);
     let lastVisibleTime = 0;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
+        if (isSseActive()) return;
         const now = Date.now();
-        if (now - lastVisibleTime < 20_000) return;
+        if (now - lastVisibleTime < 30_000) return;
         lastVisibleTime = now;
         sendHeartbeat();
       }

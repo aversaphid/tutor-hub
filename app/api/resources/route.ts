@@ -93,7 +93,7 @@ export async function GET(request: Request) {
         status: 304,
         headers: {
           ETag: etag,
-          "Cache-Control": "private, no-cache, must-revalidate",
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },
       });
     }
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
       {
         headers: {
           ETag: etag,
-          "Cache-Control": "private, no-cache, must-revalidate",
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },
       }
     );

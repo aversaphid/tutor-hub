@@ -243,18 +243,33 @@ function StudentLobbyContent() {
         es = new EventSource("/api/events");
         es.onopen = () => {
           isSseConnectedRef.current = true;
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = true;
+          }
         };
-        es.addEventListener("session-update", () => {
+        es.addEventListener("session-update", (e: any) => {
+          try {
+            const data = e.data ? JSON.parse(e.data) : null;
+            if (data?.type === "SETTINGS_UPDATED") {
+              window.dispatchEvent(new CustomEvent("th_settings_updated", { detail: data }));
+            }
+          } catch {}
           loadStudentSessions(currentUser.id);
         });
         es.onerror = () => {
           isSseConnectedRef.current = false;
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = false;
+          }
           es?.close();
           es = null;
           retryTimeout = setTimeout(connectSSE, 10000);
         };
       } catch {
         isSseConnectedRef.current = false;
+        if (typeof window !== "undefined") {
+          (window as any).__th_sse_active = false;
+        }
       }
     };
 
@@ -262,6 +277,9 @@ function StudentLobbyContent() {
 
     return () => {
       isSseConnectedRef.current = false;
+      if (typeof window !== "undefined") {
+        (window as any).__th_sse_active = false;
+      }
       if (retryTimeout) clearTimeout(retryTimeout);
       if (es) es.close();
     };

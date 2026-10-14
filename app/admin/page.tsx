@@ -666,7 +666,18 @@ export default function AdminPage() {
     const connectSSE = () => {
       try {
         es = new EventSource("/api/events");
-        es.addEventListener("session-update", () => {
+        es.onopen = () => {
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = true;
+          }
+        };
+        es.addEventListener("session-update", (e: any) => {
+          try {
+            const data = e.data ? JSON.parse(e.data) : null;
+            if (data?.type === "SETTINGS_UPDATED") {
+              window.dispatchEvent(new CustomEvent("th_settings_updated", { detail: data }));
+            }
+          } catch {}
           refreshAllData();
         });
         es.addEventListener("presence-snapshot", (e: any) => {
@@ -682,16 +693,26 @@ export default function AdminPage() {
           } catch {}
         });
         es.onerror = () => {
+          if (typeof window !== "undefined") {
+            (window as any).__th_sse_active = false;
+          }
           es?.close();
           es = null;
           retryTimeout = setTimeout(connectSSE, 10000);
         };
-      } catch {}
+      } catch {
+        if (typeof window !== "undefined") {
+          (window as any).__th_sse_active = false;
+        }
+      }
     };
 
     connectSSE();
 
     return () => {
+      if (typeof window !== "undefined") {
+        (window as any).__th_sse_active = false;
+      }
       if (retryTimeout) clearTimeout(retryTimeout);
       if (es) es.close();
     };

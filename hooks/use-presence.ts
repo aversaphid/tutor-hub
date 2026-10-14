@@ -51,12 +51,15 @@ export function useOnlinePresence(currentUserId?: string) {
 
     fetchOnlineUsers();
 
-    // 2. Refresh online users on window focus or visibility change to visible (throttled to at most once every 20s)
+    // 2. Refresh online users on window focus or visibility change to visible (only as fallback when SSE is not streaming)
     let lastVisibilityCheck = 0;
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        if (typeof window !== "undefined" && Boolean((window as any).__th_sse_active)) {
+          return;
+        }
         const now = Date.now();
-        if (now - lastVisibilityCheck < 20_000) return;
+        if (now - lastVisibilityCheck < 30_000) return;
         lastVisibilityCheck = now;
         fetchOnlineUsers();
       }
