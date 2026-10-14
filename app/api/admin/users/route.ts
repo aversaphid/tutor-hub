@@ -20,7 +20,7 @@ export async function GET() {
 
     // If Head Tutor (Admin): returns all users
     if (user.role === "HEAD_TUTOR") {
-      const users = await prisma.user.findMany({
+      const users = await (prisma.user as any).findMany({
         select: {
           id: true,
           name: true,
@@ -57,7 +57,7 @@ export async function GET() {
     }
 
     // If regular Tutor: return their assigned students with PIN & magicKey
-    const tutorWithStudents = await prisma.user.findUnique({
+    const tutorWithStudents = await (prisma.user as any).findUnique({
       where: { id: user.id },
       include: {
         assignedStudents: {
@@ -174,7 +174,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const newUser = await prisma.user.create({
+    const newUser = await (prisma.user as any).create({
       data: {
         name,
         email: finalEmail,
