@@ -1,5 +1,5 @@
 // Service Worker for LB Maths Tuition PWA Installability
-const CACHE_NAME = "lbmaths-cache-v1";
+const CACHE_NAME = "lbmaths-cache-v3";
 const STATIC_ASSETS = [
   "/manifest.json",
   "/favicon.ico",
@@ -37,20 +37,23 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API requests, SSE streams, or authentication endpoints
+  // Bypass cache completely on localhost to ensure fresh development bundles
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    return;
+  }
+
+  // Never cache API requests, SSE streams, Next.js chunks, or non-GET requests
   if (
     url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/_next/") ||
     event.request.method !== "GET" ||
     url.pathname.includes("/events")
   ) {
     return; // Pass directly to network
   }
 
-  // Network-first strategy for HTML pages, cache-first for static icons/assets
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    STATIC_ASSETS.includes(url.pathname)
-  ) {
+  // Cache-first strictly for static branding icons & manifest
+  if (STATIC_ASSETS.includes(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         return (
@@ -64,11 +67,6 @@ self.addEventListener("fetch", (event) => {
           })
         );
       })
-    );
-  } else {
-    // Navigation / other requests: fetch from network
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
     );
   }
 });

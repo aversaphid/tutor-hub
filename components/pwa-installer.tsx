@@ -17,17 +17,35 @@ export default function PwaInstaller() {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // 1. Register Service Worker
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          // Check for updates
-          reg.update().catch(() => {});
-        })
-        .catch((err) => {
-          console.warn("[PWA] Service worker registration notice:", err);
-        });
+    // 1. In development on localhost, unregister any existing service worker and clear caches
+    if (typeof window !== "undefined") {
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+              registration.unregister().catch(() => {});
+            }
+          });
+        }
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            keys.forEach((key) => caches.delete(key));
+          });
+        }
+        return;
+      }
+
+      // Register Service Worker in production
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            reg.update().catch(() => {});
+          })
+          .catch((err) => {
+            console.warn("[PWA] Service worker registration notice:", err);
+          });
+      }
     }
 
     // 2. Check if already installed
