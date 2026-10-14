@@ -55,6 +55,7 @@ import {
   Loader2,
   Info,
   Mail,
+  Phone,
 } from "lucide-react";
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
@@ -1868,6 +1869,7 @@ export default function TutorDashboardPage() {
                       student.name.toLowerCase().includes(q) ||
                       (student.pin || "").toLowerCase().includes(q) ||
                       (student.parentEmail || "").toLowerCase().includes(q) ||
+                      (student.parentPhone || "").toLowerCase().includes(q) ||
                       (student.email || "").toLowerCase().includes(q)
                     );
                   })
@@ -1909,7 +1911,7 @@ export default function TutorDashboardPage() {
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
                           {(student.parentEmail || student.email) && (
                             <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                               <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
@@ -1921,6 +1923,18 @@ export default function TutorDashboardPage() {
                                 {student.parentEmail || student.email}
                               </a>
                               <span className="text-[10px] text-slate-400">(Parent)</span>
+                            </span>
+                          )}
+                          {student.parentPhone && (
+                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                              <Phone className="w-3 h-3 text-[#48A5EE] shrink-0" />
+                              <a
+                                href={`tel:${student.parentPhone}`}
+                                className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px]"
+                                title={`Contact Parent Phone: ${student.parentPhone}`}
+                              >
+                                {student.parentPhone}
+                              </a>
                             </span>
                           )}
                         </div>

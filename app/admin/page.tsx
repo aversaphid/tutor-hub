@@ -61,6 +61,7 @@ import {
   HelpCircle,
   FileText,
   Mail,
+  Phone,
   ExternalLink,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -199,6 +200,7 @@ export default function AdminPage() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserParentEmail, setNewUserParentEmail] = useState("");
+  const [newUserParentPhone, setNewUserParentPhone] = useState("");
   const [newUserRole, setNewUserRole] = useState<"TUTOR" | "TUTEE">("TUTEE");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState("");
@@ -213,6 +215,7 @@ export default function AdminPage() {
   const [editStudentTarget, setEditStudentTarget] = useState<any>(null);
   const [editStudentName, setEditStudentName] = useState("");
   const [editStudentParentEmail, setEditStudentParentEmail] = useState("");
+  const [editStudentParentPhone, setEditStudentParentPhone] = useState("");
   const [editStudentAssignedTutorId, setEditStudentAssignedTutorId] = useState("");
   const [editStudentStudentPay, setEditStudentStudentPay] = useState("");
   const [editStudentTutorPay, setEditStudentTutorPay] = useState("");
@@ -1378,6 +1381,7 @@ export default function AdminPage() {
           name: newUserName,
           email: newUserRole === "TUTOR" ? newUserEmail : undefined,
           parentEmail: newUserRole === "TUTEE" ? (newUserParentEmail.trim() || undefined) : undefined,
+          parentPhone: newUserRole === "TUTEE" ? (newUserParentPhone.trim() || undefined) : undefined,
           role: newUserRole,
           password: newUserRole === "TUTOR" ? newUserPassword : undefined,
           pin: newUserRole === "TUTEE" ? newUserPin : undefined,
@@ -1397,6 +1401,7 @@ export default function AdminPage() {
       setNewUserName("");
       setNewUserEmail("");
       setNewUserParentEmail("");
+      setNewUserParentPhone("");
       setNewUserPassword("");
       setNewUserPin("");
       setNewUserAssignedTutorId("");
@@ -1417,6 +1422,7 @@ export default function AdminPage() {
     setEditStudentTarget(student);
     setEditStudentName(student.name || "");
     setEditStudentParentEmail(student.parentEmail || student.email || "");
+    setEditStudentParentPhone(student.parentPhone || "");
     setEditStudentAssignedTutorId(student.assignedTutorId || "");
     setEditStudentStudentPay(
       student.studentPay !== null && student.studentPay !== undefined
@@ -1526,6 +1532,7 @@ export default function AdminPage() {
           studentId: editStudentTarget.id,
           name: editStudentName.trim() || undefined,
           parentEmail: editStudentParentEmail.trim() || null,
+          parentPhone: editStudentParentPhone.trim() || null,
           assignedTutorId: editStudentAssignedTutorId || null,
           studentPay: editStudentStudentPay ? parseFloat(editStudentStudentPay) : null,
           tutorPay: editStudentTutorPay ? parseFloat(editStudentTutorPay) : null,
@@ -4855,6 +4862,18 @@ export default function AdminPage() {
                                 </a>
                               </div>
                             )}
+                            {st.parentPhone && (
+                              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                <a
+                                  href={`tel:${st.parentPhone}`}
+                                  className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px]"
+                                  title={`Contact Parent Phone: ${st.parentPhone}`}
+                                >
+                                  {st.parentPhone}
+                                </a>
+                              </div>
+                            )}
                             {/* Inactivity Deletion Flag */}
                             {inactivity.isFlaggedForRetention && (
                               <span
@@ -6398,6 +6417,20 @@ export default function AdminPage() {
 
                   <div>
                     <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                      Parent / Guardian Phone (Optional)
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. +44 7123 456789"
+                      value={newUserParentPhone}
+                      onChange={(e) => setNewUserParentPhone(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                    />
+                    <span className="text-[10px] text-slate-400">For WhatsApp & SMS coordination.</span>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
                       Assign Normal Tutor
                     </label>
                     <select
@@ -6608,6 +6641,20 @@ export default function AdminPage() {
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
                 <span className="text-[10px] text-slate-400">Used for session notices & tutor coordination.</span>
+              </div>
+
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
+                  Parent / Guardian Phone
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. +44 7123 456789"
+                  value={editStudentParentPhone}
+                  onChange={(e) => setEditStudentParentPhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
+                />
+                <span className="text-[10px] text-slate-400">For WhatsApp & SMS notifications.</span>
               </div>
 
               <div>

@@ -51,6 +51,9 @@ async function setup() {
   try {
     await client.execute(`ALTER TABLE "User" ADD COLUMN "parentEmail" TEXT;`);
   } catch { }
+  try {
+    await client.execute(`ALTER TABLE "User" ADD COLUMN "parentPhone" TEXT;`);
+  } catch { }
 
   // 2. Create Session table
   await client.execute(`

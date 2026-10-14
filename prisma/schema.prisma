@@ -27,6 +27,7 @@ model User {
   name         String
   email        String?   @unique
   parentEmail  String?   // Parent/Guardian contact email (for students)
+  parentPhone  String?   // Optional parent/guardian contact phone (admin-only view)
   role         Role
   passwordHash String?   // For Head Tutor & Tutors
   pin          String?   // 4-digit unique PIN for Tutees
