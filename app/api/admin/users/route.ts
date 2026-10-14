@@ -83,7 +83,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      users: tutorWithStudents?.assignedStudents || [],
+      users: (tutorWithStudents as any)?.assignedStudents || [],
     });
   } catch (err) {
     console.error("Admin users GET error:", err);
