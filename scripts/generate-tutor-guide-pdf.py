@@ -177,7 +177,7 @@ def build_tutor_guide_pdf(filename="docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
 
     story.append(Paragraph("How to Log In", h2_style))
     story.append(Paragraph("1. Open your browser and go to: <b>https://portal.lbmathstuition.co.uk/login</b>", num_style))
-    story.append(Paragraph("2. Enter your tutor email address (e.g. <code>dan@lbmathstuition.co.uk</code>) and password.", num_style))
+    story.append(Paragraph("2. Enter your tutor email address (e.g. <code>dan@lbmathstuition.co.uk</code>) and password — you can also just put your name (e.g. <code>dan</code>) and leave off the <code>@lbmathstuition.co.uk</code> bit.", num_style))
     story.append(Paragraph("3. Click <b>'Sign In'</b>. You will be taken straight to your Tutor Workspace.", num_style))
 
     story.append(Paragraph("What You Can See (Privacy by Design)", h2_style))
