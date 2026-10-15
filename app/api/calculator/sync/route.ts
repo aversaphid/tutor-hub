@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { broadcastCalculatorAction } from "@/lib/sse-bus";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,41 @@ export async function POST(req: Request) {
     const senderName = user.name;
     const senderRole = user.role;
 
+    let targetUserIds: string[] | undefined = undefined;
+
+    // Strictly validate lesson session and isolate recipients to participants of this specific lesson
+    if (body.sessionId && body.sessionId !== "live-demo" && body.sessionId !== "admin-demo") {
+      const session = await prisma.session.findUnique({
+        where: { id: body.sessionId },
+        select: { id: true, tutorId: true, tuteeId: true },
+      });
+
+      if (!session) {
+        return NextResponse.json({ error: "Session not found." }, { status: 404 });
+      }
+
+      const isParticipant =
+        senderId === session.tutorId ||
+        senderId === session.tuteeId ||
+        user.role === "HEAD_TUTOR";
+
+      if (!isParticipant) {
+        return NextResponse.json(
+          { error: "Forbidden: You are not a participant in this lesson session." },
+          { status: 403 }
+        );
+      }
+
+      // Restrict broadcast exclusively to the tutor/admin and the student in this lesson
+      targetUserIds = [session.tutorId, session.tuteeId];
+      if (user.role === "HEAD_TUTOR" && !targetUserIds.includes(senderId)) {
+        targetUserIds.push(senderId);
+      }
+    } else if (body.sessionId === "live-demo" || body.sessionId === "admin-demo") {
+      // Demo / idle calculators must not broadcast to any other connected users
+      targetUserIds = [senderId];
+    }
+
     // Validate and clamp cursor coordinates to valid [0, 100] % range
     let cursorPos = undefined;
     if (
@@ -58,6 +94,7 @@ export async function POST(req: Request) {
       cursorPos,
       isSynced: Boolean(body.isSynced),
       timestamp: Date.now(),
+      targetUserIds,
     });
 
     return NextResponse.json({ success: true });

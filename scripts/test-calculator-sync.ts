@@ -123,4 +123,50 @@ broadcastCalculatorAction({
 assert.strictEqual(receivedEvents.length, 0, "Unsubscribed client should receive no events");
 console.log("✅ [PASS] Clean unsubscription prevents memory leaks and stale event dispatches");
 
-console.log("\n🎉 ALL LIVE CALCULATOR SYNC ENGINE TESTS PASSED!\n");
+// 6. Test Multi-Session Isolation & Targeted Delivery (Zero Cross-Lesson Overlap)
+const lesson1StudentEvents: string[] = [];
+const lesson2StudentEvents: string[] = [];
+
+const unsubStudent1 = registerSubscriber({
+  userId: "student-lesson-1",
+  role: "TUTEE",
+  controller: {
+    enqueue: (b: Uint8Array) => lesson1StudentEvents.push(new TextDecoder().decode(b)),
+  } as any,
+});
+
+const unsubStudent2 = registerSubscriber({
+  userId: "student-lesson-2",
+  role: "TUTEE",
+  controller: {
+    enqueue: (b: Uint8Array) => lesson2StudentEvents.push(new TextDecoder().decode(b)),
+  } as any,
+});
+
+// Admin Luke broadcasts to student-lesson-1 in Lesson Session 1
+broadcastCalculatorAction({
+  sessionId: "session-lesson-1",
+  senderId: "admin-luke",
+  senderName: "Luke",
+  senderRole: "ADMIN",
+  actionType: "BUTTON",
+  actionValue: "7",
+  isSynced: true,
+  targetUserIds: ["admin-luke", "student-lesson-1"],
+});
+
+assert.strictEqual(lesson1StudentEvents.length, 1, "Student in Lesson 1 should receive event");
+assert.strictEqual(lesson2StudentEvents.length, 0, "Student in Lesson 2 must receive zero events from Lesson 1");
+
+const parsedL1 = JSON.parse(
+  lesson1StudentEvents[0].replace("event: calculator-sync\ndata: ", "").trim()
+);
+assert.strictEqual(parsedL1.senderRole, "ADMIN");
+assert.strictEqual(parsedL1.actionValue, "7");
+console.log("✅ [PASS] Admin calculator action correctly targets only student in active lesson");
+console.log("✅ [PASS] Cross-lesson isolation: Other students receive ZERO events (no overlap)");
+
+unsubStudent1();
+unsubStudent2();
+
+console.log("\n🎉 ALL LIVE CALCULATOR SYNC ENGINE & ISOLATION TESTS PASSED!\n");

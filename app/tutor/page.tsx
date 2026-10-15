@@ -356,6 +356,10 @@ export default function TutorDashboardPage() {
 
   const isSseConnectedRef = useRef(false);
 
+  // Active lesson ref for zero-latency SSE callback isolation
+  const activeLessonRef = useRef<any>(null);
+  activeLessonRef.current = activeLesson;
+
   // Real-time Server-Sent Events (SSE) listener: instant sync with zero polling overhead
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
@@ -396,6 +400,14 @@ export default function TutorDashboardPage() {
         es.addEventListener("calculator-sync", (e: any) => {
           try {
             const data = JSON.parse(e.data);
+            const currentActiveId = activeLessonRef.current?.id;
+            // Strictly ignore events that do not match the tutor's active lesson
+            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
+              return;
+            }
+            if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
+              setIsCalculatorOpen(true);
+            }
             window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
           } catch {}
         });
@@ -3326,7 +3338,7 @@ export default function TutorDashboardPage() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        sessionId={activeLesson?.id || "live-demo"}
+        sessionId={activeLesson?.id}
         userId={currentUser?.id}
         userName={formatTutorName(currentUser?.name) || "Tutor"}
         userRole="TUTOR"

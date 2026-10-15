@@ -92,6 +92,7 @@ export interface CalculatorActionPayload {
   cursorPos?: { x: number; y: number };
   isSynced?: boolean;
   timestamp?: number;
+  targetUserIds?: string[];
 }
 
 export function broadcastCalculatorAction(payload: CalculatorActionPayload) {
@@ -106,6 +107,9 @@ export function broadcastCalculatorAction(payload: CalculatorActionPayload) {
   const bytes = encoder.encode(eventMessage);
 
   for (const sub of subscribers) {
+    if (payload.targetUserIds && !payload.targetUserIds.includes(sub.userId)) {
+      continue;
+    }
     try {
       sub.controller.enqueue(bytes);
     } catch {

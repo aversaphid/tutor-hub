@@ -209,12 +209,14 @@ function uid() {
 export default function CasioCalculatorModal({
   isOpen,
   onClose,
-  sessionId = "live-demo",
+  sessionId,
   userId,
   userName = "Tutor",
   userRole = "TUTOR",
   peerName,
 }: CasioCalculatorModalProps) {
+  const isEducator = userRole === "TUTOR" || userRole === "ADMIN";
+
   // Structured items list for Natural Textbook display
   const [items, setItems] = useState<ExprItem[]>([]);
   const [cursor, setCursor] = useState<CursorTarget>({ location: "main" });
@@ -223,6 +225,14 @@ export default function CasioCalculatorModal({
   const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(false);
   const isLiveDemoSyncedRef = useRef(isLiveDemoSynced);
   isLiveDemoSyncedRef.current = isLiveDemoSynced;
+
+  // Reset synced collaboration when lesson session changes
+  useEffect(() => {
+    setIsLiveDemoSynced(false);
+    isLiveDemoSyncedRef.current = false;
+    setRemoteCursor(null);
+    setRemoteActionNotice(null);
+  }, [sessionId]);
 
   const [remoteActionNotice, setRemoteActionNotice] = useState<{
     user: string;
@@ -464,6 +474,11 @@ export default function CasioCalculatorModal({
   };
 
   const handleToggleLiveSync = async (targetSynced: boolean) => {
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") {
+      setOptnMessage("Live sync requires an active scheduled lesson with your student.");
+      return;
+    }
+
     setIsLiveDemoSynced(targetSynced);
     isLiveDemoSyncedRef.current = targetSynced;
 
@@ -474,7 +489,7 @@ export default function CasioCalculatorModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: sessionId || "live-demo",
+          sessionId,
           senderId: userId || "local-user",
           senderName: userName,
           senderRole: userRole,
@@ -511,6 +526,7 @@ export default function CasioCalculatorModal({
   // Live Collaborative Mouse Pointer Handlers (Relative % Coordinates)
   const handleChassisMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
     const now = Date.now();
     if (now - lastCursorSendRef.current < 60) return; // ~16.6 fps throttle (60ms)
 
@@ -534,7 +550,7 @@ export default function CasioCalculatorModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: sessionId || "live-demo",
+        sessionId,
         senderId: userId || "local-user",
         senderName: userName,
         senderRole: userRole,
@@ -547,11 +563,12 @@ export default function CasioCalculatorModal({
 
   const handleChassisMouseLeave = () => {
     if (!isLiveDemoSyncedRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
     fetch("/api/calculator/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: sessionId || "live-demo",
+        sessionId,
         senderId: userId || "local-user",
         senderName: userName,
         senderRole: userRole,
@@ -563,6 +580,7 @@ export default function CasioCalculatorModal({
 
   const handleChassisMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
     const rect = chassisRef.current.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
     const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
@@ -572,7 +590,7 @@ export default function CasioCalculatorModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: sessionId || "live-demo",
+        sessionId,
         senderId: userId || "local-user",
         senderName: userName,
         senderRole: userRole,
@@ -719,12 +737,12 @@ export default function CasioCalculatorModal({
   const handleNav = (dir: "UP" | "DOWN" | "LEFT" | "RIGHT", isFromRemote: boolean = false) => {
     playClick(500);
 
-    if (!isFromRemote && isLiveDemoSyncedRef.current) {
+    if (!isFromRemote && isLiveDemoSyncedRef.current && sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo") {
       fetch("/api/calculator/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: sessionId || "live-demo",
+          sessionId,
           senderId: userId || "local-user",
           senderName: userName,
           senderRole: userRole,
@@ -1248,12 +1266,12 @@ export default function CasioCalculatorModal({
   const handleButton = (action: string, isFromRemote: boolean = false) => {
     playClick(action === "=" ? 1100 : action === "AC" || action === "DEL" ? 400 : 750);
 
-    if (!isFromRemote && isLiveDemoSyncedRef.current) {
+    if (!isFromRemote && isLiveDemoSyncedRef.current && sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo") {
       fetch("/api/calculator/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: sessionId || "live-demo",
+          sessionId,
           senderId: userId || "local-user",
           senderName: userName,
           senderRole: userRole,
@@ -2477,12 +2495,16 @@ export default function CasioCalculatorModal({
       const data = e.detail;
       if (!data) return;
 
+      // Session isolation: strictly reject events not matching this exact lesson session
+      if (!sessionId || !data.sessionId || data.sessionId !== sessionId) return;
+
       const myId = userId || "local-user";
       if (data.senderId && data.senderId === myId) return;
 
-      const senderDisplay = data.senderRole === "TUTOR"
-        ? (formatTutorName(data.senderName) || "Tutor")
-        : (data.senderName || (data.senderRole === "TUTEE" ? "Student" : "Peer"));
+      const senderDisplay =
+        data.senderRole === "TUTOR" || data.senderRole === "ADMIN"
+          ? formatTutorName(data.senderName) || (data.senderRole === "ADMIN" ? "Admin" : "Tutor")
+          : data.senderName || (data.senderRole === "TUTEE" ? "Student" : "Peer");
 
       if (data.actionType === "SYNC_TOGGLE") {
         const nextSynced = Boolean(data.isSynced);
@@ -2804,16 +2826,28 @@ export default function CasioCalculatorModal({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {userRole === "TUTOR" && (
+            {isEducator && (
               <button
                 type="button"
-                onClick={() => handleToggleLiveSync(!isLiveDemoSynced)}
+                onClick={() => {
+                  if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") {
+                    setOptnMessage("Live sync requires an active scheduled lesson with your student.");
+                    return;
+                  }
+                  handleToggleLiveSync(!isLiveDemoSynced);
+                }}
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer shadow-xs ${
                   isLiveDemoSynced
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/20"
                     : "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700/60"
                 }`}
-                title={isLiveDemoSynced ? "End live sync and return to separate calculator" : "Start live synced calculator demo with student"}
+                title={
+                  !sessionId || sessionId === "live-demo" || sessionId === "admin-demo"
+                    ? "Live sync requires an active scheduled lesson"
+                    : isLiveDemoSynced
+                    ? "End live sync and return to separate calculator"
+                    : `Start live synced calculator demo with ${peerName || "student"}`
+                }
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${isLiveDemoSynced ? "bg-white animate-ping" : "bg-emerald-400"}`} />
                 <span>{isLiveDemoSynced ? "End Sync" : "Sync Demo"}</span>
@@ -2838,16 +2872,16 @@ export default function CasioCalculatorModal({
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="font-semibold text-[11px]">
-                  {userRole === "TUTOR"
+                  {isEducator
                     ? `Synced Demo with ${peerName || "Student"}`
-                    : "Synced Demo with Tutor"}
+                    : `Synced Demo with ${peerName || "Tutor"}`}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px]">
                 <span className="text-emerald-300/90 font-medium bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
                   Both can press keys
                 </span>
-                {userRole === "TUTOR" && (
+                {isEducator && (
                   <button
                     type="button"
                     onClick={() => handleToggleLiveSync(false)}

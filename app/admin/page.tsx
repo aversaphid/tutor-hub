@@ -658,6 +658,10 @@ export default function AdminPage() {
     return () => clearTimeout(timer);
   }, [activeLesson?.id, activeLesson?.status, activeLesson?.scheduledStartTime, activeLesson?.scheduledEndTime]);
 
+  // Active lesson ref for zero-latency SSE callback isolation
+  const activeLessonRef = useRef<any>(null);
+  activeLessonRef.current = activeLesson;
+
   // Real-time Server-Sent Events (SSE) listener: instant session synchronization with zero polling
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
@@ -692,6 +696,20 @@ export default function AdminPage() {
           try {
             const data = JSON.parse(e.data);
             handlePresenceEvent("presence-update", data);
+          } catch {}
+        });
+        es.addEventListener("calculator-sync", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            const currentActiveId = activeLessonRef.current?.id;
+            // Strictly ignore events that do not match the admin's active lesson
+            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
+              return;
+            }
+            if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
+              setIsCalculatorOpen(true);
+            }
+            window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
           } catch {}
         });
         es.onerror = () => {
@@ -7180,7 +7198,7 @@ export default function AdminPage() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        sessionId={activeLesson?.id || "admin-demo"}
+        sessionId={activeLesson?.id}
         userId={currentUser?.id}
         userName={currentUser?.name || "Admin"}
         userRole="ADMIN"

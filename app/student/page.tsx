@@ -231,6 +231,10 @@ function StudentLobbyContent() {
 
   const isSseConnectedRef = useRef(false);
 
+  // Active session ref for zero-latency SSE callback isolation
+  const activeSessionRef = useRef<any>(null);
+  activeSessionRef.current = activeSession;
+
   // Real-time Server-Sent Events (SSE) listener: instant session and topic synchronization
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined" || !("EventSource" in window)) return;
@@ -259,6 +263,11 @@ function StudentLobbyContent() {
         es.addEventListener("calculator-sync", (e: any) => {
           try {
             const data = JSON.parse(e.data);
+            const currentActiveId = activeSessionRef.current?.id;
+            // Strictly ignore events that do not match the student's active lesson
+            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
+              return;
+            }
             if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
               setIsCalculatorOpen(true);
             }
@@ -1005,7 +1014,7 @@ function StudentLobbyContent() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        sessionId={activeSession?.id || "live-demo"}
+        sessionId={activeSession?.id}
         userId={currentUser?.id}
         userName={currentUser?.name || "Student"}
         userRole="TUTEE"
