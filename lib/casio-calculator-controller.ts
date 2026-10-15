@@ -13,6 +13,9 @@ import {
   toFraction,
   toPiFraction,
   formatPiResult,
+  toSurd,
+  formatSurdResult,
+  SurdResult,
   serializeToMath,
   serializeToText,
   ExprItem,
@@ -83,8 +86,9 @@ export class CasioCalculatorSession {
   angleMode: "DEG" | "RAD" = "DEG";
   isShiftActive: boolean = false;
   isAlphaActive: boolean = false;
-  displayMode: "decimal" | "fraction" | "mixed" | "pi" = "decimal";
+  displayMode: "decimal" | "fraction" | "mixed" | "pi" | "surd" = "decimal";
   lastResultHadPi: boolean = false;
+  lastResultHadSurd: boolean = false;
   history: HistoryEntry[] = [];
   historyIndex: number = -1;
   hasCalculated: boolean = false;
@@ -106,6 +110,7 @@ export class CasioCalculatorSession {
     this.isAlphaActive = false;
     this.displayMode = "decimal";
     this.lastResultHadPi = false;
+    this.lastResultHadSurd = false;
     this.history = [];
     this.historyIndex = -1;
     this.hasCalculated = false;
@@ -924,6 +929,20 @@ export class CasioCalculatorSession {
     // Fraction <-> Decimal (S <=> D)
     if (action === "S_TO_D") {
       if (this.lastNumericResult !== null) {
+        if (this.lastResultHadSurd) {
+          const surd = toSurd(this.lastNumericResult);
+          if (surd) {
+            if (this.displayMode === "surd") {
+              this.displayMode = "decimal";
+              this.result = String(this.lastNumericResult);
+            } else {
+              this.displayMode = "surd";
+              this.result = formatSurdResult(surd);
+            }
+            return this;
+          }
+        }
+
         const piFrac = toPiFraction(this.lastNumericResult);
         if (this.lastResultHadPi && piFrac) {
           if (this.displayMode === "pi") {
@@ -1019,10 +1038,18 @@ export class CasioCalculatorSession {
         mathStr.includes("π") ||
         textRepr.includes("π") ||
         (this.lastResultHadPi && (mathStr.includes("Ans") || textRepr.includes("Ans")));
-      const { num, text, piFrac } = evaluateExpression(mathStr, {
+      const hasSqrtInput =
+        mathStr.includes("sqrt") ||
+        mathStr.includes("cbrt") ||
+        mathStr.includes("√") ||
+        mathStr.includes("³√") ||
+        this.items.some((i) => i.type === "sqrt") ||
+        (this.lastResultHadSurd && (mathStr.includes("Ans") || textRepr.includes("Ans")));
+      const { num, text, piFrac, surd } = evaluateExpression(mathStr, {
         angleMode: this.angleMode,
         ans: this.ans,
         hasPi: hasPiInput,
+        hasSqrt: hasSqrtInput,
       });
       this.result = text;
       if (!isNaN(num) && isFinite(num)) {
@@ -1035,11 +1062,17 @@ export class CasioCalculatorSession {
         ];
         this.historyIndex = -1;
 
-        if (hasPiInput && piFrac) {
+        if (hasSqrtInput && surd) {
+          this.displayMode = "surd";
+          this.lastResultHadSurd = true;
+          this.lastResultHadPi = false;
+        } else if (hasPiInput && piFrac) {
           this.displayMode = "pi";
           this.lastResultHadPi = true;
+          this.lastResultHadSurd = false;
         } else {
           this.lastResultHadPi = false;
+          this.lastResultHadSurd = false;
           const frac = toFraction(num);
           if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
             this.displayMode = "fraction";
@@ -1500,7 +1533,12 @@ export class CasioCalculatorSession {
   // Natural Display string or result formatter for verification
   getDisplayResult(): string {
     if (this.lastNumericResult !== null) {
-      if (this.displayMode === "pi") {
+      if (this.displayMode === "surd") {
+        const surd = toSurd(this.lastNumericResult);
+        if (surd) {
+          return formatSurdResult(surd);
+        }
+      } else if (this.displayMode === "pi") {
         const piFrac = toPiFraction(this.lastNumericResult);
         if (piFrac) {
           return formatPiResult(piFrac);
@@ -1536,6 +1574,7 @@ export class CasioCalculatorSession {
     s.isAlphaActive = this.isAlphaActive;
     s.displayMode = this.displayMode;
     s.lastResultHadPi = this.lastResultHadPi;
+    s.lastResultHadSurd = this.lastResultHadSurd;
     s.history = this.history.map((h) => ({
       items: h.items.map((i) => ({ ...i })),
       res: h.res,

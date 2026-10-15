@@ -7,6 +7,9 @@ import {
   toFraction,
   toPiFraction,
   formatPiResult,
+  toSurd,
+  formatSurdResult,
+  SurdResult,
   serializeToMath,
   serializeToText,
   ExprItem,
@@ -212,8 +215,9 @@ export default function CasioCalculatorModal({
   const [angleMode, setAngleMode] = useState<"DEG" | "RAD">("DEG");
   const [isShiftActive, setIsShiftActive] = useState(false);
   const [isAlphaActive, setIsAlphaActive] = useState(false);
-  const [displayMode, setDisplayMode] = useState<"decimal" | "fraction" | "mixed" | "pi">("decimal");
+  const [displayMode, setDisplayMode] = useState<"decimal" | "fraction" | "mixed" | "pi" | "surd">("decimal");
   const [lastResultHadPi, setLastResultHadPi] = useState<boolean>(false);
+  const [lastResultHadSurd, setLastResultHadSurd] = useState<boolean>(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -1031,6 +1035,7 @@ export default function CasioCalculatorModal({
       setHasCalculated(false);
       setDisplayMode("decimal");
       setLastResultHadPi(false);
+      setLastResultHadSurd(false);
       setOptnMessage(null);
       return;
     }
@@ -1234,6 +1239,22 @@ export default function CasioCalculatorModal({
     // Fraction <-> Decimal (S <=> D)
     if (action === "S_TO_D") {
       if (lastNumericResult !== null) {
+        if (lastResultHadSurd) {
+          const surd = toSurd(lastNumericResult);
+          if (surd) {
+            setDisplayMode((prev) => {
+              if (prev === "surd") {
+                setResult(String(lastNumericResult));
+                return "decimal";
+              } else {
+                setResult(formatSurdResult(surd));
+                return "surd";
+              }
+            });
+            return;
+          }
+        }
+
         const piFrac = toPiFraction(lastNumericResult);
         if (lastResultHadPi && piFrac) {
           setDisplayMode((prev) => {
@@ -1329,10 +1350,18 @@ export default function CasioCalculatorModal({
         mathStr.includes("π") ||
         textRepr.includes("π") ||
         (lastResultHadPi && (mathStr.includes("Ans") || textRepr.includes("Ans")));
-      const { num, text, piFrac } = evaluateExpression(mathStr, {
+      const hasSqrtInput =
+        mathStr.includes("sqrt") ||
+        mathStr.includes("cbrt") ||
+        mathStr.includes("√") ||
+        mathStr.includes("³√") ||
+        items.some((i) => i.type === "sqrt") ||
+        (lastResultHadSurd && (mathStr.includes("Ans") || textRepr.includes("Ans")));
+      const { num, text, piFrac, surd } = evaluateExpression(mathStr, {
         angleMode,
         ans,
         hasPi: hasPiInput,
+        hasSqrt: hasSqrtInput,
       });
       setResult(text);
       if (!isNaN(num) && isFinite(num)) {
@@ -1345,11 +1374,17 @@ export default function CasioCalculatorModal({
         ]);
         setHistoryIndex(-1);
 
-        if (hasPiInput && piFrac) {
+        if (hasSqrtInput && surd) {
+          setDisplayMode("surd");
+          setLastResultHadSurd(true);
+          setLastResultHadPi(false);
+        } else if (hasPiInput && piFrac) {
           setDisplayMode("pi");
           setLastResultHadPi(true);
+          setLastResultHadSurd(false);
         } else {
           setLastResultHadPi(false);
+          setLastResultHadSurd(false);
           const frac = toFraction(num);
           if (frac && frac.den !== 1 && Math.abs(num) < 1000) {
             setDisplayMode("fraction");
@@ -2071,6 +2106,47 @@ export default function CasioCalculatorModal({
       return <span className="leading-none">{result}</span>;
     }
 
+    if (displayMode === "surd") {
+      const surd = toSurd(lastNumericResult);
+      if (surd) {
+        const isNeg = surd.sign === -1;
+        const coeff = surd.coeff;
+        const radicand = surd.radicand;
+        const den = surd.den;
+
+        const surdNumerator = (
+          <span className="inline-flex items-center leading-none">
+            {coeff > 1 && <span className="mr-0.5">{coeff}</span>}
+            <span className="text-sm sm:text-base leading-none font-bold">√</span>
+            <span className="border-t border-[#121e12] px-0.5 leading-none">{radicand}</span>
+          </span>
+        );
+
+        if (den === 1) {
+          return (
+            <span className="font-mono font-black text-[#121e12] leading-none py-0.5 text-lg sm:text-xl inline-flex items-center">
+              {isNeg && <span className="mr-0.5 leading-none">−</span>}
+              {surdNumerator}
+            </span>
+          );
+        }
+
+        return (
+          <div className="inline-flex items-center gap-1 font-mono font-black text-[#121e12] leading-none py-0.5">
+            {isNeg && <span className="text-lg sm:text-xl mr-0.5 leading-none">−</span>}
+            <div className="inline-flex flex-col items-center justify-center leading-none text-center">
+              <span className="text-xs sm:text-sm border-b border-[#121e12] px-1.5 pb-0.5 font-black text-center w-full leading-none inline-flex items-center justify-center">
+                {surdNumerator}
+              </span>
+              <span className="text-xs sm:text-sm px-1.5 pt-0.5 font-black text-center w-full leading-none">
+                {den}
+              </span>
+            </div>
+          </div>
+        );
+      }
+    }
+
     if (displayMode === "pi") {
       const piFrac = toPiFraction(lastNumericResult);
       if (piFrac) {
@@ -2467,7 +2543,7 @@ export default function CasioCalculatorModal({
                   <span className={`px-0.5 rounded-xs ${memory !== 0 ? "opacity-100 font-black" : "opacity-20"}`}>
                     M
                   </span>
-                  <span className={`px-0.5 rounded-xs ${displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi" ? "opacity-100 font-black" : "opacity-20"}`}>
+                  <span className={`px-0.5 rounded-xs ${displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi" || displayMode === "surd" ? "opacity-100 font-black" : "opacity-20"}`}>
                     ■/■
                   </span>
                 </div>
@@ -3069,7 +3145,7 @@ export default function CasioCalculatorModal({
                 <button
                   onClick={() => handleButton("S_TO_D")}
                   className={`w-full py-1 rounded-md border font-black text-[10px] transition-all shadow-xs active:translate-y-[1px] cursor-pointer ${
-                    displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi"
+                    displayMode === "fraction" || displayMode === "mixed" || displayMode === "pi" || displayMode === "surd"
                       ? "bg-[#38bdf8] text-slate-950 border-sky-300 font-extrabold"
                       : "bg-[#242a35] hover:bg-[#2e3644] text-[#38bdf8] border-slate-600/80"
                   }`}

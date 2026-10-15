@@ -31,8 +31,23 @@ export function nCr(n: number, r: number): number {
   return factorial(n) / (factorial(r) * factorial(n - r));
 }
 
+// Greatest common divisor helper
+export function gcd(a: number, b: number): number {
+  a = Math.abs(Math.round(a));
+  b = Math.abs(Math.round(b));
+  while (b) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
+  return a || 1;
+}
+
 // Convert decimal to simplified fraction (for S <=> D button)
-export function toFraction(val: number): { num: number; den: number } | null {
+export function toFraction(
+  val: number,
+  tolerance = 1e-9
+): { num: number; den: number } | null {
   if (!isFinite(val) || isNaN(val) || Math.abs(val) > 100000) return null;
   const sign = val < 0 ? -1 : 1;
   const absVal = Math.abs(val);
@@ -74,11 +89,95 @@ export function toFraction(val: number): { num: number; den: number } | null {
     b = 1 / diff;
   }
 
-  if (minError < 1e-6) {
+  if (minError < tolerance) {
     return { num: sign * bestNumerator, den: bestDenominator };
   }
 
   return null;
+}
+
+export interface SurdResult {
+  sign: -1 | 1;
+  coeff: number;
+  radicand: number;
+  den: number;
+}
+
+// Convert decimal to simplified exact radical / surd form (e.g. 4√2, √221, 2√3, √2/2)
+export function toSurd(val: number): SurdResult | null {
+  if (!isFinite(val) || isNaN(val) || Math.abs(val) < 1e-9 || Math.abs(val) > 1000000) {
+    return null;
+  }
+  // Pure integers are never represented as surds on Casio
+  if (Math.abs(val - Math.round(val)) < 1e-9) {
+    return null;
+  }
+
+  const sign: -1 | 1 = val < 0 ? -1 : 1;
+  const absVal = Math.abs(val);
+  const sq = absVal * absVal;
+
+  let P = 0;
+  let Q = 1;
+
+  const roundSq = Math.round(sq);
+  if (Math.abs(sq - roundSq) < 1e-7 && roundSq > 0 && roundSq <= 1000000) {
+    P = roundSq;
+    Q = 1;
+  } else {
+    // Try to find a fraction P/Q for sq with small denominator <= 400
+    const sqFrac = toFraction(sq, 1e-7);
+    if (!sqFrac || sqFrac.den > 400 || Math.abs(sqFrac.num) > 1000000) {
+      return null;
+    }
+    P = Math.abs(sqFrac.num);
+    Q = sqFrac.den;
+  }
+
+  const M = P * Q;
+  if (M <= 0 || M > 100000000) return null;
+
+  // Factor out largest square factor: M = a^2 * b where b is square-free
+  let a = 1;
+  let b = M;
+  const maxD = Math.min(10000, Math.floor(Math.sqrt(M)));
+  for (let d = maxD; d >= 2; d--) {
+    const d2 = d * d;
+    if (M % d2 === 0) {
+      a = d;
+      b = Math.round(M / d2);
+      break;
+    }
+  }
+
+  // If b === 1, then sqrt(M) was an exact integer, meaning val is rational
+  if (b <= 1) {
+    return null;
+  }
+
+  const g = gcd(a, Q);
+  const coeff = a / g;
+  const den = Q / g;
+  const radicand = b;
+
+  // Verify reconstruction numerical fidelity
+  const reconstructed = (sign * coeff * Math.sqrt(radicand)) / den;
+  if (Math.abs(val - reconstructed) > 1e-8) {
+    return null;
+  }
+
+  return { sign, coeff, radicand, den };
+}
+
+// Format an exact surd as human/Casio readable string (e.g. "4√2", "√221", "2√3", "√2/2")
+export function formatSurdResult(surd: SurdResult): string {
+  const signStr = surd.sign === -1 ? "−" : "";
+  const coeffStr = surd.coeff === 1 ? "" : String(surd.coeff);
+  const rootStr = `${coeffStr}√${surd.radicand}`;
+  if (surd.den === 1) {
+    return `${signStr}${rootStr}`;
+  }
+  return `${signStr}${rootStr}/${surd.den}`;
 }
 
 // Convert decimal to exact rational multiple of π (n/d * π)
@@ -189,13 +288,19 @@ export interface EvaluateOptions {
   angleMode?: "DEG" | "RAD";
   ans?: number;
   hasPi?: boolean;
+  hasSqrt?: boolean;
 }
 
 // Core Math Evaluator
 export function evaluateExpression(
   mathStr: string,
   options: EvaluateOptions = {}
-): { num: number; text: string; piFrac?: { num: number; den: number } | null } {
+): {
+  num: number;
+  text: string;
+  piFrac?: { num: number; den: number } | null;
+  surd?: SurdResult | null;
+} {
   try {
     if (!mathStr || !mathStr.trim()) return { num: 0, text: "0" };
 
@@ -356,6 +461,13 @@ export function evaluateExpression(
     }
 
     const piFrac = hasPi ? toPiFraction(computed) : null;
+    const hasSqrt =
+      options.hasSqrt ??
+      (mathStr.includes("sqrt") ||
+        mathStr.includes("cbrt") ||
+        mathStr.includes("√") ||
+        mathStr.includes("³√"));
+    const surd = hasSqrt ? toSurd(computed) : null;
 
     let cleaned = Math.abs(computed) < 1e-12 ? 0 : computed;
     if (Math.abs(cleaned - Math.round(cleaned)) < 1e-11) {
@@ -364,9 +476,14 @@ export function evaluateExpression(
       cleaned = Number(cleaned.toPrecision(10));
     }
 
-    const text = piFrac ? formatPiResult(piFrac) : String(cleaned);
+    let text = String(cleaned);
+    if (surd) {
+      text = formatSurdResult(surd);
+    } else if (piFrac) {
+      text = formatPiResult(piFrac);
+    }
 
-    return { num: cleaned, text, piFrac };
+    return { num: cleaned, text, piFrac, surd };
   } catch {
     return { num: NaN, text: "Syntax ERROR" };
   }
