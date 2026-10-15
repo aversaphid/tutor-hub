@@ -73,3 +73,43 @@ export function broadcastPresenceUpdate(payload: {
     }
   }
 }
+
+export interface CalculatorActionPayload {
+  sessionId?: string;
+  senderId?: string;
+  senderName?: string;
+  senderRole?: string;
+  actionType:
+    | "BUTTON"
+    | "NAV"
+    | "SYNC_TOGGLE"
+    | "FULL_STATE"
+    | "CURSOR_MOVE"
+    | "CURSOR_CLICK"
+    | "CURSOR_LEAVE";
+  actionValue?: string;
+  fullState?: any;
+  cursorPos?: { x: number; y: number };
+  isSynced?: boolean;
+  timestamp?: number;
+}
+
+export function broadcastCalculatorAction(payload: CalculatorActionPayload) {
+  if (subscribers.size === 0) return;
+
+  const encoder = new TextEncoder();
+  const eventData = JSON.stringify({
+    ...payload,
+    timestamp: payload.timestamp || Date.now(),
+  });
+  const eventMessage = `event: calculator-sync\ndata: ${eventData}\n\n`;
+  const bytes = encoder.encode(eventMessage);
+
+  for (const sub of subscribers) {
+    try {
+      sub.controller.enqueue(bytes);
+    } catch {
+      subscribers.delete(sub);
+    }
+  }
+}

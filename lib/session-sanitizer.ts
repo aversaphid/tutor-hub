@@ -1,3 +1,5 @@
+import { formatTutorName } from "./format";
+
 /**
  * Role-based field masking for session objects:
  * - HEAD_TUTOR: Sees all financial fields (studentPay, tutorPay).
@@ -30,6 +32,14 @@ export function sanitizeSessionForRole<T extends Record<string, any> | null | un
       sanitized.tutee = { ...sanitized.tutee };
       delete sanitized.tutee.tutorPay;
     }
+  }
+
+  // Ensure tutor name first letter is always uppercase when displayed to students or tutors
+  if (sanitized.tutor && sanitized.tutor.name) {
+    sanitized.tutor = {
+      ...sanitized.tutor,
+      name: formatTutorName(sanitized.tutor.name),
+    };
   }
 
   return sanitized as T;

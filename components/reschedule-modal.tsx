@@ -188,7 +188,7 @@ export default function RescheduleModal({
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
-                ● {session.status}
+                ● {session.status === "IN_PROGRESS" ? "IN PROGRESS" : session.status}
               </span>
             )}
           </div>

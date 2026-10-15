@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { prisma } from "./prisma";
+import { formatTutorName } from "./format";
 
 import { NextResponse } from "next/server";
 
@@ -168,6 +169,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     });
 
     if (user) {
+      if (user.role === "TUTOR" || user.role === "HEAD_TUTOR") {
+        user.name = formatTutorName(user.name);
+      }
+
       // If tokenVersion in token doesn't match active DB tokenVersion, token was revoked
       if (parsed.tv !== undefined && user.tokenVersion !== undefined && parsed.tv !== user.tokenVersion) {
         userCache.delete(parsed.sub);

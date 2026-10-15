@@ -393,6 +393,12 @@ export default function TutorDashboardPage() {
             handlePresenceEvent("presence-update", data);
           } catch {}
         });
+        es.addEventListener("calculator-sync", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
+          } catch {}
+        });
         es.onerror = () => {
           isSseConnectedRef.current = false;
           if (typeof window !== "undefined") {
@@ -918,7 +924,7 @@ export default function TutorDashboardPage() {
       location: s.teamsMeetingUrl || `${portalUrl}/tutor`,
       startTime: s.scheduledStartTime,
       endTime: s.scheduledEndTime,
-      tutorName: currentUser?.name,
+      tutorName: formatTutorName(currentUser?.name) || "Tutor",
       studentName: s.tutee?.name,
     }));
 
@@ -1177,7 +1183,7 @@ export default function TutorDashboardPage() {
                               : "bg-[#48A5EE]/10 text-[#48A5EE] dark:bg-[#48A5EE]/20"
                           }`}
                       >
-                        ● {isLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
+                        ● {isLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status === "IN_PROGRESS" ? "In Progress" : activeLesson.status}
                       </span>
                       {activeLesson.status === "DELAYED" && activeLesson.delayReason && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
@@ -2332,9 +2338,11 @@ export default function TutorDashboardPage() {
                                       }`}
                                     >
                                       {isRowLive
-                                        ? "LIVE"
+                                        ? "IN PROGRESS"
                                         : s.status === "DELAYED" && s.delayMinutes
                                         ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status === "IN_PROGRESS"
+                                        ? "IN PROGRESS"
                                         : s.status}
                                     </span>
                                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold font-mono">
@@ -2597,9 +2605,11 @@ export default function TutorDashboardPage() {
                                         }`}
                                     >
                                       {isRowLive
-                                        ? "IN_PROGRESS"
+                                        ? "IN PROGRESS"
                                         : s.status === "DELAYED" && s.delayMinutes
                                         ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status === "IN_PROGRESS"
+                                        ? "IN PROGRESS"
                                         : s.status}
                                     </span>
                                     {s.delayReason && (
@@ -3314,6 +3324,11 @@ export default function TutorDashboardPage() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
+        sessionId={activeLesson?.id || "live-demo"}
+        userId={currentUser?.id}
+        userName={formatTutorName(currentUser?.name) || "Tutor"}
+        userRole="TUTOR"
+        peerName={activeLesson?.tutee?.name || "Student"}
       />
 
       {/* Cancel Lesson Modal */}

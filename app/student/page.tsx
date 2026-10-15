@@ -256,6 +256,15 @@ function StudentLobbyContent() {
           } catch {}
           loadStudentSessions(currentUser.id);
         });
+        es.addEventListener("calculator-sync", (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
+              setIsCalculatorOpen(true);
+            }
+            window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
+          } catch {}
+        });
         es.onerror = () => {
           isSseConnectedRef.current = false;
           if (typeof window !== "undefined") {
@@ -996,6 +1005,11 @@ function StudentLobbyContent() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
+        sessionId={activeSession?.id || "live-demo"}
+        userId={currentUser?.id}
+        userName={currentUser?.name || "Student"}
+        userRole="TUTEE"
+        peerName={formatTutorName(activeSession?.tutor?.name) || "Tutor"}
       />
 
       {/* Live Calendar Subscription Modal */}

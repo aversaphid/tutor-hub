@@ -2070,7 +2070,7 @@ export default function AdminPage() {
       location: s.teamsMeetingUrl || `${portalUrl}/admin`,
       startTime: s.scheduledStartTime,
       endTime: s.scheduledEndTime,
-      tutorName: s.tutor?.name,
+      tutorName: formatTutorName(s.tutor?.name) || "Tutor",
       studentName: s.tutee?.name,
     }));
 
@@ -2392,7 +2392,7 @@ export default function AdminPage() {
                         : "bg-[#48A5EE]/15 text-[#48A5EE]"
                     }`}
                   >
-                    ● {isAdminLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status}
+                    ● {isAdminLessonLive ? "Live Now" : activeLesson.status === "DELAYED" ? `Delayed (+${activeLesson.delayMinutes}m)` : activeLesson.status === "IN_PROGRESS" ? "In Progress" : activeLesson.status}
                   </span>
 
                   <LessonCountdownBadge
@@ -3256,6 +3256,8 @@ export default function AdminPage() {
                                         ? "LIVE NOW"
                                         : s.status === "DELAYED" && s.delayMinutes
                                         ? `DELAYED (+${s.delayMinutes}m)`
+                                        : s.status === "IN_PROGRESS"
+                                        ? "IN PROGRESS"
                                         : s.status}
                                     </span>
                                     {s.delayReason && (
@@ -3671,6 +3673,8 @@ export default function AdminPage() {
                                           ? "LIVE NOW"
                                           : s.status === "DELAYED" && s.delayMinutes
                                           ? `DELAYED (+${s.delayMinutes}m)`
+                                          : s.status === "IN_PROGRESS"
+                                          ? "IN PROGRESS"
                                           : s.status}
                                       </span>
                                     </div>

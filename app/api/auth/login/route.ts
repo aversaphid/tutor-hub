@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createAuthToken, setAuthCookie } from "@/lib/auth";
+import { formatTutorName } from "@/lib/format";
 import {
   getClientIp,
   checkDualPasswordRateLimit,
@@ -63,6 +64,8 @@ export async function POST(request: Request) {
           { email: normalizedEmail },
           { email: lowerIdentifier },
           { name: { equals: rawIdentifier } },
+          { name: { equals: lowerIdentifier } },
+          { name: { equals: formatTutorName(rawIdentifier) } },
         ],
       },
     });
@@ -96,7 +99,7 @@ export async function POST(request: Request) {
       success: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: formatTutorName(user.name),
         email: user.email,
         role: user.role,
       },

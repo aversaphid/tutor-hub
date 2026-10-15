@@ -1979,7 +1979,7 @@ export default function UserWeeklyCalendarModal({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 font-semibold">Status:</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#48A5EE]/10 text-[#48A5EE]">
-                  {selectedSession.status}
+                  {selectedSession.status === "IN_PROGRESS" ? "IN PROGRESS" : selectedSession.status}
                 </span>
               </div>
               <div className="flex items-center justify-between">

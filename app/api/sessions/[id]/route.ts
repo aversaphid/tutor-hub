@@ -5,6 +5,7 @@ import { UpdateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
 import { logSessionAudit } from "@/lib/audit";
 import { sanitizeSessionForRole } from "@/lib/session-sanitizer";
+import { formatTutorName } from "@/lib/format";
 
 export async function GET(
   request: Request,
@@ -279,7 +280,7 @@ export async function PATCH(
       if (updates.teamsMeetingUrl && updates.teamsMeetingUrl.trim()) {
         sendPushToUser(existing.tuteeId, {
           title: "Teams Meeting Link Ready",
-          body: `${updated.tutor?.name || "Your tutor"} has added the Teams link for your lesson. Click to join!`,
+          body: `${formatTutorName(updated.tutor?.name) || "Your tutor"} has added the Teams link for your lesson. Click to join!`,
           url: "/student",
         }).catch(() => {});
       } else if (updates.status === "CANCELLED") {

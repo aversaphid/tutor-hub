@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { DelaySessionSchema } from "@/lib/validations";
 import { logSessionAudit } from "@/lib/audit";
+import { formatTutorName } from "@/lib/format";
 
 export async function POST(
   request: Request,
@@ -97,7 +98,7 @@ export async function POST(
     // Send Web Push notification to student
     try {
       const { sendPushToUser } = await import("@/lib/web-push");
-      const tutorName = updated.tutor?.name || "Your tutor";
+      const tutorName = formatTutorName(updated.tutor?.name) || "Your tutor";
       sendPushToUser(session.tuteeId, {
         title: "Lesson Delayed",
         body: `${tutorName} has delayed your lesson by ${delayMinutes} minutes${reason ? ` (${reason})` : ""}.`,

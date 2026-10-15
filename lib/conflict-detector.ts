@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { formatTutorName } from "./format";
 
 export interface ConflictCheckParams {
   tutorId: string;
@@ -61,7 +62,7 @@ export async function detectSessionConflict(
     return {
       hasConflict: true,
       conflictingSessionId: tutorOverlap.id,
-      reason: `Schedule Conflict: Tutor ${tutorOverlap.tutor.name} is already booked for "${tutorOverlap.title}" with ${tutorOverlap.tutee.name} from ${startStr} to ${endStr}.`,
+      reason: `Schedule Conflict: Tutor ${formatTutorName(tutorOverlap.tutor.name)} is already booked for "${tutorOverlap.title}" with ${tutorOverlap.tutee.name} from ${startStr} to ${endStr}.`,
     };
   }
 
@@ -93,7 +94,7 @@ export async function detectSessionConflict(
     return {
       hasConflict: true,
       conflictingSessionId: tuteeOverlap.id,
-      reason: `Schedule Conflict: Student ${tuteeOverlap.tutee.name} already has an active session "${tuteeOverlap.title}" with Tutor ${tuteeOverlap.tutor.name} from ${startStr} to ${endStr}.`,
+      reason: `Schedule Conflict: Student ${tuteeOverlap.tutee.name} already has an active session "${tuteeOverlap.title}" with Tutor ${formatTutorName(tuteeOverlap.tutor.name)} from ${startStr} to ${endStr}.`,
     };
   }
 
@@ -136,7 +137,7 @@ export async function detectSessionConflict(
 
     return {
       hasConflict: true,
-      reason: `Schedule Conflict: Tutor ${unavailabilityOverlap.tutor.name} has marked this time as ${label}${reasonText} (${startStr} – ${endStr}).`,
+      reason: `Schedule Conflict: Tutor ${formatTutorName(unavailabilityOverlap.tutor.name)} has marked this time as ${label}${reasonText} (${startStr} – ${endStr}).`,
     };
   }
 

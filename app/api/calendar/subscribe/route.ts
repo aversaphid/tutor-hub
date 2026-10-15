@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseAuthToken } from "@/lib/auth";
+import { formatTutorName } from "@/lib/format";
 import crypto from "crypto";
 
 function formatDateToICS(date: Date): string {
@@ -152,7 +153,7 @@ export async function GET(request: Request) {
       const formattedStart = formatDateToICS(start);
       const formattedEnd = formatDateToICS(end);
 
-      const tutorName = s.tutor?.name || "Tutor";
+      const tutorName = formatTutorName(s.tutor?.name) || "Tutor";
       const studentName = s.tutee?.name || "Student";
 
       let summary = `Maths Lesson: ${studentName}`;

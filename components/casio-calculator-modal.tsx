@@ -14,12 +14,18 @@ import {
   serializeToText,
   ExprItem,
 } from "../lib/casio-math-engine";
+import { formatTutorName } from "../lib/format";
 
 export type CasioTheme = "black" | "pink" | "cyan";
 
 interface CasioCalculatorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  sessionId?: string;
+  userId?: string;
+  userName?: string;
+  userRole?: "TUTOR" | "TUTEE" | "ADMIN";
+  peerName?: string;
 }
 
 export type CursorTarget =
@@ -203,10 +209,49 @@ function uid() {
 export default function CasioCalculatorModal({
   isOpen,
   onClose,
+  sessionId = "live-demo",
+  userId,
+  userName = "Tutor",
+  userRole = "TUTOR",
+  peerName,
 }: CasioCalculatorModalProps) {
   // Structured items list for Natural Textbook display
   const [items, setItems] = useState<ExprItem[]>([]);
   const [cursor, setCursor] = useState<CursorTarget>({ location: "main" });
+
+  // Live Collaboration & Synced Demo States
+  const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(false);
+  const isLiveDemoSyncedRef = useRef(isLiveDemoSynced);
+  isLiveDemoSyncedRef.current = isLiveDemoSynced;
+
+  const [remoteActionNotice, setRemoteActionNotice] = useState<{
+    user: string;
+    action: string;
+    timestamp: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!remoteActionNotice) return;
+    const t = setTimeout(() => {
+      setRemoteActionNotice(null);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [remoteActionNotice]);
+
+  // Remote Peer Mouse Cursor Tracking
+  const [remoteCursor, setRemoteCursor] = useState<{
+    x: number;
+    y: number;
+    user: string;
+    role: string;
+    visible: boolean;
+    isClicking?: boolean;
+  } | null>(null);
+
+  const remoteCursorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chassisRef = useRef<HTMLDivElement | null>(null);
+  const lastCursorSendRef = useRef<number>(0);
+  const lastSentPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [result, setResult] = useState<string>("0");
   const [lastNumericResult, setLastNumericResult] = useState<number | null>(null);
@@ -372,6 +417,172 @@ export default function CasioCalculatorModal({
   const hasCalculatedRef = useRef(hasCalculated);
   hasCalculatedRef.current = hasCalculated;
 
+  const resultRef = useRef(result);
+  resultRef.current = result;
+  const lastNumericResultRef = useRef(lastNumericResult);
+  lastNumericResultRef.current = lastNumericResult;
+  const ansRef = useRef(ans);
+  ansRef.current = ans;
+  const memoryRef = useRef(memory);
+  memoryRef.current = memory;
+  const angleModeRef = useRef(angleMode);
+  angleModeRef.current = angleMode;
+  const displayModeRef = useRef(displayMode);
+  displayModeRef.current = displayMode;
+  const lastResultHadPiRef = useRef(lastResultHadPi);
+  lastResultHadPiRef.current = lastResultHadPi;
+  const lastResultHadSurdRef = useRef(lastResultHadSurd);
+  lastResultHadSurdRef.current = lastResultHadSurd;
+
+  const getCurrentState = () => ({
+    items: itemsRef.current,
+    cursor: cursorRef.current,
+    result: resultRef.current,
+    lastNumericResult: lastNumericResultRef.current,
+    ans: ansRef.current,
+    memory: memoryRef.current,
+    angleMode: angleModeRef.current,
+    displayMode: displayModeRef.current,
+    lastResultHadPi: lastResultHadPiRef.current,
+    lastResultHadSurd: lastResultHadSurdRef.current,
+    hasCalculated: hasCalculatedRef.current,
+  });
+
+  const applyFullState = (state: any) => {
+    if (!state) return;
+    if (Array.isArray(state.items)) setItems(state.items);
+    if (state.cursor) setCursor(state.cursor);
+    if (state.result !== undefined) setResult(state.result);
+    if (state.lastNumericResult !== undefined) setLastNumericResult(state.lastNumericResult);
+    if (state.ans !== undefined) setAns(state.ans);
+    if (state.memory !== undefined) setMemory(state.memory);
+    if (state.angleMode) setAngleMode(state.angleMode);
+    if (state.displayMode) setDisplayMode(state.displayMode);
+    if (state.lastResultHadPi !== undefined) setLastResultHadPi(state.lastResultHadPi);
+    if (state.lastResultHadSurd !== undefined) setLastResultHadSurd(state.lastResultHadSurd);
+    if (state.hasCalculated !== undefined) setHasCalculated(state.hasCalculated);
+  };
+
+  const handleToggleLiveSync = async (targetSynced: boolean) => {
+    setIsLiveDemoSynced(targetSynced);
+    isLiveDemoSyncedRef.current = targetSynced;
+
+    const stateSnapshot = targetSynced ? getCurrentState() : undefined;
+
+    try {
+      await fetch("/api/calculator/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionId || "live-demo",
+          senderId: userId || "local-user",
+          senderName: userName,
+          senderRole: userRole,
+          actionType: "SYNC_TOGGLE",
+          isSynced: targetSynced,
+          fullState: stateSnapshot,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to toggle calculator sync:", err);
+    }
+  };
+
+  const formatActionLabel = (act: string): string => {
+    switch (act) {
+      case "SQRT": return "√";
+      case "SQUARE": return "x²";
+      case "CUBE": return "x³";
+      case "POWER": return "x■";
+      case "FRAC": return "a/b";
+      case "MIXED_FRAC": return "a b/c";
+      case "S_TO_D": return "S⇔D";
+      case "MODE_TOGGLE": return "DEG/RAD";
+      case "POW_10": return "×10ˣ";
+      case "NEG": return "(-)";
+      case "INV": return "x⁻¹";
+      case "LOG_BASE": return "log_■(■)";
+      case "DMS": return "° ' \"";
+      case "M_PLUS": return "M+";
+      default: return act;
+    }
+  };
+
+  // Live Collaborative Mouse Pointer Handlers (Relative % Coordinates)
+  const handleChassisMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    const now = Date.now();
+    if (now - lastCursorSendRef.current < 60) return; // ~16.6 fps throttle (60ms)
+
+    const rect = chassisRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+
+    // Jitter suppression: ignore micro-movements < 0.35%
+    if (
+      Math.abs(x - lastSentPosRef.current.x) < 0.35 &&
+      Math.abs(y - lastSentPosRef.current.y) < 0.35
+    ) {
+      return;
+    }
+
+    lastCursorSendRef.current = now;
+    lastSentPosRef.current = { x, y };
+
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionId || "live-demo",
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_MOVE",
+        cursorPos: { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) },
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleChassisMouseLeave = () => {
+    if (!isLiveDemoSyncedRef.current) return;
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionId || "live-demo",
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_LEAVE",
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleChassisMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    const rect = chassisRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: sessionId || "live-demo",
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_CLICK",
+        cursorPos: { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) },
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
   // Audio click generator
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -505,8 +716,24 @@ export default function CasioCalculatorModal({
   };
 
   // Navigation Keys: Up, Down, Left, Right
-  const handleNav = (dir: "UP" | "DOWN" | "LEFT" | "RIGHT") => {
+  const handleNav = (dir: "UP" | "DOWN" | "LEFT" | "RIGHT", isFromRemote: boolean = false) => {
     playClick(500);
+
+    if (!isFromRemote && isLiveDemoSyncedRef.current) {
+      fetch("/api/calculator/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionId || "live-demo",
+          senderId: userId || "local-user",
+          senderName: userName,
+          senderRole: userRole,
+          actionType: "NAV",
+          actionValue: dir,
+          isSynced: true,
+        }),
+      }).catch(() => {});
+    }
 
     // RIGHT ARROW: Steps out of Root, Exponent, or Fraction Denominator, or edits after =
     if (dir === "RIGHT") {
@@ -1018,8 +1245,24 @@ export default function CasioCalculatorModal({
   };
 
   // Button Input Handlers
-  const handleButton = (action: string) => {
+  const handleButton = (action: string, isFromRemote: boolean = false) => {
     playClick(action === "=" ? 1100 : action === "AC" || action === "DEL" ? 400 : 750);
+
+    if (!isFromRemote && isLiveDemoSyncedRef.current) {
+      fetch("/api/calculator/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionId || "live-demo",
+          senderId: userId || "local-user",
+          senderName: userName,
+          senderRole: userRole,
+          actionType: "BUTTON",
+          actionValue: action,
+          isSynced: true,
+        }),
+      }).catch(() => {});
+    }
 
     const shift = isShiftActive;
     const alpha = isAlphaActive;
@@ -2228,6 +2471,99 @@ export default function CasioCalculatorModal({
   const handleNavRef = useRef(handleNav);
   handleNavRef.current = handleNav;
 
+  // Listen for remote real-time calculator actions (Live Demo Sync)
+  useEffect(() => {
+    const handleSyncEvent = (e: any) => {
+      const data = e.detail;
+      if (!data) return;
+
+      const myId = userId || "local-user";
+      if (data.senderId && data.senderId === myId) return;
+
+      const senderDisplay = data.senderRole === "TUTOR"
+        ? (formatTutorName(data.senderName) || "Tutor")
+        : (data.senderName || (data.senderRole === "TUTEE" ? "Student" : "Peer"));
+
+      if (data.actionType === "SYNC_TOGGLE") {
+        const nextSynced = Boolean(data.isSynced);
+        setIsLiveDemoSynced(nextSynced);
+        isLiveDemoSyncedRef.current = nextSynced;
+        if (nextSynced && data.fullState) {
+          applyFullState(data.fullState);
+        }
+        return;
+      }
+
+      if (data.actionType === "CURSOR_MOVE" && data.cursorPos) {
+        if (remoteCursorTimeoutRef.current) clearTimeout(remoteCursorTimeoutRef.current);
+        setRemoteCursor({
+          x: data.cursorPos.x,
+          y: data.cursorPos.y,
+          user: senderDisplay,
+          role: data.senderRole || "TUTOR",
+          visible: true,
+          isClicking: false,
+        });
+        remoteCursorTimeoutRef.current = setTimeout(() => {
+          setRemoteCursor((prev) => (prev ? { ...prev, visible: false } : null));
+        }, 2500);
+        return;
+      }
+
+      if (data.actionType === "CURSOR_CLICK" && data.cursorPos) {
+        setRemoteCursor((prev) =>
+          prev
+            ? { ...prev, x: data.cursorPos.x, y: data.cursorPos.y, isClicking: true, visible: true }
+            : {
+                x: data.cursorPos.x,
+                y: data.cursorPos.y,
+                user: senderDisplay,
+                role: data.senderRole || "TUTOR",
+                visible: true,
+                isClicking: true,
+              }
+        );
+        setTimeout(() => {
+          setRemoteCursor((prev) => (prev ? { ...prev, isClicking: false } : null));
+        }, 200);
+        return;
+      }
+
+      if (data.actionType === "CURSOR_LEAVE") {
+        setRemoteCursor((prev) => (prev ? { ...prev, visible: false } : null));
+        return;
+      }
+
+      if (!isLiveDemoSyncedRef.current && !data.isSynced) return;
+
+      if (data.actionType === "BUTTON" && data.actionValue) {
+        handleButtonRef.current(data.actionValue, true);
+        setRemoteActionNotice({
+          user: senderDisplay,
+          action: `pressed [${formatActionLabel(data.actionValue)}]`,
+          timestamp: Date.now(),
+        });
+        if (data.fullState) {
+          applyFullState(data.fullState);
+        }
+      } else if (data.actionType === "NAV" && data.actionValue) {
+        handleNavRef.current(data.actionValue as any, true);
+        setRemoteActionNotice({
+          user: senderDisplay,
+          action: `navigated ${data.actionValue.toLowerCase()}`,
+          timestamp: Date.now(),
+        });
+      } else if (data.actionType === "FULL_STATE" && data.fullState) {
+        applyFullState(data.fullState);
+      }
+    };
+
+    window.addEventListener("th_calculator_sync", handleSyncEvent as EventListener);
+    return () => {
+      window.removeEventListener("th_calculator_sync", handleSyncEvent as EventListener);
+    };
+  }, [sessionId, userId, userName, userRole]);
+
   // Dynamic Calculator Scale (Grow or Shrink)
   const [scale, setScale] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -2467,21 +2803,87 @@ export default function CasioCalculatorModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800/90 hover:bg-red-900/60 text-slate-300 hover:text-red-200 border border-slate-700/60 transition-colors cursor-pointer text-[11px]"
-            title="Close calculator (Esc)"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span>Close (Esc)</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            {userRole === "TUTOR" && (
+              <button
+                type="button"
+                onClick={() => handleToggleLiveSync(!isLiveDemoSynced)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer shadow-xs ${
+                  isLiveDemoSynced
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/20"
+                    : "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700/60"
+                }`}
+                title={isLiveDemoSynced ? "End live sync and return to separate calculator" : "Start live synced calculator demo with student"}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isLiveDemoSynced ? "bg-white animate-ping" : "bg-emerald-400"}`} />
+                <span>{isLiveDemoSynced ? "End Sync" : "Sync Demo"}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800/90 hover:bg-red-900/60 text-slate-300 hover:text-red-200 border border-slate-700/60 transition-colors cursor-pointer text-[11px]"
+              title="Close calculator (Esc)"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close (Esc)</span>
+            </button>
+          </div>
         </div>
+
+        {/* Synced Demo Banner - ONLY shown when active */}
+        {isLiveDemoSynced && (
+          <div className="w-full max-w-[375px] mb-2 px-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs bg-emerald-950/85 border border-emerald-500/50 text-emerald-200 shadow-md backdrop-blur-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-semibold text-[11px]">
+                  {userRole === "TUTOR"
+                    ? `Synced Demo with ${peerName || "Student"}`
+                    : "Synced Demo with Tutor"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="text-emerald-300/90 font-medium bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Both can press keys
+                </span>
+                {userRole === "TUTOR" && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLiveSync(false)}
+                    className="text-emerald-400 hover:text-white underline cursor-pointer ml-1"
+                  >
+                    End
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Remote Action Toast / Banner */}
+        {remoteActionNotice && (
+          <div className="w-full max-w-[375px] mb-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="bg-indigo-950/90 border border-indigo-500/50 text-indigo-100 rounded-lg px-2.5 py-1 text-[11px] flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
+                <span className="font-bold text-white">{remoteActionNotice.user}</span>
+                <span className="text-indigo-200">{remoteActionNotice.action}</span>
+              </div>
+              <span className="text-[9px] text-indigo-400/80 font-mono">Live</span>
+            </div>
+          </div>
+        )}
 
         {/* ============================================================ */}
         {/* REAL CASIO FX-83GT X CLASSWIZ EXACT HARDWARE REPLICA        */}
         {/* ============================================================ */}
         <div
-          className={`relative w-[345px] sm:w-[375px] rounded-[36px] ${themeStyles.chassis} p-3 sm:p-3.5 text-slate-100 flex flex-col items-center select-none border-4 shrink-0 transition-colors duration-300`}
+          ref={chassisRef}
+          onMouseMove={handleChassisMouseMove}
+          onMouseLeave={handleChassisMouseLeave}
+          onMouseDown={handleChassisMouseDown}
+          className={`relative w-[345px] sm:w-[375px] rounded-[36px] ${themeStyles.chassis} p-3 sm:p-3.5 text-slate-100 flex flex-col items-center select-none border-4 shrink-0 transition-colors duration-300 overflow-hidden`}
           style={{
             boxShadow: `
               0 30px 70px -10px rgba(0,0,0,0.95),
@@ -2491,6 +2893,48 @@ export default function CasioCalculatorModal({
             `,
           }}
         >
+          {/* Remote Peer Mouse Pointer */}
+          {isLiveDemoSynced && remoteCursor && remoteCursor.visible && (
+            <div
+              className="absolute z-50 pointer-events-none transition-[left,top] duration-75 ease-linear flex flex-col items-start -translate-x-1 -translate-y-1"
+              style={{
+                left: `${remoteCursor.x}%`,
+                top: `${remoteCursor.y}%`,
+              }}
+            >
+              <div className="relative">
+                <svg
+                  className={`w-4 h-4 drop-shadow-md transition-transform duration-100 ${
+                    remoteCursor.isClicking ? "scale-75" : "scale-100"
+                  } ${
+                    remoteCursor.role === "TUTOR"
+                      ? "text-indigo-400 fill-indigo-500"
+                      : "text-emerald-400 fill-emerald-500"
+                  }`}
+                  viewBox="0 0 24 24"
+                  stroke="white"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                </svg>
+                {remoteCursor.isClicking && (
+                  <span className="absolute -inset-1 rounded-full bg-white/70 animate-ping pointer-events-none" />
+                )}
+              </div>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[9px] font-semibold text-white shadow-md select-none mt-0.5 whitespace-nowrap ${
+                  remoteCursor.role === "TUTOR"
+                    ? "bg-indigo-600/95 border border-indigo-400/50"
+                    : "bg-emerald-600/95 border border-emerald-400/50"
+                }`}
+              >
+                {remoteCursor.user}
+              </span>
+            </div>
+          )}
+
           {/* External Hard Shell Cradle Lip */}
           <div className={`absolute -inset-1 rounded-[38px] border-2 ${themeStyles.cradle} pointer-events-none -z-10 shadow-2xl transition-colors duration-300`} />
 

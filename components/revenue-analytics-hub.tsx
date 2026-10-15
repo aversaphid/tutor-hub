@@ -392,7 +392,7 @@ export default function RevenueAnalyticsHub({
       const endTimeStr = !isNaN(endDate.getTime()) ? endDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
 
       const studentName = s.tutee?.name || "Student";
-      const tutorName = s.tutor?.name || "Tutor";
+      const tutorName = formatTutorName(s.tutor?.name) || "Tutor";
       const hrs = getSessionDurationHours(s).toFixed(2);
       const rev = getSessionStudentPay(s).toFixed(2);
       const pay = getSessionTutorPay(s).toFixed(2);

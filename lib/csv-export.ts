@@ -1,3 +1,5 @@
+import { formatTutorName } from "./format";
+
 export interface SessionExportData {
   id: string;
   title?: string | null;
@@ -30,7 +32,7 @@ function escapeCSV(val: unknown): string {
 /**
  * Converts a list of session objects into RFC 4180 compliant CSV and triggers browser download
  */
-export function exportSessionsToCSV(sessions: SessionExportData[], filenamePrefix = "lb-maths-lessons"): void {
+export function exportSessionsToCSV(sessions: SessionExportData[], filenamePrefix = "lb-maths-lessons"): string {
   const headers = [
     "Lesson ID",
     "Lesson Title",
@@ -80,8 +82,8 @@ export function exportSessionsToCSV(sessions: SessionExportData[], filenamePrefi
       escapeCSV(endTimeStr),
       escapeCSV(durationMins),
       escapeCSV(s.tutee?.name || "Student"),
-      escapeCSV(s.tutor?.name || "Tutor"),
-      escapeCSV(s.status),
+      escapeCSV(formatTutorName(s.tutor?.name) || "Tutor"),
+      escapeCSV(s.status === "IN_PROGRESS" ? "IN PROGRESS" : s.status),
       escapeCSV(s.tutorConfirmed ? "Confirmed" : "Unconfirmed"),
       escapeCSV(s.tuteeConfirmed ? "Confirmed" : "Unconfirmed"),
       escapeCSV(s.tutorPaid ? "Paid / Settled" : "Unpaid"),
@@ -94,15 +96,20 @@ export function exportSessionsToCSV(sessions: SessionExportData[], filenamePrefi
   });
 
   const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
 
-  const dateTag = new Date().toISOString().slice(0, 10);
-  link.setAttribute("download", `${filenamePrefix}-${dateTag}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (typeof document !== "undefined") {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const dateTag = new Date().toISOString().slice(0, 10);
+    link.setAttribute("download", `${filenamePrefix}-${dateTag}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  return csvContent;
 }
