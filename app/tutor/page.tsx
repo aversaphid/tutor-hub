@@ -1026,6 +1026,7 @@ export default function TutorDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              data-tour="tutor-calculator"
               onClick={() => setIsCalculatorOpen(true)}
               className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Open Casio fx-83GTX Scientific Calculator"
@@ -1112,6 +1113,7 @@ export default function TutorDashboardPage() {
             <span className="hidden sm:inline text-xs">Upcoming Lessons ({upcomingLessonsCount})</span>
           </button>
           <button
+            data-tour="tutor-tab-resources"
             onClick={() => setActiveTab("resources")}
             className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-1.5 py-2 px-1 sm:px-4 rounded-xl text-center font-bold transition-all cursor-pointer ${activeTab === "resources"
                 ? "bg-[#48A5EE] text-white shadow-sm"

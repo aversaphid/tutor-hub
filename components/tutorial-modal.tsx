@@ -100,7 +100,7 @@ export default function TutorialModal({ isOpen, onClose, user }: TutorialModalPr
       targetSelector: '[data-tour="student-teams-card"]',
       sampleType: "teams_launcher",
       description:
-        "When it is lesson time, joining takes just one click. The Teams Meeting button unlocks automatically 5 minutes before your scheduled start time, or immediately once your tutor begins.",
+        "When it is lesson time, joining takes just one click. The Teams Meeting button unlocks automatically before your scheduled start time (typically 5 minutes before, or 10–15 minutes if configured by the administrator), or immediately once your tutor begins.",
       tips: [
         "A live ticking countdown badge displays how much time remains until start.",
         "The button opens your Microsoft Teams meeting room safely and directly.",
@@ -271,6 +271,38 @@ export default function TutorialModal({ isOpen, onClose, user }: TutorialModalPr
       tips: [
         "Search past sessions by keywords or student names to check topics covered.",
         "Keeps track of scheduled duration, times, and upcoming lesson dates.",
+      ],
+    },
+    {
+      id: "tutor-resources-tab",
+      title: "Shared Resources Library Tab",
+      badge: "Teaching Materials",
+      badgeColor: "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300",
+      icon: BookOpen,
+      targetSelector: '[data-tour="tutor-tab-resources"]',
+      description:
+        "Access past papers, worksheets, formulas, and online tools categorized with tags. You can copy direct links to send to students or upload your own math worksheets to share with the team.",
+      tips: [
+        "Filter by tags: Past Papers, Worksheets, Online Tools, Formulas & Specs, or Starters.",
+        "Quick keyword search for any topic (e.g. 'Quadratic' or 'Trigonometry').",
+        "Click 'Add Resource Link' to contribute worksheets and links to the collective library.",
+      ],
+    },
+    {
+      id: "tutor-calculator",
+      title: "Casio fx-83GTX ClassWiz Calculator",
+      badge: "Classroom Tool",
+      badgeColor: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300",
+      icon: Calculator,
+      targetSelector: '[data-tour="tutor-calculator"]',
+      sampleType: "calculator",
+      description:
+        "Full virtual Casio fx-83GT X ClassWiz calculator on screen. Features Natural Textbook Display, exact fractions and surds, S ⇔ D decimal toggling, and live interactive sync with students during calls.",
+      tips: [
+        "Natural Textbook Display: fractions, roots, powers, and π format exactly as in exams.",
+        "S ⇔ D toggle switches between exact fraction/surd form and decimals.",
+        "Live Keystroke Sync: student and tutor see the same calculations in real time.",
+        "Resizable floating modal that remembers your preferred scale across sessions.",
       ],
     },
     {

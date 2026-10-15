@@ -210,7 +210,7 @@ def build_tutor_guide_pdf(filename="docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
         [
             Paragraph("<b>Shared Resources</b>", td_style),
             Paragraph("Fourth tab (book icon)", td_style),
-            Paragraph("Download worksheets, past papers, and topic notes. You can also upload your own worksheets to share with students.", td_style)
+            Paragraph("Revision library: browse worksheets, past papers, formulas, and online tools by tag. Copy links for pupils or upload your own math worksheets.", td_style)
         ],
         [
             Paragraph("<b>Settings</b>", td_style),
@@ -222,7 +222,7 @@ def build_tutor_guide_pdf(filename="docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
     story.append(Spacer(1, 6))
 
     story.append(Paragraph("Built-In Classroom Tools (Top Header Bar)", h2_style))
-    story.append(Paragraph("• <b>fx-83GTX:</b> Full virtual scientific calculator on screen with exact fractions and roots. Great to demo calculations during lessons.", bullet_style))
+    story.append(Paragraph("• <b>fx-83GTX Virtual Calculator:</b> Complete Casio fx-83GT X ClassWiz emulator with Natural Textbook Display, exact surds and fractions, S ⇔ D decimal toggling, arrow key navigation, and real-time live sync with students during calls.", bullet_style))
     story.append(Paragraph("• <b>Formula Sheet:</b> Instant pop-up with official GCSE (Edexcel &amp; AQA) and A-Level (Edexcel, AQA &amp; OCR) formula sheets.", bullet_style))
     story.append(Paragraph("• <b>My Timetable:</b> Opens your weekly schedule grid where you can view booked slots and mark times you cannot teach.", bullet_style))
 
@@ -360,18 +360,21 @@ def build_tutor_guide_pdf(filename="docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
         body_style
     ))
 
-    story.append(Paragraph("The 5-Minute Student Unlock Rule", h2_style))
+    story.append(Paragraph("The Student Early Unlock Rule (Configurable 5–15 Mins)", h2_style))
     story.append(Paragraph(
         "Students can log into the website early to see the countdown and formula sheets, "
-        "but their <i>'Join Teams Call'</i> button will only turn blue and clickable <b>5 minutes before the lesson start time</b>. "
+        "but their <i>'Join Teams Call'</i> button will only turn blue and clickable <b>5 minutes before the lesson start time</b> "
+        "(or <b>10 or 15 minutes</b> if configured by the administrator when scheduling). "
         "This prevents children from sitting unattended in a video call before you arrive.",
         body_style
     ))
 
     story.append(Spacer(1, 4))
     story.append(make_tip_box(
-        "Teams links remember automatically",
-        "Once you paste your personal Teams meeting room link for a student, the system automatically saves it as the default for all future lessons with that student."
+        "Using the Calculator & Shared Resources in Lessons",
+        "• <b>Live-sync calculator:</b> Click <b>'fx-83GTX'</b> in the top bar. Keystrokes mirror live on your student's screen in real time.<br/>"
+        "• <b>Exact fractions &amp; surds:</b> Press <b>'S ⇔ D'</b> to toggle between exact mathematical form and decimal approximations.<br/>"
+        "• <b>Shared Resources:</b> Open the <b>'Shared Resources'</b> tab anytime to grab exam papers, worksheets, or formula sheets during lessons."
     ))
 
     story.append(PageBreak())

@@ -74,6 +74,7 @@ import CalendarSubscriptionModal from "@/components/calendar-subscription-modal"
 
 // Dynamic imports for secondary heavy modals & tabs to keep initial page bundle lean
 const SharedResourcesHub = dynamic(() => import("@/components/shared-resources-hub"), { ssr: false });
+const CasioCalculatorModal = dynamic(() => import("@/components/casio-calculator-modal"), { ssr: false });
 const UserWeeklyCalendarModal = dynamic(() => import("@/components/user-weekly-calendar-modal"), { ssr: false });
 const FindOpenSlotModal = dynamic(() => import("@/components/find-open-slot-modal"), { ssr: false });
 const RevenueAnalyticsHub = dynamic(() => import("@/components/revenue-analytics-hub"), { ssr: false });
@@ -456,8 +457,9 @@ export default function AdminPage() {
   const [completeNotes, setCompleteNotes] = useState<string>("");
   const [isSubmittingComplete, setIsSubmittingComplete] = useState<boolean>(false);
 
-  // Formula sheet modal state
+  // Formula sheet & Casio Calculator modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
   // Reschedule Modal state
   const [rescheduleTargetLesson, setRescheduleTargetLesson] = useState<any>(null);
@@ -2336,11 +2338,19 @@ export default function AdminPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setIsCalculatorOpen(true)}
+              className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
+              title="Open Casio fx-83GTX ClassWiz Scientific Calculator"
+            >
+              <Calculator className="w-4 h-4 text-[#48A5EE]" />
+              <span>fx-83GTX</span>
+            </button>
+            <button
               onClick={() => setIsFormulaSheetOpen(true)}
               className="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Open quick GCSE & A-Level Maths Formula Reference"
             >
-              <Calculator className="w-4 h-4 text-[#48A5EE]" />
+              <BookOpen className="w-4 h-4 text-[#48A5EE]" />
               <span>Formula Sheet</span>
             </button>
             <button
@@ -6396,12 +6406,12 @@ export default function AdminPage() {
             <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
               <div>
                 <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
-                  Name *
+                  {newUserRole === "TUTOR" ? "First Name *" : "Name *"}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder={newUserRole === "TUTOR" ? "e.g. Sarah Jenkins" : "e.g. Samuel Green"}
+                  placeholder={newUserRole === "TUTOR" ? "e.g. Dan" : "e.g. Samuel Green"}
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
@@ -7164,6 +7174,17 @@ export default function AdminPage() {
       <FormulaSheetModal
         isOpen={isFormulaSheetOpen}
         onClose={() => setIsFormulaSheetOpen(false)}
+      />
+
+      {/* Casio fx-83GTX Scientific Calculator Modal */}
+      <CasioCalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        sessionId={activeLesson?.id || "admin-demo"}
+        userId={currentUser?.id}
+        userName={currentUser?.name || "Admin"}
+        userRole="ADMIN"
+        peerName={activeLesson?.tutee?.name || "Student"}
       />
 
       {/* Admin Complete & Review Lesson Feedback Modal */}

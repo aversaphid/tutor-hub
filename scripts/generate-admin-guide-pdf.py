@@ -205,7 +205,7 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(Paragraph("• <b>Students:</b> Your student directory. Check student PINs, send Magic Links to parents, or add new students.", bullet_style))
     story.append(Paragraph("• <b>Tutors:</b> Your staff list. Check which students each tutor teaches, and reset tutor passwords if they forget them.", bullet_style))
     story.append(Paragraph("• <b>Revenue & Analytics:</b> Your money tab. Shows monthly totals: how much students were charged, tutor payroll, and profit.", bullet_style))
-    story.append(Paragraph("• <b>Resources:</b> Upload worksheets, links, or revision notes so students can download them.", bullet_style))
+    story.append(Paragraph("• <b>Resources:</b> Revision library hub. Upload worksheets, past papers, formulas, and tools tagged for students and staff. Admin can add, edit, or delete any resource.", bullet_style))
     story.append(Paragraph("• <b>Settings & Logs:</b> Download complete database backups or see the history log of who booked or changed lessons.", bullet_style))
 
     story.append(Spacer(1, 6))
@@ -339,8 +339,8 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
             Paragraph("If you accidentally try to book a lesson when the tutor or student is already busy (or if the tutor booked a holiday), the site will pop up a red warning so you don't clash.", td_style)
         ],
         [
-            Paragraph("<b>The 5-Minute Safety Rule</b>", td_style),
-            Paragraph("Students can open the website early to see the countdown, but the <i>'Join Teams Call'</i> button will only turn blue and clickable <b>5 minutes before the lesson starts</b>. This stops children waiting alone in video calls before a tutor arrives.", td_style)
+            Paragraph("<b>Student Unlock Rule (5, 10, or 15 Mins)</b>", td_style),
+            Paragraph("Students can open the website early to see the countdown, but the <i>'Join Teams Call'</i> button will only turn blue and clickable <b>5, 10, or 15 minutes before the lesson starts</b> (configured when scheduling, defaulting to 5 minutes). This stops children waiting alone in video calls before a tutor arrives.", td_style)
         ],
         [
             Paragraph("<b>Tutor Delay Buttons (+5m / +10m)</b>", td_style),
@@ -432,10 +432,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
 
     story.append(Paragraph("How to Add a New Tutor", h2_style))
     story.append(Paragraph("1. Open the <b>Tutors</b> tab and click <b>'Add Tutor'</b>.", num_style))
-    story.append(Paragraph("2. Type their <b>Full Name</b>.", num_style))
-    story.append(Paragraph("3. Enter their work email (e.g. <code>dan@lbmathstuition.co.uk</code>).", num_style))
-    story.append(Paragraph("4. Type a temporary password (at least 8 characters).", num_style))
-    story.append(Paragraph("5. Click <b>'Create Tutor Account'</b> and send them their login details.", num_style))
+    story.append(Paragraph("2. Type their <b>First Name</b> only (e.g. <code>Dan</code>).", num_style))
+    story.append(Paragraph("3. Type their <b>Password</b> (at least 8 characters).", num_style))
+    story.append(Paragraph("4. Click <b>'Create Tutor Account'</b> and send them their password. The system automatically sets up their account and work email (e.g. <code>dan@lbmathstuition.co.uk</code>) so no email entry is needed.", num_style))
 
     story.append(Paragraph("What Tutors Can See When They Log In", h2_style))
     tutor_rules = [
@@ -569,8 +568,8 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
         [Paragraph("Tool", th_style), Paragraph("Where it is", th_style), Paragraph("How it works", th_style)],
         [
             Paragraph("<b>Casio fx-83GT X ClassWiz</b>", td_style),
-            Paragraph("Calculator icon in top bar", td_style),
-            Paragraph("A complete virtual scientific calculator on screen. Works just like the real exam calculator with exact fractions, square roots, and π.", td_style)
+            Paragraph("Top bar (fx-83GTX)", td_style),
+            Paragraph("Exam-standard scientific calculator with Natural Textbook Display (fractions, surds, π), S ⇔ D toggle, arrow key navigation, resizable scale, and real-time live sync with students during calls.", td_style)
         ],
         [
             Paragraph("<b>Formula Sheet Hub</b>", td_style),
@@ -583,9 +582,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
             Paragraph("Shows live days and hours remaining until Summer GCSE and A-Level maths exam papers.", td_style)
         ],
         [
-            Paragraph("<b>Revision Resources</b>", td_style),
-            Paragraph("Resources tab in menu", td_style),
-            Paragraph("Upload worksheets, YouTube links, or past paper links. You can tag them by topic (like Algebra or Geometry) for students.", td_style)
+            Paragraph("<b>Shared Resources Library</b>", td_style),
+            Paragraph("Resources tab in top bar", td_style),
+            Paragraph("Central revision repository. Upload worksheets, past paper links, or videos. Tag by category (Past Papers, Worksheets, Formulas, Starters). Admin can edit or delete any resource.", td_style)
         ]
     ]
     story.append(make_clean_table(tools_list, [130, 120, 245]))
