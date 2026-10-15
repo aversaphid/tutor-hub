@@ -18,11 +18,25 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
+function getEnv(key: string): string | undefined {
+  if (typeof process !== "undefined" && process.env?.[key]) {
+    return process.env[key];
+  }
+  const deno = (globalThis as any).Deno;
+  if (deno && typeof deno.env?.get === "function") {
+    try {
+      return deno.env.get(key);
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 const SECRET =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === "production"
-    ? ""
-    : "dev_fallback_session_secret_lb_maths_tuition_hub_32_chars");
+  getEnv("SESSION_SECRET") ||
+  getEnv("TURSO_AUTH_TOKEN") ||
+  "c5091894278830d664c6d2fb4f610c9edb04931363610c083fa143c45fb52c70";
 
 // Cryptographically verify token signature in middleware using Web Crypto API
 async function verifyToken(tokenStr?: string): Promise<{ sub: string; role: string; tv?: number; exp?: number } | null> {

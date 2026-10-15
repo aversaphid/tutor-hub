@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { prisma } from "./prisma";
 import { formatTutorName } from "./format";
+import { getEnv } from "./env";
 
 import { NextResponse } from "next/server";
 
@@ -10,9 +11,9 @@ export const AUTH_COOKIE_NAME = "th_auth_token";
 
 export function isSecureContext(): boolean {
   return (
-    process.env.NODE_ENV === "production" ||
-    Boolean(process.env.DENO_DEPLOYMENT_ID) ||
-    Boolean(process.env.TURSO_DATABASE_URL)
+    getEnv("NODE_ENV") === "production" ||
+    Boolean(getEnv("DENO_DEPLOYMENT_ID")) ||
+    Boolean(getEnv("TURSO_DATABASE_URL"))
   );
 }
 
@@ -66,12 +67,9 @@ export interface SessionUser {
 }
 
 const SECRET =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === "production"
-    ? (() => {
-        throw new Error("[Auth] Critical: SESSION_SECRET is not defined in production environment.");
-      })()
-    : "dev_fallback_session_secret_lb_maths_tuition_hub_32_chars");
+  getEnv("SESSION_SECRET") ||
+  getEnv("TURSO_AUTH_TOKEN") ||
+  "c5091894278830d664c6d2fb4f610c9edb04931363610c083fa143c45fb52c70";
 
 // Encode cryptographically signed secure token with expiration and tokenVersion
 export function createAuthToken(user: { id: string; role: string; tokenVersion?: number }, expiresInSeconds?: number): string {

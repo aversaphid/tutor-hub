@@ -1,16 +1,17 @@
 import webpush from "web-push";
 import { prisma } from "./prisma";
+import { getEnv } from "./env";
 
 const VAPID_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+  getEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY") ||
   "BJdTbAtKYOQu6AlJbtqMd8a7SBtQUqlHu7dyyjtCo7eahepsCWrIIFMTmXDRwNW9AFi3RdNj76bhPUcnPBOL7Fw";
 
 const VAPID_PRIVATE_KEY =
-  process.env.VAPID_PRIVATE_KEY ||
+  getEnv("VAPID_PRIVATE_KEY") ||
   "oEtfmVjBxyOY3d5kYhINFwpM-uU3crlWw9mz1oJuFRY";
 
 const VAPID_SUBJECT =
-  process.env.VAPID_SUBJECT || "mailto:support@lbmathstuition.co.uk";
+  getEnv("VAPID_SUBJECT") || "mailto:support@lbmathstuition.co.uk";
 
 try {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);

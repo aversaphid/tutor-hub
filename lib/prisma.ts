@@ -2,20 +2,11 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
 
+import { getEnv } from "./env";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
-
-function getEnv(key: string): string | undefined {
-  if (typeof process !== "undefined" && process.env?.[key]) {
-    return process.env[key];
-  }
-  const deno = (globalThis as any).Deno;
-  if (deno && typeof deno.env?.get === "function") {
-    return deno.env.get(key);
-  }
-  return undefined;
-}
 
 function createPrismaClient() {
   const tursoUrl = getEnv("TURSO_DATABASE_URL");
