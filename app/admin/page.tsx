@@ -6072,6 +6072,41 @@ export default function AdminPage() {
             billingDurationMode={billingDurationMode}
           />
         )}
+
+        {/* Admin Dashboard User Guide Banner (Bottom of Screen) */}
+        <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] shrink-0 border border-[#48A5EE]/20 shadow-xs">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#48A5EE]/15 text-[#48A5EE]">
+                  Documentation
+                </span>
+                <span className="text-xs text-slate-400">PDF Guide • 7 Pages</span>
+              </div>
+              <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+                Admin Dashboard Usage Guide
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
+                Complete Head Tutor manual explaining lesson scheduling, interactive timetable grid, student PIN management, tutor payroll, and monthly revenue analytics.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <a
+              href="/docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Open Admin Guide (PDF)</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            </a>
+          </div>
+        </div>
       </main>
 
       {/* SCHEDULE LESSON MODAL (NO LESSON TOPIC INPUT!) */}

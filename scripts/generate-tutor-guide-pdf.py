@@ -587,6 +587,13 @@ def build_tutor_guide_pdf(filename="docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
     ))
 
     doc.build(story, canvasmaker=TutorNumberedCanvas)
+    try:
+        import shutil
+        pub_path = os.path.join("public", "docs", os.path.basename(filename))
+        os.makedirs(os.path.dirname(pub_path), exist_ok=True)
+        shutil.copyfile(filename, pub_path)
+    except Exception as e:
+        print(f"Warning: could not copy to public/docs: {e}")
     print(f"Successfully generated Word-style 6-page tutor guide: {filename}")
 
 if __name__ == "__main__":
