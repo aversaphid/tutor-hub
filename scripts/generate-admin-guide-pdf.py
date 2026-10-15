@@ -182,12 +182,12 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
         [Paragraph("Who", th_style), Paragraph("Where they go", th_style), Paragraph("What they can do", th_style)],
         [
             Paragraph("<b>Head Tutor (You)</b>", td_style),
-            Paragraph("<code>.../login</code> $\\rightarrow$ <code>/admin</code>", td_style),
+            Paragraph("<code>.../login</code> &rarr; <code>/admin</code>", td_style),
             Paragraph("Full master access. You can book lessons, view all student fees, change tutor wages, and edit any details.", td_style)
         ],
         [
             Paragraph("<b>Tutors (Staff)</b>", td_style),
-            Paragraph("<code>.../login</code> $\\rightarrow$ <code>/tutor</code>", td_style),
+            Paragraph("<code>.../login</code> &rarr; <code>/tutor</code>", td_style),
             Paragraph("Only see their own assigned students, their upcoming lessons, and how much they are owed for teaching.", td_style)
         ],
         [
