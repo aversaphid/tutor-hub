@@ -63,7 +63,7 @@ def make_tip_box(title, text, bg="#F0F4F8", border="#2B579A"):
     ]))
     return t
 
-def make_clean_table(data, col_widths):
+def make_clean_table(data, col_widths, padding=5):
     t = Table(data, colWidths=col_widths)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2B579A")), # Microsoft Word classic dark blue
@@ -72,8 +72,8 @@ def make_clean_table(data, col_widths):
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D0D5DD")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), padding),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), padding),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
@@ -201,7 +201,7 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
 
     story.append(Paragraph("What Each Tab Does (Top of the Screen)", h2_style))
     story.append(Paragraph("When logged in as Admin, you have 6 tabs along the top bar:", body_style))
-    story.append(Paragraph("• <b>Timetable:</b> Your main home screen. Shows upcoming lessons, live lessons, and past lessons. This is where you book new sessions.", bullet_style))
+    story.append(Paragraph("• <b>Timetable & Lessons:</b> Your main hub. Shows the list of upcoming lessons, active live lessons, and provides access to the interactive weekly calendar grid.", bullet_style))
     story.append(Paragraph("• <b>Students:</b> Your student directory. Check student PINs, send Magic Links to parents, or add new students.", bullet_style))
     story.append(Paragraph("• <b>Tutors:</b> Your staff list. Check which students each tutor teaches, and reset tutor passwords if they forget them.", bullet_style))
     story.append(Paragraph("• <b>Revenue & Analytics:</b> Your money tab. Shows monthly totals: how much students were charged, tutor payroll, and profit.", bullet_style))
@@ -217,9 +217,109 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 2: BOOKING & MANAGING LESSONS
+    # PAGE 2: THE INTERACTIVE TIMETABLE & CALENDAR
     # =========================================================================
-    story.append(Paragraph("Page 2: Booking & Managing Lessons", title_style))
+    story.append(Paragraph("Page 2: The Interactive Timetable & Calendar Grid", title_style))
+    story.append(Paragraph("Visual schedule, booking directly on the grid, tutor unavailability, and button reference.", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
+
+    story.append(Paragraph("What the Timetable Grid Is", h2_style))
+    story.append(Paragraph(
+        "The Timetable provides a complete weekly visual calendar (Monday to Sunday, 08:00 to 24:00). "
+        "It maps out all lessons, tutor busy hours, and booked holidays in one place with a live red line showing the current time. "
+        "Every interactive button on this screen is explained below.",
+        body_style
+    ))
+
+    story.append(Paragraph("Top Navigation Buttons", h2_style))
+    calendar_nav_table = [
+        [Paragraph("Button / Control", th_style), Paragraph("Where to find it", th_style), Paragraph("What it does", th_style)],
+        [
+            Paragraph("<b>[Timetable] Button</b>", td_style),
+            Paragraph("Top header bar (next to Formula Sheet)", td_style),
+            Paragraph("Opens the full-screen interactive weekly calendar modal from anywhere in the admin dashboard.", td_style)
+        ],
+        [
+            Paragraph("<b>Tutor / Student Filter</b>", td_style),
+            Paragraph("Top-left dropdown menu", td_style),
+            Paragraph("Switch between viewing the master schedule for <i>All Tutors</i>, an individual tutor, or a specific student.", td_style)
+        ],
+        [
+            Paragraph("<b>&lt; (Prev) and &gt; (Next)</b>", td_style),
+            Paragraph("Week navigation bar", td_style),
+            Paragraph("Shifts the entire calendar view backwards or forwards by exactly 7 days.", td_style)
+        ],
+        [
+            Paragraph("<b>[Current Week] Button</b>", td_style),
+            Paragraph("Next to date selector", td_style),
+            Paragraph("Appears when browsing past or future dates. Click it to jump straight back to today's active week.", td_style)
+        ],
+        [
+            Paragraph("<b>[X] (Close) Button</b>", td_style),
+            Paragraph("Top-right corner", td_style),
+            Paragraph("Closes the timetable popup and returns you to the standard lesson card list.", td_style)
+        ]
+    ]
+    story.append(make_clean_table(calendar_nav_table, [125, 130, 240], padding=3))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Booking Lessons Directly on the Grid", h2_style))
+    story.append(Paragraph(
+        "• <b>Click any empty slot:</b> Click any 30-minute block on the calendar to open the <i>'Quick Schedule'</i> window with that date and time pre-selected.<br/>"
+        "• <b>[5m / 10m / 15m] Buttons:</b> Chooses how early the student's blue <i>'Join Teams'</i> button turns on before the lesson.<br/>"
+        "• <b>[Schedule Lesson] Button:</b> Saves the booking. The built-in conflict engine prevents double-booking tutors or students.<br/>"
+        "• <b>Drag &amp; Drop:</b> Click and hold any lesson card on the grid, drag it to a new time or day, and release. A dashed preview shows where it will land.",
+        body_style
+    ))
+
+    story.append(Paragraph("Setting Tutor Unavailability & Holidays", h2_style))
+    unavail_table = [
+        [Paragraph("Button / Tab", th_style), Paragraph("How to use it", th_style), Paragraph("What it does", th_style)],
+        [
+            Paragraph("<b>[+ Set Unavailable / Holiday]</b>", td_style),
+            Paragraph("Amber button above calendar grid", td_style),
+            Paragraph("Opens the availability blocker modal so tutors or admins can block out unavailable teaching hours.", td_style)
+        ],
+        [
+            Paragraph("<b>[Hourly Blackout] Tab</b>", td_style),
+            Paragraph("Pick a date, start time, and end time", td_style),
+            Paragraph("Blocks out specific hours in a day (e.g. Wednesday 13:00 to 16:00). Shows as a striped block on the calendar.", td_style)
+        ],
+        [
+            Paragraph("<b>Repeat Weekly Dropdown</b>", td_style),
+            Paragraph("Select 1 to 12 weeks", td_style),
+            Paragraph("Automatically repeats the hourly blackout for up to 12 weeks so you don't have to enter it repeatedly.", td_style)
+        ],
+        [
+            Paragraph("<b>[Book Holiday] Tab</b>", td_style),
+            Paragraph("Choose start date, end date, and reason", td_style),
+            Paragraph("Marks multi-day leave (e.g. 1st Aug to 14th Aug) with an amber palm tree badge; blocks all lesson bookings during leave.", td_style)
+        ],
+        [
+            Paragraph("<b>[Copy Week &rarr; Next] Button</b>", td_style),
+            Paragraph("One-click header button", td_style),
+            Paragraph("Copies all hourly blackout blocks from this week into next week in a single click.", td_style)
+        ]
+    ]
+    story.append(make_clean_table(unavail_table, [130, 160, 205], padding=3))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Buttons Inside Calendar Cards (Managing Existing Slots)", h2_style))
+    story.append(Paragraph(
+        "• <b>[Edit Time] Button:</b> Click any lesson card and click <i>'Edit Time'</i> to change start and end times in 5-minute intervals without cancelling the lesson.<br/>"
+        "• <b>[Join Microsoft Teams] Button:</b> Directly launches the lesson's Teams video call in a new browser tab.<br/>"
+        "• <b>[Delete Lesson] Button:</b> Permanently removes the lesson from the database (asks for confirmation first).<br/>"
+        "• <b>[Copy to Future Weeks (1-4w)] Buttons:</b> When clicking an hourly blackout, duplicates the block into future weeks.<br/>"
+        "• <b>[Remove Block] Button:</b> Deletes the unavailability or holiday, immediately reopening that slot for bookings.",
+        body_style
+    ))
+
+    story.append(PageBreak())
+
+    # =========================================================================
+    # PAGE 3: BOOKING & MANAGING LESSONS
+    # =========================================================================
+    story.append(Paragraph("Page 3: Booking & Managing Lessons", title_style))
     story.append(Paragraph("How to book lessons, repeat bookings, paste Teams links, and handle delays.", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
 
@@ -268,9 +368,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 3: STUDENTS & PASSWORDS
+    # PAGE 4: STUDENTS & PASSWORDS
     # =========================================================================
-    story.append(Paragraph("Page 3: Adding Students, PINs & Magic Links", title_style))
+    story.append(Paragraph("Page 4: Adding Students, PINs & Magic Links", title_style))
     story.append(Paragraph("How students get into their lessons, fixing locked PINs, and term breaks.", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
 
@@ -324,9 +424,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 4: TUTORS & STAFF HOURS
+    # PAGE 5: TUTORS & STAFF HOURS
     # =========================================================================
-    story.append(Paragraph("Page 4: Managing Tutors & Staff Availability", title_style))
+    story.append(Paragraph("Page 5: Managing Tutors & Staff Availability", title_style))
     story.append(Paragraph("Adding tutors, resetting passwords, and managing when tutors can teach.", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
 
@@ -387,9 +487,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 5: MONEY & REPORTS
+    # PAGE 6: MONEY & REPORTS
     # =========================================================================
-    story.append(Paragraph("Page 5: Money, Rates & Monthly Reports", title_style))
+    story.append(Paragraph("Page 6: Money, Rates & Monthly Reports", title_style))
     story.append(Paragraph("How lesson pricing works, checking monthly profit, and downloading spreadsheets.", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
 
@@ -453,9 +553,9 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     story.append(PageBreak())
 
     # =========================================================================
-    # PAGE 6: EXTRA TOOLS, LOGS & BACKUPS
+    # PAGE 7: EXTRA TOOLS, LOGS & BACKUPS
     # =========================================================================
-    story.append(Paragraph("Page 6: Extra Tools, Activity Logs & Backups", title_style))
+    story.append(Paragraph("Page 7: Extra Tools, Activity Logs & Backups", title_style))
     story.append(Paragraph("Built-in calculator, exam formula sheets, checking history, and downloading backups.", subtitle_style))
     story.append(HRFlowable(width="100%", thickness=1, color=SUBTITLE_COLOR, spaceBefore=0, spaceAfter=8))
 
@@ -515,7 +615,7 @@ def build_word_style_pdf(filename="docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf")
     ))
 
     doc.build(story, canvasmaker=WordStyleNumberedCanvas)
-    print(f"Successfully generated Word-style 6-page guide: {filename}")
+    print(f"Successfully generated Word-style 7-page guide: {filename}")
 
 if __name__ == "__main__":
     out_path = "docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf"
