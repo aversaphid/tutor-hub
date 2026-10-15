@@ -1,8 +1,39 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { ExternalLink, Shield } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ExternalLink, Shield, BookOpen } from "lucide-react";
 
-export default function Footer() {
+interface FooterProps {
+  guideUrl?: string;
+  guideLabel?: string;
+  guideTourId?: string;
+}
+
+export default function Footer({
+  guideUrl,
+  guideLabel,
+  guideTourId,
+}: FooterProps = {}) {
+  const pathname = usePathname();
+
+  let resolvedGuideUrl = guideUrl;
+  let resolvedGuideLabel = guideLabel;
+  let resolvedTourId = guideTourId;
+
+  if (!resolvedGuideUrl && pathname) {
+    if (pathname.startsWith("/admin")) {
+      resolvedGuideUrl = "/docs/LB_Maths_Tuition_Admin_Usage_Guide.pdf";
+      resolvedGuideLabel = "Admin Guide";
+      resolvedTourId = "admin-user-guide";
+    } else if (pathname.startsWith("/tutor")) {
+      resolvedGuideUrl = "/docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf";
+      resolvedGuideLabel = "Tutor Guide";
+      resolvedTourId = "tutor-user-guide";
+    }
+  }
+
   return (
     <footer className="w-full border-t border-slate-200/80 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm py-5 px-4 sm:px-6 transition-colors duration-200 mt-auto">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
@@ -38,8 +69,23 @@ export default function Footer() {
           </Link>
         </div>
 
-        {/* External source code link */}
-        <div className="flex items-center gap-4">
+        {/* External links & user guide */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {resolvedGuideUrl && (
+            <a
+              href={resolvedGuideUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-tour={resolvedTourId}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-[#48A5EE] hover:text-white bg-[#48A5EE]/10 hover:bg-[#48A5EE] border border-[#48A5EE]/30 hover:border-[#48A5EE] transition-all duration-150 group shadow-xs cursor-pointer"
+              title={`Open ${resolvedGuideLabel} (PDF)`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#48A5EE] group-hover:text-white transition-colors" />
+              <span>{resolvedGuideLabel}</span>
+              <ExternalLink className="w-3 h-3 text-[#48A5EE]/70 group-hover:text-white/80 transition-colors" />
+            </a>
+          )}
+
           <a
             href="https://github.com/aversaphid/tutor-hub"
             target="_blank"

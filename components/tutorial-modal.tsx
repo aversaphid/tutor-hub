@@ -304,16 +304,17 @@ export default function TutorialModal({ isOpen, onClose, user }: TutorialModalPr
     {
       id: "tutor-user-guide",
       title: "Tutor Usage Guide (PDF Manual)",
-      badge: "Bottom of Page",
+      badge: "Bottom Footer Tab",
       badgeColor: "bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300",
       icon: BookOpen,
       targetSelector: '[data-tour="tutor-user-guide"]',
       description:
-        "Need a handy reference manual? Scroll towards the bottom of your screen anytime and click 'Open Tutor Guide (PDF)' to view or download the comprehensive 6-page tutor guide.",
+        "At the very bottom of your screen in the footer tab next to 'View Source Code', click the 'Tutor Guide' button anytime to view or download the comprehensive 6-page tutor guide.",
       tips: [
+        "Located right next to 'View Source Code' at the bottom of the page.",
+        "Opens in a new browser tab ready to print or save to your computer.",
         "Covers Microsoft Teams links, 5m/10m delay notices, lesson notes, and student PIN resets.",
         "Includes the 5-Minute Routine Checklist to keep your teaching organized.",
-        "Opens directly in a new tab so you can save or print it for offline reference.",
       ],
     },
   ];

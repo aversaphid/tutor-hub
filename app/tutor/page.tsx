@@ -3238,43 +3238,6 @@ export default function TutorDashboardPage() {
           </div>
         )}
 
-        {/* Tutor Portal User Guide Banner (Bottom of Screen) */}
-        <div
-          data-tour="tutor-user-guide"
-          className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors"
-        >
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-[#48A5EE]/10 text-[#48A5EE] shrink-0 border border-[#48A5EE]/20 shadow-xs">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#48A5EE]/15 text-[#48A5EE]">
-                  Documentation
-                </span>
-                <span className="text-xs text-slate-400">PDF Guide • 6 Pages</span>
-              </div>
-              <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
-                Tutor Portal Usage Guide
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
-                Need a quick refresher? Open the complete staff manual covering live lesson controls, Teams links, delay notices, student PINs, and availability.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            <a
-              href="/docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Open Tutor Guide (PDF)</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-            </a>
-          </div>
-        </div>
       </main>
 
       {/* Tutor Completion Modal */}
@@ -3419,7 +3382,11 @@ export default function TutorDashboardPage() {
         subtitle="Subscribe your phone or computer calendar to your teaching schedule. Changes, reschedules, or new bookings sync automatically."
       />
 
-      <Footer />
+      <Footer
+        guideUrl="/docs/LB_Maths_Tuition_Tutor_Usage_Guide.pdf"
+        guideLabel="Tutor Guide"
+        guideTourId="tutor-user-guide"
+      />
     </div>
   );
 }
