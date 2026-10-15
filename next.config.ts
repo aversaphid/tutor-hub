@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   turbopack: {},
   output: "standalone",
-  compress: true,
+  compress: false, // Deno Deploy edge proxy already handles gzip/brotli; disabling internal compression saves memory on 512MB limit
   typescript: {
     ignoreBuildErrors: false,
   },

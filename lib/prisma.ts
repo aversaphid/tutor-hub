@@ -30,7 +30,7 @@ function createPrismaClient() {
       fetch: (input: any, init: any) =>
         fetch(input, {
           ...init,
-          keepalive: true,
+          keepalive: false, // Prevents dead TCP socket reuse after serverless isolate sleep/freeze
         }),
     });
     const adapter = new PrismaLibSQL(libsql);

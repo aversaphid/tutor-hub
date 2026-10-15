@@ -71,108 +71,113 @@ async function verifyToken(tokenStr?: string): Promise<{ sub: string; role: stri
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  try {
+    const { pathname } = request.nextUrl;
 
-  // 1. CSRF Protection for state-changing API requests
-  if (pathname.startsWith("/api") && MUTATING_METHODS.has(request.method)) {
-    const origin = request.headers.get("origin");
-    const referer = request.headers.get("referer");
-    const hostHeader = request.headers.get("host");
-    const forwardedHost = request.headers.get("x-forwarded-host");
+    // 1. CSRF Protection for state-changing API requests
+    if (pathname.startsWith("/api") && MUTATING_METHODS.has(request.method)) {
+      const origin = request.headers.get("origin");
+      const referer = request.headers.get("referer");
+      const hostHeader = request.headers.get("host");
+      const forwardedHost = request.headers.get("x-forwarded-host");
 
-    const cleanHost = (host: string) => host.split(":")[0].toLowerCase().trim();
-    const allowedHost = hostHeader ? cleanHost(hostHeader) : "";
-    const allowedForwarded = forwardedHost ? cleanHost(forwardedHost) : "";
+      const cleanHost = (host: string) => host.split(":")[0].toLowerCase().trim();
+      const allowedHost = hostHeader ? cleanHost(hostHeader) : "";
+      const allowedForwarded = forwardedHost ? cleanHost(forwardedHost) : "";
 
-    const matchesAllowedHost = (hostname: string) => {
-      const clean = cleanHost(hostname);
-      if (!clean) return false;
-      if (clean === "localhost" || clean === "127.0.0.1") return true;
-      if (allowedHost && clean === allowedHost) return true;
-      if (allowedForwarded && clean === allowedForwarded) return true;
-      return false;
-    };
+      const matchesAllowedHost = (hostname: string) => {
+        const clean = cleanHost(hostname);
+        if (!clean) return false;
+        if (clean === "localhost" || clean === "127.0.0.1") return true;
+        if (allowedHost && clean === allowedHost) return true;
+        if (allowedForwarded && clean === allowedForwarded) return true;
+        return false;
+      };
 
-    if (origin) {
-      try {
-        const originUrl = new URL(origin);
-        if (!matchesAllowedHost(originUrl.host)) {
+      if (origin) {
+        try {
+          const originUrl = new URL(origin);
+          if (!matchesAllowedHost(originUrl.host)) {
+            return applySecurityHeaders(
+              NextResponse.json(
+                { error: "Forbidden: Cross-site request rejected (Origin mismatch)." },
+                { status: 403 }
+              )
+            );
+          }
+        } catch {
           return applySecurityHeaders(
             NextResponse.json(
-              { error: "Forbidden: Cross-site request rejected (Origin mismatch)." },
+              { error: "Forbidden: Invalid Origin header." },
               { status: 403 }
             )
           );
         }
-      } catch {
-        return applySecurityHeaders(
-          NextResponse.json(
-            { error: "Forbidden: Invalid Origin header." },
-            { status: 403 }
-          )
-        );
-      }
-    } else if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        if (!matchesAllowedHost(refererUrl.host)) {
+      } else if (referer) {
+        try {
+          const refererUrl = new URL(referer);
+          if (!matchesAllowedHost(refererUrl.host)) {
+            return applySecurityHeaders(
+              NextResponse.json(
+                { error: "Forbidden: Cross-site request rejected (Referer mismatch)." },
+                { status: 403 }
+              )
+            );
+          }
+        } catch {
           return applySecurityHeaders(
             NextResponse.json(
-              { error: "Forbidden: Cross-site request rejected (Referer mismatch)." },
+              { error: "Forbidden: Invalid Referer header." },
               { status: 403 }
             )
           );
         }
-      } catch {
-        return applySecurityHeaders(
-          NextResponse.json(
-            { error: "Forbidden: Invalid Referer header." },
-            { status: 403 }
-          )
-        );
       }
     }
+
+    const token = request.cookies.get("th_auth_token")?.value;
+    const payload = await verifyToken(token);
+
+    // 2. Guard /admin routes (Head Tutor only)
+    if (pathname.startsWith("/admin")) {
+      if (!payload) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", "/admin");
+        return applySecurityHeaders(NextResponse.redirect(loginUrl));
+      }
+      if (payload.role !== "HEAD_TUTOR") {
+        return applySecurityHeaders(NextResponse.redirect(new URL("/tutor", request.url)));
+      }
+    }
+
+    // 3. Guard /tutor routes (Head Tutor or Tutor)
+    if (pathname.startsWith("/tutor")) {
+      if (!payload) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", "/tutor");
+        return applySecurityHeaders(NextResponse.redirect(loginUrl));
+      }
+      if (payload.role !== "HEAD_TUTOR" && payload.role !== "TUTOR") {
+        return applySecurityHeaders(NextResponse.redirect(new URL("/student", request.url)));
+      }
+    }
+
+    // 4. Guard /student routes
+    if (pathname.startsWith("/student")) {
+      // If arriving via magic link with query key, let client page complete exchange
+      if (request.nextUrl.searchParams.has("key")) {
+        return applySecurityHeaders(NextResponse.next());
+      }
+      if (!payload) {
+        return applySecurityHeaders(NextResponse.redirect(new URL("/", request.url)));
+      }
+    }
+
+    return applySecurityHeaders(NextResponse.next());
+  } catch (error) {
+    console.error("[Proxy Middleware Unhandled Error]:", error);
+    return applySecurityHeaders(NextResponse.next());
   }
-
-  const token = request.cookies.get("th_auth_token")?.value;
-  const payload = await verifyToken(token);
-
-  // 2. Guard /admin routes (Head Tutor only)
-  if (pathname.startsWith("/admin")) {
-    if (!payload) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", "/admin");
-      return applySecurityHeaders(NextResponse.redirect(loginUrl));
-    }
-    if (payload.role !== "HEAD_TUTOR") {
-      return applySecurityHeaders(NextResponse.redirect(new URL("/tutor", request.url)));
-    }
-  }
-
-  // 3. Guard /tutor routes (Head Tutor or Tutor)
-  if (pathname.startsWith("/tutor")) {
-    if (!payload) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", "/tutor");
-      return applySecurityHeaders(NextResponse.redirect(loginUrl));
-    }
-    if (payload.role !== "HEAD_TUTOR" && payload.role !== "TUTOR") {
-      return applySecurityHeaders(NextResponse.redirect(new URL("/student", request.url)));
-    }
-  }
-
-  // 4. Guard /student routes
-  if (pathname.startsWith("/student")) {
-    // If arriving via magic link with query key, let client page complete exchange
-    if (request.nextUrl.searchParams.has("key")) {
-      return applySecurityHeaders(NextResponse.next());
-    }
-    if (!payload) {
-      return applySecurityHeaders(NextResponse.redirect(new URL("/", request.url)));
-    }
-  }
-
-  return applySecurityHeaders(NextResponse.next());
 }
 
 export { proxy as middleware };
