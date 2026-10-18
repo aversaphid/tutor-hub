@@ -6,7 +6,8 @@ import Footer from "@/components/footer";
 import ChangePasswordModal from "@/components/change-password-modal";
 import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
-import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
+import { downloadMultiEventICS, getCanonicalPortalUrl, CalendarEvent } from "@/lib/calendar";
+import { parseEmailList } from "@/lib/email-utils";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import {
@@ -2082,17 +2083,24 @@ export default function AdminPage() {
       return;
     }
 
-    const portalUrl = window.location.origin;
-    const events: CalendarEvent[] = weekSessions.map((s) => ({
-      id: s.id,
-      title: `${s.title} (${s.tutee?.name || "Student"} & ${formatTutorName(s.tutor?.name)})`,
-      description: `LB Maths Tuition Lesson.\nTutor: ${formatTutorName(s.tutor?.name)}\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nNotes: ${s.notes || "None"}`,
-      location: s.teamsMeetingUrl || `${portalUrl}/admin`,
-      startTime: s.scheduledStartTime,
-      endTime: s.scheduledEndTime,
-      tutorName: formatTutorName(s.tutor?.name) || "Tutor",
-      studentName: s.tutee?.name,
-    }));
+    const portalUrl = getCanonicalPortalUrl();
+    const events: CalendarEvent[] = weekSessions.map((s) => {
+      const studentDirectUrl = s.tutee?.magicKey
+        ? `${portalUrl}/student?key=${encodeURIComponent(s.tutee.magicKey)}`
+        : `${portalUrl}/student`;
+      return {
+        id: s.id,
+        title: `${s.title} (${s.tutee?.name || "Student"} & ${formatTutorName(s.tutor?.name)})`,
+        description: `LB Maths Tuition Lesson.\nTutor: ${formatTutorName(s.tutor?.name)}\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nStudent Direct Link: ${studentDirectUrl}\nNotes: ${s.notes || "None"}`,
+        location: s.teamsMeetingUrl || `${portalUrl}/admin`,
+        url: s.teamsMeetingUrl || `${portalUrl}/admin`,
+        startTime: s.scheduledStartTime,
+        endTime: s.scheduledEndTime,
+        tutorName: formatTutorName(s.tutor?.name) || "Tutor",
+        studentName: s.tutee?.name,
+        studentMagicKey: s.tutee?.magicKey || undefined,
+      };
+    });
 
     const dateSlug = monday.toISOString().slice(0, 10);
     downloadMultiEventICS(events, `lb-maths-week-${dateSlug}.ics`);
@@ -2136,7 +2144,7 @@ export default function AdminPage() {
 
   const copyMagicLink = async (key?: string | null) => {
     if (!key) return;
-    const url = `${window.location.origin}/student?key=${key}`;
+    const url = `${getCanonicalPortalUrl()}/student?key=${encodeURIComponent(key)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedKey(key);
@@ -2973,10 +2981,13 @@ export default function AdminPage() {
             return true;
           });
 
-          // Sort function
-          const sortList = (list: any[]) => {
+          // Sort function: for past/archived lessons, "soonest" defaults to closest in time (most recent first)
+          const sortList = (list: any[], isPast = false) => {
             return [...list].sort((a, b) => {
               if (lessonSortBy === "soonest") {
+                if (isPast) {
+                  return new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime();
+                }
                 return new Date(a.scheduledStartTime).getTime() - new Date(b.scheduledStartTime).getTime();
               }
               if (lessonSortBy === "newest") {
@@ -3004,7 +3015,8 @@ export default function AdminPage() {
               const endMs = new Date(s.scheduledEndTime).getTime();
               const isDone = s.status === "COMPLETED" || s.status === "CANCELLED";
               return !s.tutorPaid && !isDone && endMs > nowMs;
-            })
+            }),
+            false
           );
 
           // 2. Completed (Tutor Not Paid): strictly unpaid, NOT cancelled, and (completed OR scheduled end time has passed)
@@ -3013,7 +3025,8 @@ export default function AdminPage() {
               const endMs = new Date(s.scheduledEndTime).getTime();
               const isDoneOrPassed = s.status === "COMPLETED" || endMs <= nowMs;
               return !s.tutorPaid && s.status !== "CANCELLED" && isDoneOrPassed;
-            })
+            }),
+            true
           );
 
           // Total payout sum for all completed unpaid lessons
@@ -3056,12 +3069,14 @@ export default function AdminPage() {
 
           // 3. Archived (Tutor Paid): tutorPaid === true
           const archivedPaidList = sortList(
-            filtered.filter((s) => s.tutorPaid)
+            filtered.filter((s) => s.tutorPaid),
+            true
           );
 
           // 4. Cancelled: status === "CANCELLED"
           const cancelledList = sortList(
-            filtered.filter((s) => s.status === "CANCELLED")
+            filtered.filter((s) => s.status === "CANCELLED"),
+            true
           );
 
           return (
@@ -4903,18 +4918,50 @@ export default function AdminPage() {
                                 </span>
                               ) : null}
                             </div>
-                            {(st.parentEmail || st.email) && (
-                              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-                                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                                <a
-                                  href={`mailto:${st.parentEmail || st.email}`}
-                                  className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px]"
-                                  title={`Contact Parent/Guardian: ${st.parentEmail || st.email}`}
-                                >
-                                  {st.parentEmail || st.email}
-                                </a>
-                              </div>
-                            )}
+                            {(() => {
+                              const emailList = parseEmailList(st.parentEmail || st.email);
+                              if (emailList.length === 0) return null;
+                              if (emailList.length === 1) {
+                                return (
+                                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                                    <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <a
+                                      href={`mailto:${emailList[0]}`}
+                                      className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px]"
+                                      title={`Contact Parent/Guardian: ${emailList[0]}`}
+                                    >
+                                      {emailList[0]}
+                                    </a>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="flex flex-col gap-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                                  <div className="flex items-center gap-1">
+                                    <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
+                                    <a
+                                      href={`mailto:${emailList.join(",")}`}
+                                      className="text-[10px] font-semibold text-[#48A5EE] hover:underline"
+                                      title={`Email all ${emailList.length} addresses: ${emailList.join(", ")}`}
+                                    >
+                                      Email All ({emailList.length})
+                                    </a>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {emailList.map((em, idx) => (
+                                      <a
+                                        key={idx}
+                                        href={`mailto:${em}`}
+                                        className="hover:text-[#48A5EE] hover:underline text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md truncate max-w-[140px]"
+                                        title={`Contact: ${em}`}
+                                      >
+                                        {em}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                             {st.parentPhone && (
                               <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                                 <Phone className="w-3 h-3 text-slate-400 shrink-0" />
@@ -6457,16 +6504,16 @@ export default function AdminPage() {
                 <>
                   <div>
                     <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
-                      Parent / Guardian Email (Optional)
+                      Parent / Guardian Email(s) (Optional)
                     </label>
                     <input
-                      type="email"
-                      placeholder="e.g. parent@example.com"
+                      type="text"
+                      placeholder="e.g. mum@example.com, dad@example.com"
                       value={newUserParentEmail}
                       onChange={(e) => setNewUserParentEmail(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                     />
-                    <span className="text-[10px] text-slate-400">For lesson notices & coordination. Student logs in via PIN.</span>
+                    <span className="text-[10px] text-slate-400">Separate multiple emails with commas (e.g. both parents). Student logs in via PIN.</span>
                   </div>
 
                   <div>
@@ -6685,16 +6732,16 @@ export default function AdminPage() {
 
               <div>
                 <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1">
-                  Parent / Guardian Email
+                  Parent / Guardian Email(s)
                 </label>
                 <input
-                  type="email"
-                  placeholder="e.g. parent@example.com"
+                  type="text"
+                  placeholder="e.g. mum@example.com, dad@example.com"
                   value={editStudentParentEmail}
                   onChange={(e) => setEditStudentParentEmail(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#48A5EE]"
                 />
-                <span className="text-[10px] text-slate-400">Used for session notices & tutor coordination.</span>
+                <span className="text-[10px] text-slate-400">Separate multiple emails with commas (e.g. for both parents).</span>
               </div>
 
               <div>

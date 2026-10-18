@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseAuthToken } from "@/lib/auth";
 import { formatTutorName } from "@/lib/format";
+import { getCanonicalPortalUrl, getCanonicalPortalHost } from "@/lib/calendar";
 import crypto from "crypto";
 
 function formatDateToICS(date: Date): string {
@@ -54,6 +55,16 @@ export async function GET(request: Request) {
       });
     }
 
+    // Lazily ensure tutee user has a magicKey
+    let studentUserMagicKey = user.magicKey;
+    if (user.role === "TUTEE" && !studentUserMagicKey) {
+      studentUserMagicKey = crypto.randomBytes(16).toString("hex");
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { magicKey: studentUserMagicKey },
+      }).catch(() => {});
+    }
+
     // 2. Fetch active sessions within a 120-day active window (30 days past, 90 days future)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000);
     const ninetyDaysAhead = new Date(Date.now() + 90 * 24 * 3600 * 1000);
@@ -80,7 +91,7 @@ export async function GET(request: Request) {
       where,
       include: {
         tutor: { select: { name: true } },
-        tutee: { select: { name: true } },
+        tutee: { select: { id: true, name: true, magicKey: true } },
       },
       orderBy: { scheduledStartTime: "asc" },
     });
@@ -144,8 +155,8 @@ export async function GET(request: Request) {
         ? `LB Maths Tuition - ${user.name}`
         : `LB Maths Tuition - ${user.name}`;
 
-    const host = request.headers.get("host") || "lbmathstuition.co.uk";
-    const portalUrl = `https://${host}`;
+    const portalUrl = getCanonicalPortalUrl(request);
+    const portalHost = getCanonicalPortalHost(request);
 
     const vEvents = sessions.map((s) => {
       const start = new Date(s.scheduledStartTime);
@@ -155,6 +166,13 @@ export async function GET(request: Request) {
 
       const tutorName = formatTutorName(s.tutor?.name) || "Tutor";
       const studentName = s.tutee?.name || "Student";
+      const thisStudentMagicKey =
+        user.role === "TUTEE"
+          ? (studentUserMagicKey || s.tutee?.magicKey)
+          : s.tutee?.magicKey;
+      const studentDirectUrl = thisStudentMagicKey
+        ? `${portalUrl}/student?key=${encodeURIComponent(thisStudentMagicKey)}`
+        : `${portalUrl}/student`;
 
       let summary = `Maths Lesson: ${studentName}`;
       if (user.role === "TUTEE") {
@@ -168,29 +186,49 @@ export async function GET(request: Request) {
         `Student: ${studentName}`,
         `Tutor: ${tutorName}`,
         s.studentTopic ? `Topic: ${s.studentTopic}` : null,
+        user.role === "TUTEE"
+          ? `Direct Student Portal: ${studentDirectUrl}`
+          : `Portal Lobby: ${portalUrl}/${user.role === "TUTOR" ? "tutor" : "admin"}`,
+        user.role !== "TUTEE" && thisStudentMagicKey
+          ? `Student Direct Link: ${studentDirectUrl}`
+          : null,
         s.teamsMeetingUrl ? `Teams Meeting Link: ${s.teamsMeetingUrl}` : null,
-        `Portal Lobby: ${portalUrl}/${user.role === "TUTEE" ? "student" : user.role === "TUTOR" ? "tutor" : "admin"}`,
         s.notes ? `Notes: ${s.notes}` : null,
       ]
         .filter(Boolean)
         .join("\\n");
 
       const cleanSummary = summary.replace(/\n/g, " ");
-      const location = (s.teamsMeetingUrl || `${portalUrl}/student`).replace(/\n/g, " ");
+      const location = (
+        user.role === "TUTEE"
+          ? (s.teamsMeetingUrl || studentDirectUrl)
+          : (s.teamsMeetingUrl || `${portalUrl}/tutor`)
+      ).replace(/\n/g, " ");
+
+      const eventUrl =
+        user.role === "TUTEE"
+          ? studentDirectUrl
+          : (s.teamsMeetingUrl || `${portalUrl}/${user.role === "TUTOR" ? "tutor" : "admin"}`);
+
+      const alarmDescription =
+        user.role === "TUTEE"
+          ? `Maths lesson starting in 15 mins - Tap to join: ${studentDirectUrl}`
+          : "Maths lesson starting in 15 minutes";
 
       return [
         "BEGIN:VEVENT",
-        `UID:session-${s.id}@${host}`,
+        `UID:session-${s.id}@${portalHost}`,
         `DTSTAMP:${formattedStamp}`,
         `DTSTART:${formattedStart}`,
         `DTEND:${formattedEnd}`,
         `SUMMARY:${cleanSummary}`,
         `DESCRIPTION:${descLines}`,
         `LOCATION:${location}`,
+        `URL:${eventUrl}`,
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
         "ACTION:DISPLAY",
-        "DESCRIPTION:Maths lesson starting in 15 minutes",
+        `DESCRIPTION:${alarmDescription}`,
         "TRIGGER:-PT15M",
         "END:VALARM",
         "END:VEVENT",

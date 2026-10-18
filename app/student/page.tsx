@@ -7,6 +7,7 @@ import Footer from "@/components/footer";
 import CountdownTimer from "@/components/countdown-timer";
 import TeamsLauncher from "@/components/teams-launcher";
 import AddToCalendar from "@/components/add-to-calendar";
+import { parseEmailList } from "@/lib/email-utils";
 import {
   Calendar,
   ArrowLeft,
@@ -415,10 +416,10 @@ function StudentLobbyContent() {
           </div>
           <div className="min-w-0">
             <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block truncate">
-              Parent / Guardian Contact Email
+              Parent / Guardian Contact Emails
             </span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
-              Tutors use this to share lesson updates &amp; notes
+              Tutors use this to share lesson updates &amp; notes. Separate multiple emails with commas.
             </span>
           </div>
         </div>
@@ -441,7 +442,7 @@ function StudentLobbyContent() {
       {parentEmailSaved && (
         <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in">
           <Check className="w-3.5 h-3.5 shrink-0" />
-          <span>Parent contact email saved successfully!</span>
+          <span>Parent contact email(s) saved successfully!</span>
         </div>
       )}
 
@@ -456,10 +457,10 @@ function StudentLobbyContent() {
         <form onSubmit={handleSaveParentEmail} className="space-y-2 pt-1">
           <div className="flex gap-2">
             <input
-              type="email"
+              type="text"
               value={parentEmailInput}
               onChange={(e) => setParentEmailInput(e.target.value)}
-              placeholder="parent@example.com"
+              placeholder="e.g. mum@example.com, dad@example.com"
               autoFocus
               className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-[#48A5EE] transition-colors"
             />
@@ -489,18 +490,31 @@ function StudentLobbyContent() {
             </button>
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500">
-            For parent updates &amp; lesson coordination. Login continues with your 4-digit PIN.
+            You can add several emails separated by commas (e.g. both parents).
           </p>
         </form>
       ) : (
         <div className="flex items-center justify-between text-xs pt-0.5">
-          <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
-            {currentUser?.parentEmail || currentUser?.email || (
-              <span className="italic text-slate-400 font-normal">No parent email registered yet</span>
-            )}
-          </span>
+          {(() => {
+            const list = parseEmailList(currentUser?.parentEmail || currentUser?.email);
+            if (list.length === 0) {
+              return <span className="italic text-slate-400 font-normal">No parent email registered yet</span>;
+            }
+            return (
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                {list.map((em, idx) => (
+                  <span
+                    key={idx}
+                    className="font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg text-xs"
+                  >
+                    {em}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
           {(currentUser?.parentEmail || currentUser?.email) && (
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 shrink-0">
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
               Registered
             </span>
           )}
@@ -659,7 +673,12 @@ function StudentLobbyContent() {
                   <span>Casio fx-83GTX</span>
                 </button>
                 <div data-tour="student-calendar" className="shrink-0">
-                  <AddToCalendar session={activeSession} label="Add to Calendar" />
+                  <AddToCalendar
+                    session={activeSession}
+                    studentMagicKey={magicKey || currentUser?.magicKey}
+                    userRole="TUTEE"
+                    label="Add to Calendar"
+                  />
                 </div>
               </div>
             </div>
@@ -878,7 +897,12 @@ function StudentLobbyContent() {
                               })}
                             </p>
                           </div>
-                          <AddToCalendar session={session} compact />
+                          <AddToCalendar
+                            session={session}
+                            studentMagicKey={magicKey || currentUser?.magicKey}
+                            userRole="TUTEE"
+                            compact
+                          />
                         </div>
                       ))}
                     </div>
@@ -984,7 +1008,12 @@ function StudentLobbyContent() {
                           })}
                         </p>
                       </div>
-                      <AddToCalendar session={s} compact />
+                      <AddToCalendar
+                        session={s}
+                        compact
+                        studentMagicKey={magicKey || currentUser?.magicKey}
+                        userRole="TUTEE"
+                      />
                     </div>
                   ))}
                 </div>

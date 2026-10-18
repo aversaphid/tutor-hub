@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
-import { downloadICS, getGoogleCalendarUrl, CalendarEvent } from "@/lib/calendar";
+import { downloadICS, getGoogleCalendarUrl, getCanonicalPortalUrl, CalendarEvent } from "@/lib/calendar";
 import { formatTutorName } from "@/lib/format";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 
@@ -23,13 +23,21 @@ interface AddToCalendarProps {
     teamsMeetingUrl?: string | null;
     notes?: string | null;
     tutor?: { name: string } | null;
-    tutee?: { name: string } | null;
+    tutee?: { id?: string; name: string; magicKey?: string | null } | null;
   };
   compact?: boolean;
   label?: string;
+  studentMagicKey?: string | null;
+  userRole?: "TUTEE" | "TUTOR" | "ADMIN";
 }
 
-export default function AddToCalendar({ session, compact = false, label }: AddToCalendarProps) {
+export default function AddToCalendar({
+  session,
+  compact = false,
+  label,
+  studentMagicKey,
+  userRole,
+}: AddToCalendarProps) {
   const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -40,17 +48,49 @@ export default function AddToCalendar({ session, compact = false, label }: AddTo
 
   const tutorName = formatTutorName(session.tutor?.name) || "Tutor";
   const studentName = formatTutorName(session.tutee?.name) || "Student";
-  const portalUrl = typeof window !== "undefined" ? window.location.origin : "https://lbmathstuition.co.uk";
+  const portalUrl = getCanonicalPortalUrl();
+
+  const magicKey = studentMagicKey || session.tutee?.magicKey;
+  const isStudent = userRole === "TUTEE" || Boolean(studentMagicKey);
+  const studentDirectUrl = magicKey
+    ? `${portalUrl}/student?key=${encodeURIComponent(magicKey)}`
+    : `${portalUrl}/student`;
+
+  const descLines = [
+    `Online Maths Tuition Session with LB Maths Tuition.`,
+    `Tutor: ${tutorName}`,
+    `Student: ${studentName}`,
+    isStudent
+      ? `Direct Student Portal: ${studentDirectUrl}`
+      : `Portal Lobby: ${portalUrl}/tutor`,
+    !isStudent && magicKey
+      ? `Student Direct Link: ${studentDirectUrl}`
+      : null,
+    session.teamsMeetingUrl
+      ? `Teams Meeting Link: ${session.teamsMeetingUrl}`
+      : `Teams Meeting Link: Available in portal lobby`,
+    session.notes ? `Notes: ${session.notes}` : null,
+  ].filter(Boolean);
+
+  const location = (
+    isStudent
+      ? (session.teamsMeetingUrl || studentDirectUrl)
+      : (session.teamsMeetingUrl || `${portalUrl}/tutor`)
+  ).replace(/\n/g, " ");
 
   const calendarEvent: CalendarEvent = {
     id: session.id,
-    title: `Maths Tuition: ${studentName} & ${tutorName}`,
-    description: `Online Maths Tuition Session with LB Maths Tuition.\n\nTutor: ${tutorName}\nStudent: ${studentName}\n\nJoin Lesson Lobby: ${portalUrl}\nTeams Link: ${session.teamsMeetingUrl || "Available in portal lobby"}`,
-    location: session.teamsMeetingUrl || `${portalUrl}/student`,
+    title: isStudent
+      ? `Maths Lesson with ${tutorName}`
+      : `Maths Tuition: ${studentName} & ${tutorName}`,
+    description: descLines.join("\n\n"),
+    location,
+    url: isStudent ? studentDirectUrl : (session.teamsMeetingUrl || `${portalUrl}/tutor`),
     startTime: session.scheduledStartTime,
     endTime: session.scheduledEndTime,
     tutorName,
     studentName,
+    studentMagicKey: magicKey,
   };
 
   const startTimeDate = new Date(session.scheduledStartTime);
@@ -257,6 +297,7 @@ export default function AddToCalendar({ session, compact = false, label }: AddTo
       <CalendarSubscriptionModal
         isOpen={isSubModalOpen}
         onClose={() => setIsSubModalOpen(false)}
+        magicKey={magicKey || undefined}
       />
     </>
   );

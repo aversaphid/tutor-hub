@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
+import { getCanonicalPortalHost } from "@/lib/calendar";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const host = request.headers.get("host") || "lbmathstuition.co.uk";
+    const host = getCanonicalPortalHost(request);
     const protocol = host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https";
     const httpsUrl = `${protocol}://${host}/api/calendar/subscribe?key=${magicKey}`;
     const webcalUrl = `webcal://${host}/api/calendar/subscribe?key=${magicKey}`;

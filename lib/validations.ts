@@ -48,6 +48,8 @@ export const MagicKeySchema = z
   .trim()
   .regex(/^[A-Za-z0-9-_]{6,64}$/, "Invalid magic link format");
 
+import { validateMultiEmails } from "./email-utils";
+
 // User creation/update
 export const CreateUserSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -66,7 +68,15 @@ export const CreateUserSchema = z.object({
   assignedTutorId: z.string().optional().nullable(),
   studentPay: z.number().min(0, "Student pay must be 0 or more").optional().nullable(),
   tutorPay: z.number().min(0, "Tutor pay must be 0 or more").optional().nullable(),
-  parentEmail: z.string().trim().email("Invalid email address").optional().nullable().or(z.literal("")),
+  parentEmail: z
+    .string()
+    .trim()
+    .refine((val) => !val || validateMultiEmails(val).valid, {
+      message: "Please provide valid email address(es). Separate multiple emails with commas.",
+    })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   parentPhone: z.string().trim().max(30, "Phone number is too long").optional().nullable().or(z.literal("")),
 });
 
@@ -89,7 +99,15 @@ export const UpdateStudentSchema = z.object({
   assignedTutorId: z.string().nullable().optional(),
   studentPay: z.number().min(0).nullable().optional(),
   tutorPay: z.number().min(0).nullable().optional(),
-  parentEmail: z.string().trim().email("Invalid email address").optional().nullable().or(z.literal("")),
+  parentEmail: z
+    .string()
+    .trim()
+    .refine((val) => !val || validateMultiEmails(val).valid, {
+      message: "Please provide valid email address(es). Separate multiple emails with commas.",
+    })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   parentPhone: z.string().trim().max(30, "Phone number is too long").optional().nullable().or(z.literal("")),
   pin: z
     .string()

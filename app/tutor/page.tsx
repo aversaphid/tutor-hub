@@ -8,7 +8,8 @@ import TutorCompletionModal from "@/components/tutor-completion-modal";
 import LessonNotesModal from "@/components/lesson-notes-modal";
 import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
-import { downloadMultiEventICS, CalendarEvent } from "@/lib/calendar";
+import { downloadMultiEventICS, getCanonicalPortalUrl, CalendarEvent } from "@/lib/calendar";
+import { parseEmailList } from "@/lib/email-utils";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
 import CasioCalculatorModal from "@/components/casio-calculator-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
@@ -591,8 +592,8 @@ export default function TutorDashboardPage() {
   };
 
   const handleCopyLink = async (key: string, magicKey?: string) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const fullUrl = magicKey ? `${origin}/student?key=${magicKey}` : `${origin}/student`;
+    const origin = getCanonicalPortalUrl();
+    const fullUrl = magicKey ? `${origin}/student?key=${encodeURIComponent(magicKey)}` : `${origin}/student`;
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedKey(key);
@@ -928,17 +929,24 @@ export default function TutorDashboardPage() {
       return;
     }
 
-    const portalUrl = window.location.origin;
-    const events: CalendarEvent[] = weekSessions.map((s) => ({
-      id: s.id,
-      title: `${s.title} (${s.tutee?.name || "Student"})`,
-      description: `LB Maths Tuition Lesson.\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nNotes: ${s.notes || "None"}`,
-      location: s.teamsMeetingUrl || `${portalUrl}/tutor`,
-      startTime: s.scheduledStartTime,
-      endTime: s.scheduledEndTime,
-      tutorName: formatTutorName(currentUser?.name) || "Tutor",
-      studentName: s.tutee?.name,
-    }));
+    const portalUrl = getCanonicalPortalUrl();
+    const events: CalendarEvent[] = weekSessions.map((s) => {
+      const studentDirectUrl = s.tutee?.magicKey
+        ? `${portalUrl}/student?key=${encodeURIComponent(s.tutee.magicKey)}`
+        : `${portalUrl}/student`;
+      return {
+        id: s.id,
+        title: `${s.title} (${s.tutee?.name || "Student"})`,
+        description: `LB Maths Tuition Lesson.\nStudent: ${s.tutee?.name || "Student"}\nMeeting: ${s.teamsMeetingUrl || "See portal lobby"}\nStudent Direct Link: ${studentDirectUrl}\nNotes: ${s.notes || "None"}`,
+        location: s.teamsMeetingUrl || `${portalUrl}/tutor`,
+        url: s.teamsMeetingUrl || `${portalUrl}/tutor`,
+        startTime: s.scheduledStartTime,
+        endTime: s.scheduledEndTime,
+        tutorName: formatTutorName(currentUser?.name) || "Tutor",
+        studentName: s.tutee?.name,
+        studentMagicKey: s.tutee?.magicKey || undefined,
+      };
+    });
 
     const dateSlug = monday.toISOString().slice(0, 10);
     downloadMultiEventICS(events, `my-tutor-schedule-${dateSlug}.ics`);
@@ -1262,18 +1270,47 @@ export default function TutorDashboardPage() {
                         offlineLabel="Student Offline"
                         size="xs"
                       />
-                      {(activeLesson.tutee?.parentEmail || activeLesson.tutee?.email) && (
-                        <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-normal">
-                          <Mail className="w-3 h-3 text-[#48A5EE]" />
-                          <a
-                            href={`mailto:${activeLesson.tutee.parentEmail || activeLesson.tutee.email}`}
-                            className="hover:underline hover:text-[#48A5EE] font-medium"
-                            title={`Contact Parent/Guardian: ${activeLesson.tutee.parentEmail || activeLesson.tutee.email}`}
-                          >
-                            Parent: {activeLesson.tutee.parentEmail || activeLesson.tutee.email}
-                          </a>
-                        </span>
-                      )}
+                      {(() => {
+                        const emailList = parseEmailList(activeLesson.tutee?.parentEmail || activeLesson.tutee?.email);
+                        if (emailList.length === 0) return null;
+                        if (emailList.length === 1) {
+                          return (
+                            <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-normal">
+                              <Mail className="w-3 h-3 text-[#48A5EE]" />
+                              <a
+                                href={`mailto:${emailList[0]}`}
+                                className="hover:underline hover:text-[#48A5EE] font-medium"
+                                title={`Contact Parent/Guardian: ${emailList[0]}`}
+                              >
+                                Parent: {emailList[0]}
+                              </a>
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-normal flex-wrap">
+                            <Mail className="w-3 h-3 text-[#48A5EE]" />
+                            <span className="font-medium text-slate-700 dark:text-slate-300">Parents:</span>
+                            <a
+                              href={`mailto:${emailList.join(",")}`}
+                              className="text-[10px] font-bold text-[#48A5EE] hover:underline"
+                              title={`Email all ${emailList.length} addresses: ${emailList.join(", ")}`}
+                            >
+                              Email All ({emailList.length})
+                            </a>
+                            {emailList.map((em, idx) => (
+                              <a
+                                key={idx}
+                                href={`mailto:${em}`}
+                                className="hover:underline hover:text-[#48A5EE] font-medium text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
+                                title={`Contact: ${em}`}
+                              >
+                                {em}
+                              </a>
+                            ))}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {activeLesson.studentTopic && (
@@ -1955,19 +1992,47 @@ export default function TutorDashboardPage() {
                           )}
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                          {(student.parentEmail || student.email) && (
-                            <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
-                              <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
-                              <a
-                                href={`mailto:${student.parentEmail || student.email}`}
-                                className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px]"
-                                title={`Contact Parent: ${student.parentEmail || student.email}`}
-                              >
-                                {student.parentEmail || student.email}
-                              </a>
-                              <span className="text-[10px] text-slate-400">(Parent)</span>
-                            </span>
-                          )}
+                          {(() => {
+                            const emailList = parseEmailList(student.parentEmail || student.email);
+                            if (emailList.length === 0) return null;
+                            if (emailList.length === 1) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                                  <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
+                                  <a
+                                    href={`mailto:${emailList[0]}`}
+                                    className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px]"
+                                    title={`Contact Parent: ${emailList[0]}`}
+                                  >
+                                    {emailList[0]}
+                                  </a>
+                                  <span className="text-[10px] text-slate-400">(Parent)</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 flex-wrap">
+                                <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
+                                <a
+                                  href={`mailto:${emailList.join(",")}`}
+                                  className="text-[10px] font-bold text-[#48A5EE] hover:underline"
+                                  title={`Email all ${emailList.length} parent contacts: ${emailList.join(", ")}`}
+                                >
+                                  Email All ({emailList.length})
+                                </a>
+                                {emailList.map((em, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={`mailto:${em}`}
+                                    className="hover:underline hover:text-[#48A5EE] font-medium text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[130px]"
+                                    title={`Contact: ${em}`}
+                                  >
+                                    {em}
+                                  </a>
+                                ))}
+                              </span>
+                            );
+                          })()}
                           {student.parentPhone && (
                             <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                               <Phone className="w-3 h-3 text-[#48A5EE] shrink-0" />
@@ -2092,10 +2157,13 @@ export default function TutorDashboardPage() {
             return true;
           });
 
-          // Sort function
-          const sortList = (list: any[]) => {
+          // Sort function: for past/archived lessons, "soonest" defaults to closest in time (most recent first)
+          const sortList = (list: any[], isPast = false) => {
             return [...list].sort((a, b) => {
               if (lessonSortBy === "soonest") {
+                if (isPast) {
+                  return new Date(b.scheduledStartTime).getTime() - new Date(a.scheduledStartTime).getTime();
+                }
                 return new Date(a.scheduledStartTime).getTime() - new Date(b.scheduledStartTime).getTime();
               }
               if (lessonSortBy === "newest") {
@@ -2120,7 +2188,8 @@ export default function TutorDashboardPage() {
               const endMs = new Date(s.scheduledEndTime).getTime();
               const isDone = s.status === "COMPLETED" || s.status === "CANCELLED";
               return !s.tutorPaid && !isDone && endMs > nowMs;
-            })
+            }),
+            false
           );
 
           // 2. Completed (Tutor Not Paid): strictly unpaid, NOT cancelled, and (completed OR scheduled end time has passed)
@@ -2129,17 +2198,20 @@ export default function TutorDashboardPage() {
               const endMs = new Date(s.scheduledEndTime).getTime();
               const isDoneOrPassed = s.status === "COMPLETED" || endMs <= nowMs;
               return !s.tutorPaid && s.status !== "CANCELLED" && isDoneOrPassed;
-            })
+            }),
+            true
           );
 
           // 3. Archived (Tutor Paid): tutorPaid === true
           const archivedPaidList = sortList(
-            filtered.filter((s) => s.tutorPaid)
+            filtered.filter((s) => s.tutorPaid),
+            true
           );
 
           // 4. Cancelled: status === "CANCELLED"
           const cancelledList = sortList(
-            filtered.filter((s) => s.status === "CANCELLED")
+            filtered.filter((s) => s.status === "CANCELLED"),
+            true
           );
 
           // Extract unique students for filter

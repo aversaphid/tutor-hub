@@ -1,12 +1,52 @@
+import { getEnv } from "./env";
+
 export interface CalendarEvent {
   id: string;
   title: string;
   description: string;
   location?: string;
+  url?: string;
   startTime: Date | string;
   endTime: Date | string;
   tutorName?: string;
   studentName?: string;
+  studentMagicKey?: string | null;
+}
+
+/**
+ * Returns the canonical portal URL for calendar feeds, reminders, and direct student links.
+ * Preserves localhost in local development, but in production strictly uses
+ * the official portal link https://portal.lbmathstuition.co.uk (never internal hostnames like tutor-hub...).
+ */
+export function getCanonicalPortalUrl(request?: Request): string {
+  const envUrl = getEnv("NEXT_PUBLIC_PORTAL_URL") || getEnv("PORTAL_URL");
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  if (request) {
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+    if (host.includes("localhost") || host.includes("127.0.0.1")) {
+      const protocol = host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https";
+      return `${protocol}://${host}`;
+    }
+  } else if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+      return origin;
+    }
+  }
+
+  return "https://portal.lbmathstuition.co.uk";
+}
+
+export function getCanonicalPortalHost(request?: Request): string {
+  const url = getCanonicalPortalUrl(request);
+  try {
+    return new URL(url).host;
+  } catch {
+    return "portal.lbmathstuition.co.uk";
+  }
 }
 
 function formatDateToICS(date: Date): string {
@@ -29,30 +69,37 @@ export function generateICS(event: CalendarEvent): string {
   const cleanTitle = event.title.replace(/\n/g, " ");
   const cleanDescription = (event.description || "").replace(/\n/g, "\\n");
   const cleanLocation = (event.location || "Microsoft Teams / LB Maths Tuition Portal").replace(/\n/g, " ");
+  const cleanUrl = event.url ? event.url.replace(/\n/g, " ") : undefined;
+  const portalHost = getCanonicalPortalHost();
 
-  return [
+  const eventLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//LB Maths Tuition//Lesson Portal//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:lb-maths-${event.id}@lbmathstuition.co.uk`,
+    `UID:lb-maths-${event.id}@${portalHost}`,
     `DTSTAMP:${formattedStamp}`,
     `DTSTART:${formattedStart}`,
     `DTEND:${formattedEnd}`,
     `SUMMARY:${cleanTitle}`,
     `DESCRIPTION:${cleanDescription}`,
     `LOCATION:${cleanLocation}`,
+    cleanUrl ? `URL:${cleanUrl}` : null,
     "STATUS:CONFIRMED",
     "BEGIN:VALARM",
     "ACTION:DISPLAY",
-    "DESCRIPTION:Maths lesson starting in 15 minutes",
+    cleanUrl
+      ? `DESCRIPTION:Maths lesson starting in 15 mins - Tap to join: ${cleanUrl}`
+      : "DESCRIPTION:Maths lesson starting in 15 minutes",
     "TRIGGER:-PT15M",
     "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR",
-  ].join("\r\n");
+  ].filter(Boolean);
+
+  return eventLines.join("\r\n");
 }
 
 /**
@@ -78,6 +125,7 @@ export function downloadICS(event: CalendarEvent): void {
 export function generateMultiEventICS(events: CalendarEvent[], calendarTitle = "LB Maths Tuition - Weekly Schedule"): string {
   const now = new Date();
   const formattedStamp = formatDateToICS(now);
+  const portalHost = getCanonicalPortalHost();
 
   const vEvents = events.map((event) => {
     const start = new Date(event.startTime);
@@ -88,24 +136,28 @@ export function generateMultiEventICS(events: CalendarEvent[], calendarTitle = "
     const cleanTitle = event.title.replace(/\n/g, " ");
     const cleanDescription = (event.description || "").replace(/\n/g, "\\n");
     const cleanLocation = (event.location || "Microsoft Teams / LB Maths Tuition Portal").replace(/\n/g, " ");
+    const cleanUrl = event.url ? event.url.replace(/\n/g, " ") : undefined;
 
     return [
       "BEGIN:VEVENT",
-      `UID:lb-maths-${event.id}@lbmathstuition.co.uk`,
+      `UID:lb-maths-${event.id}@${portalHost}`,
       `DTSTAMP:${formattedStamp}`,
       `DTSTART:${formattedStart}`,
       `DTEND:${formattedEnd}`,
       `SUMMARY:${cleanTitle}`,
       `DESCRIPTION:${cleanDescription}`,
       `LOCATION:${cleanLocation}`,
+      cleanUrl ? `URL:${cleanUrl}` : null,
       "STATUS:CONFIRMED",
       "BEGIN:VALARM",
       "ACTION:DISPLAY",
-      "DESCRIPTION:Maths lesson starting in 15 minutes",
+      cleanUrl
+        ? `DESCRIPTION:Maths lesson starting in 15 mins - Tap to join: ${cleanUrl}`
+        : "DESCRIPTION:Maths lesson starting in 15 minutes",
       "TRIGGER:-PT15M",
       "END:VALARM",
       "END:VEVENT",
-    ].join("\r\n");
+    ].filter(Boolean).join("\r\n");
   });
 
   return [

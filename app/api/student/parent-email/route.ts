@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, clearUserCache } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
-
-const ParentEmailSchema = z.object({
-  parentEmail: z
-    .string()
-    .trim()
-    .email("Please provide a valid email address.")
-    .optional()
-    .nullable()
-    .or(z.literal("")),
-});
+import { validateMultiEmails, normalizeMultiEmails } from "@/lib/email-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -23,18 +13,19 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const parsed = ParentEmailSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Invalid parent email format." },
-        { status: 400 }
-      );
+    const rawInput = body.parentEmail !== undefined ? body.parentEmail : null;
+
+    if (rawInput && typeof rawInput === "string" && rawInput.trim()) {
+      const validation = validateMultiEmails(rawInput);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: validation.error || "Please provide valid email address(es)." },
+          { status: 400 }
+        );
+      }
     }
 
-    const emailValue =
-      parsed.data.parentEmail && parsed.data.parentEmail.trim()
-        ? parsed.data.parentEmail.trim().toLowerCase()
-        : null;
+    const emailValue = normalizeMultiEmails(rawInput);
 
     const updated = await prisma.user.update({
       where: { id: user.id },

@@ -9,6 +9,7 @@ import {
   UpdateStudentSchema,
   AdminUpdateUserPasswordSchema,
 } from "@/lib/validations";
+import { normalizeMultiEmails } from "@/lib/email-utils";
 import crypto from "crypto";
 
 export async function GET() {
@@ -178,7 +179,7 @@ export async function POST(request: Request) {
       data: {
         name,
         email: finalEmail,
-        parentEmail: role === "TUTEE" ? (parentEmail?.trim() || null) : null,
+        parentEmail: role === "TUTEE" ? normalizeMultiEmails(parentEmail) : null,
         parentPhone: role === "TUTEE" ? (parentPhone?.trim() || null) : null,
         role,
         passwordHash,
@@ -360,7 +361,7 @@ export async function PATCH(request: Request) {
       updateData.name = name.trim();
     }
     if (parentEmail !== undefined) {
-      updateData.parentEmail = parentEmail && parentEmail.trim() ? parentEmail.trim() : null;
+      updateData.parentEmail = normalizeMultiEmails(parentEmail);
     }
     if (parentPhone !== undefined) {
       updateData.parentPhone = parentPhone && parentPhone.trim() ? parentPhone.trim() : null;
