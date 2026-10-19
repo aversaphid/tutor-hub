@@ -6,14 +6,16 @@ export interface SessionExportData {
   scheduledStartTime: string | Date;
   scheduledEndTime: string | Date;
   actualStartTime?: string | Date | null;
-  status: string;
+  status?: string;
   tutorPaid?: boolean | null;
   tutorConfirmed?: boolean | null;
   tuteeConfirmed?: boolean | null;
   feedbackRating?: number | null;
   feedbackCovered?: string | null;
   feedbackNotes?: string | null;
+  studentTopic?: string | null;
   adminReminder?: string | null;
+  notes?: string | null;
   teamsMeetingUrl?: string | null;
   tutor?: { name?: string | null; email?: string | null } | null;
   tutee?: { name?: string | null } | null;
@@ -30,68 +32,83 @@ function escapeCSV(val: unknown): string {
 }
 
 /**
- * Converts a list of session objects into RFC 4180 compliant CSV and triggers browser download
+ * Converts a list of session objects into RFC 4180 compliant CSV and triggers browser download.
+ * Structure:
+ * 1. Lesson ID
+ * 2. Date (dd/mm/yyyy)
+ * 3. Day of week
+ * 4. Tutee Name
+ * 5. Tutor Name
+ * 6. Time (start-end in 24h time)
+ * 7. Tutor Attendance Confirmation
+ * 8. Tutee Attendance Confirmation
+ * 9. Topic Covered
+ * 10. Paid (Yes / No)
+ * 11. Tutor Feedback
+ * 12. Admin Notes
  */
 export function exportSessionsToCSV(sessions: SessionExportData[], filenamePrefix = "lb-maths-lessons"): string {
   const headers = [
     "Lesson ID",
-    "Lesson Title",
     "Date",
-    "Start Time",
-    "End Time",
-    "Duration (Minutes)",
-    "Student Name",
+    "Day",
+    "Tutee Name",
     "Tutor Name",
-    "Status",
+    "Time",
     "Tutor Attendance Confirmed",
-    "Student Attendance Confirmed",
-    "Tutor Settled / Paid",
-    "Lesson Rating",
-    "Topics Covered",
-    "Tutor Feedback Notes",
-    "Admin Reminder",
-    "Microsoft Teams URL",
+    "Tutee Attendance Confirmed",
+    "Topic Covered",
+    "Paid",
+    "Tutor Feedback",
+    "Admin Notes",
   ];
 
   const rows = sessions.map((s) => {
     const start = new Date(s.scheduledStartTime);
     const end = new Date(s.scheduledEndTime);
-    const durationMins = Math.round((end.getTime() - start.getTime()) / 60000);
+    const isValidStart = !isNaN(start.getTime());
+    const isValidEnd = !isNaN(end.getTime());
 
-    const dateStr = start.toLocaleDateString("en-GB", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    let dateStr = "";
+    let dayStr = "";
+    let timeStr = "";
 
-    const startTimeStr = start.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (isValidStart) {
+      const d = String(start.getDate()).padStart(2, "0");
+      const m = String(start.getMonth() + 1).padStart(2, "0");
+      const y = start.getFullYear();
+      dateStr = `${d}/${m}/${y}`;
+      dayStr = start.toLocaleDateString("en-GB", { weekday: "long" });
 
-    const endTimeStr = end.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+      if (isValidEnd) {
+        const startH = String(start.getHours()).padStart(2, "0");
+        const startM = String(start.getMinutes()).padStart(2, "0");
+        const endH = String(end.getHours()).padStart(2, "0");
+        const endM = String(end.getMinutes()).padStart(2, "0");
+        timeStr = `${startH}:${startM} - ${endH}:${endM}`;
+      }
+    }
+
+    const tutorConfirmedStr = s.tutorConfirmed ? "Confirmed" : "Unconfirmed";
+    const tuteeConfirmedStr = s.tuteeConfirmed ? "Confirmed" : "Unconfirmed";
+    const topicCovered = s.feedbackCovered || s.studentTopic || "";
+    const isPaidStr = s.tutorPaid ? "Yes" : "No";
+    const tutorFeedback = s.feedbackNotes || "";
+    const adminNotes = [s.adminReminder, s.notes].filter(Boolean).join(" - ") || "";
 
     return [
       escapeCSV(s.id),
-      escapeCSV(s.title || "Maths Lesson"),
       escapeCSV(dateStr),
-      escapeCSV(startTimeStr),
-      escapeCSV(endTimeStr),
-      escapeCSV(durationMins),
+      escapeCSV(dayStr),
       escapeCSV(s.tutee?.name || "Student"),
       escapeCSV(formatTutorName(s.tutor?.name) || "Tutor"),
-      escapeCSV(s.status === "IN_PROGRESS" ? "IN PROGRESS" : s.status),
-      escapeCSV(s.tutorConfirmed ? "Confirmed" : "Unconfirmed"),
-      escapeCSV(s.tuteeConfirmed ? "Confirmed" : "Unconfirmed"),
-      escapeCSV(s.tutorPaid ? "Paid / Settled" : "Unpaid"),
-      escapeCSV(s.feedbackRating ? `${s.feedbackRating} / 5` : "Unrated"),
-      escapeCSV(s.feedbackCovered || ""),
-      escapeCSV(s.feedbackNotes || ""),
-      escapeCSV(s.adminReminder || ""),
-      escapeCSV(s.teamsMeetingUrl || ""),
+      escapeCSV(timeStr),
+      escapeCSV(tutorConfirmedStr),
+      escapeCSV(tuteeConfirmedStr),
+      escapeCSV(topicCovered),
+      escapeCSV(isPaidStr),
+      escapeCSV(tutorFeedback),
+      escapeCSV(adminNotes),
     ].join(",");
   });
 

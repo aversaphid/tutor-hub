@@ -49,11 +49,9 @@ assert(sanitizedForTutor.tutor?.name === "Luke", "Tutor gets capitalized tutor n
 assert(sanitizedForTutor.tutorPay === 30, "Tutor can see tutorPay");
 assert(sanitizedForTutor.studentPay === undefined, "Tutor cannot see studentPay");
 
-// --- 3. CSV Export IN PROGRESS & Tutor Name Formatting ---
-console.log("\n--- 3. Testing CSV export status and tutor name ---");
+// --- 3. CSV Export Tutor Name Formatting ---
+console.log("\n--- 3. Testing CSV export tutor name ---");
 const csvOutput = exportSessionsToCSV([rawSession]);
-assert(!csvOutput.includes("IN_PROGRESS"), "CSV does not contain 'IN_PROGRESS' with underscore");
-assert(csvOutput.includes('"IN PROGRESS"'), "CSV contains formatted 'IN PROGRESS'");
 assert(csvOutput.includes('"Luke"'), "CSV contains formatted tutor name 'Luke'");
 assert(!csvOutput.includes('"luke"'), "CSV does not contain lowercase 'luke'");
 
