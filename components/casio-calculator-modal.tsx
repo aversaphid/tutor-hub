@@ -222,14 +222,20 @@ export default function CasioCalculatorModal({
   const [cursor, setCursor] = useState<CursorTarget>({ location: "main" });
 
   // Live Collaboration & Synced Demo States
-  const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(false);
+  const isLessonSessionInitial = Boolean(
+    sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo"
+  );
+  const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(isLessonSessionInitial);
   const isLiveDemoSyncedRef = useRef(isLiveDemoSynced);
   isLiveDemoSyncedRef.current = isLiveDemoSynced;
 
-  // Reset synced collaboration when lesson session changes
+  // Auto-sync collaboration when active lesson session changes
   useEffect(() => {
-    setIsLiveDemoSynced(false);
-    isLiveDemoSyncedRef.current = false;
+    const isLessonSession = Boolean(
+      sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo"
+    );
+    setIsLiveDemoSynced(isLessonSession);
+    isLiveDemoSyncedRef.current = isLessonSession;
     setRemoteCursor(null);
     setRemoteActionNotice(null);
   }, [sessionId]);
@@ -596,6 +602,86 @@ export default function CasioCalculatorModal({
         senderRole: userRole,
         actionType: "CURSOR_CLICK",
         cursorPos: { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) },
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleChassisTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const now = Date.now();
+    if (now - lastCursorSendRef.current < 60) return;
+
+    const rect = chassisRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = Math.min(100, Math.max(0, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((touch.clientY - rect.top) / rect.height) * 100));
+
+    if (
+      Math.abs(x - lastSentPosRef.current.x) < 0.35 &&
+      Math.abs(y - lastSentPosRef.current.y) < 0.35
+    ) {
+      return;
+    }
+
+    lastCursorSendRef.current = now;
+    lastSentPosRef.current = { x, y };
+
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_MOVE",
+        cursorPos: { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) },
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleChassisTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const rect = chassisRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = Math.min(100, Math.max(0, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((touch.clientY - rect.top) / rect.height) * 100));
+
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_CLICK",
+        cursorPos: { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) },
+        isSynced: true,
+      }),
+    }).catch(() => {});
+  };
+
+  const handleChassisTouchEnd = () => {
+    if (!isLiveDemoSyncedRef.current) return;
+    if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
+    fetch("/api/calculator/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        senderId: userId || "local-user",
+        senderName: userName,
+        senderRole: userRole,
+        actionType: "CURSOR_LEAVE",
         isSynced: true,
       }),
     }).catch(() => {});
@@ -2516,6 +2602,12 @@ export default function CasioCalculatorModal({
         return;
       }
 
+      // If ANY remote action is received with isSynced === true, ensure receiver is locked into synced collaboration
+      if (data.isSynced && !isLiveDemoSyncedRef.current) {
+        setIsLiveDemoSynced(true);
+        isLiveDemoSyncedRef.current = true;
+      }
+
       if (data.actionType === "CURSOR_MOVE" && data.cursorPos) {
         if (remoteCursorTimeoutRef.current) clearTimeout(remoteCursorTimeoutRef.current);
         setRemoteCursor({
@@ -2917,6 +3009,9 @@ export default function CasioCalculatorModal({
           onMouseMove={handleChassisMouseMove}
           onMouseLeave={handleChassisMouseLeave}
           onMouseDown={handleChassisMouseDown}
+          onTouchMove={handleChassisTouchMove}
+          onTouchStart={handleChassisTouchStart}
+          onTouchEnd={handleChassisTouchEnd}
           className={`relative w-[345px] sm:w-[375px] rounded-[36px] ${themeStyles.chassis} p-3 sm:p-3.5 text-slate-100 flex flex-col items-center select-none border-4 shrink-0 transition-colors duration-300 overflow-hidden`}
           style={{
             boxShadow: `
@@ -2928,7 +3023,7 @@ export default function CasioCalculatorModal({
           }}
         >
           {/* Remote Peer Mouse Pointer */}
-          {isLiveDemoSynced && remoteCursor && remoteCursor.visible && (
+          {remoteCursor && remoteCursor.visible && (
             <div
               className="absolute z-50 pointer-events-none transition-[left,top] duration-75 ease-linear flex flex-col items-start -translate-x-1 -translate-y-1"
               style={{

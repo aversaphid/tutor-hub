@@ -104,6 +104,7 @@ export default function TutorDashboardPage() {
   // Formula Sheet & Casio Calculator Modals
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calculatorSessionId, setCalculatorSessionId] = useState<string | null>(null);
 
   // Cancel Lesson Modal
   const [cancelTargetLesson, setCancelTargetLesson] = useState<any>(null);
@@ -401,12 +402,11 @@ export default function TutorDashboardPage() {
         es.addEventListener("calculator-sync", (e: any) => {
           try {
             const data = JSON.parse(e.data);
-            const currentActiveId = activeLessonRef.current?.id;
-            // Strictly ignore events that do not match the tutor's active lesson
-            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
-              return;
-            }
+            if (!data) return;
             if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
+              if (data?.sessionId) {
+                setCalculatorSessionId(data.sessionId);
+              }
               setIsCalculatorOpen(true);
             }
             window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
@@ -1047,7 +1047,10 @@ export default function TutorDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               data-tour="tutor-calculator"
-              onClick={() => setIsCalculatorOpen(true)}
+              onClick={() => {
+                if (activeLesson?.id) setCalculatorSessionId(activeLesson.id);
+                setIsCalculatorOpen(true);
+              }}
               className="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700"
               title="Open Casio fx-83GTX Scientific Calculator"
             >
@@ -3410,7 +3413,7 @@ export default function TutorDashboardPage() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        sessionId={activeLesson?.id}
+        sessionId={calculatorSessionId || activeLesson?.id}
         userId={currentUser?.id}
         userName={formatTutorName(currentUser?.name) || "Tutor"}
         userRole="TUTOR"

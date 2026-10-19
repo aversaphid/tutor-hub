@@ -64,9 +64,9 @@ function getBroadcastChannel(): any | null {
   if (!globalStore.__sseChannel) {
     try {
       const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-      channel.onmessage = (event: MessageEvent) => {
+      channel.addEventListener("message", (event: MessageEvent) => {
         handleRemoteBroadcast(event.data);
-      };
+      });
       globalStore.__sseChannel = channel;
     } catch {
       return null;
@@ -162,6 +162,8 @@ function deliverLocalCalculatorAction(payload: CalculatorActionPayload) {
 }
 
 export function registerSubscriber(subscriber: SSESubscriber): () => void {
+  // Ensure BroadcastChannel listener is wired in this isolate
+  getBroadcastChannel();
   subscribers.add(subscriber);
   return () => {
     subscribers.delete(subscriber);

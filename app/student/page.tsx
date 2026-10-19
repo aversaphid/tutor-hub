@@ -57,6 +57,7 @@ function StudentLobbyContent() {
   // Formula Sheet, Casio Calculator, Exam Countdown & Shared Resources modal state
   const [isFormulaSheetOpen, setIsFormulaSheetOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calculatorSessionId, setCalculatorSessionId] = useState<string | null>(null);
   const [isExamCountdownOpen, setIsExamCountdownOpen] = useState(false);
   const [isResourcesOpen, setIsResourcesOpen] = useState(false);
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
@@ -264,12 +265,11 @@ function StudentLobbyContent() {
         es.addEventListener("calculator-sync", (e: any) => {
           try {
             const data = JSON.parse(e.data);
-            const currentActiveId = activeSessionRef.current?.id;
-            // Strictly ignore events that do not match the student's active lesson
-            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
-              return;
-            }
+            if (!data) return;
             if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
+              if (data?.sessionId) {
+                setCalculatorSessionId(data.sessionId);
+              }
               setIsCalculatorOpen(true);
             }
             window.dispatchEvent(new CustomEvent("th_calculator_sync", { detail: data }));
@@ -1028,7 +1028,10 @@ function StudentLobbyContent() {
         isOpen={isExamCountdownOpen}
         onClose={() => setIsExamCountdownOpen(false)}
         studentName={currentUser?.name}
-        onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenCalculator={() => {
+          if (activeSession?.id) setCalculatorSessionId(activeSession.id);
+          setIsCalculatorOpen(true);
+        }}
         onOpenFormulaSheet={() => setIsFormulaSheetOpen(true)}
         onOpenResources={() => setIsResourcesOpen(true)}
       />
@@ -1043,7 +1046,7 @@ function StudentLobbyContent() {
       <CasioCalculatorModal
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        sessionId={activeSession?.id}
+        sessionId={calculatorSessionId || activeSession?.id}
         userId={currentUser?.id}
         userName={currentUser?.name || "Student"}
         userRole="TUTEE"

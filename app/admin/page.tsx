@@ -702,11 +702,7 @@ export default function AdminPage() {
         es.addEventListener("calculator-sync", (e: any) => {
           try {
             const data = JSON.parse(e.data);
-            const currentActiveId = activeLessonRef.current?.id;
-            // Strictly ignore events that do not match the admin's active lesson
-            if (!currentActiveId || !data?.sessionId || data.sessionId !== currentActiveId) {
-              return;
-            }
+            if (!data) return;
             if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
               setIsCalculatorOpen(true);
             }
