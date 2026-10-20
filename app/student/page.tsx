@@ -29,6 +29,7 @@ import {
   Sparkles,
   HelpCircle,
   Edit3,
+  Paperclip,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -36,6 +37,7 @@ import { formatTutorName } from "@/lib/format";
 import ExamCountdownModal from "@/components/exam-countdown-modal";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import NotesHistoryModal from "@/components/notes-history-modal";
+import HomeworkAttachments from "@/components/homework-attachments";
 import PushNotificationToggle from "@/components/push-notification-toggle";
 import { resolveActiveSession } from "@/lib/session-utils";
 
@@ -857,6 +859,27 @@ function StudentLobbyContent() {
                     <p className="text-slate-700 dark:text-slate-200 leading-snug pl-5">
                       {activeSession.notes}
                     </p>
+                  </div>
+                )}
+
+                {/* Worksheets & Homework Attachments (if present on active session) */}
+                {Boolean(activeSession.attachments && activeSession.attachments !== "[]") && (
+                  <div className="p-3.5 rounded-2xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-900/50 space-y-2 shadow-sm transition-colors text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-bold text-purple-900 dark:text-purple-300">
+                        <Paperclip className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        <span>Worksheets &amp; Homework Files</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.2 rounded-full border border-amber-200/70 dark:border-amber-900/60">
+                        21-Day Rollover
+                      </span>
+                    </div>
+                    <HomeworkAttachments
+                      sessionId={activeSession.id}
+                      attachments={activeSession.attachments}
+                      studentMagicKey={magicKey || currentUser?.magicKey}
+                      compact
+                    />
                   </div>
                 )}
 

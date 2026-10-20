@@ -189,6 +189,7 @@ export const UpdateSessionSchema = z.object({
   feedbackCovered: z.string().optional().nullable(),
   feedbackRating: z.number().int().min(1).max(5).optional().nullable(),
   feedbackNotes: z.string().optional().nullable(),
+  attachments: z.string().optional().nullable(),
   allowOverlap: z.boolean().optional(),
 });
 

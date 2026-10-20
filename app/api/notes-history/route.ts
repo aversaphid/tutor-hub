@@ -86,6 +86,7 @@ export async function GET(request: Request) {
         OR: [
           { feedbackNotes: { not: null } },
           { feedbackCovered: { not: null } },
+          { attachments: { not: null } },
           ...(isStaff ? [{ notes: { not: null } }, { adminReminder: { not: null } }] : []),
         ],
       },
@@ -99,6 +100,7 @@ export async function GET(request: Request) {
         status: true,
         feedbackCovered: true,
         feedbackNotes: true,
+        attachments: true,
         studentTopic: true,
         notes: true,
         adminReminder: true,
@@ -120,14 +122,15 @@ export async function GET(request: Request) {
       },
     });
 
-    // Filter to entries that have non-empty notes or feedback (and strip admin fields for students)
+    // Filter to entries that have non-empty notes, feedback, or attachments
     const history = rawSessions
       .filter((s) => {
         const hasNotes = Boolean(s.feedbackNotes && s.feedbackNotes.trim().length > 0);
         const hasCovered = Boolean(s.feedbackCovered && s.feedbackCovered.trim().length > 0);
+        const hasAttachments = Boolean(s.attachments && s.attachments.trim().length > 0 && s.attachments !== "[]");
         const hasAdminNotes = isStaff && Boolean(s.notes && s.notes.trim().length > 0);
         const hasAdminReminder = isStaff && Boolean(s.adminReminder && s.adminReminder.trim().length > 0);
-        return hasNotes || hasCovered || hasAdminNotes || hasAdminReminder;
+        return hasNotes || hasCovered || hasAttachments || hasAdminNotes || hasAdminReminder;
       })
       .map((s) => {
         if (!isStaff) {

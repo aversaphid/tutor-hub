@@ -96,6 +96,7 @@ model Session {
   feedbackCovered    String?       // What was covered in the lesson
   feedbackRating     Int?          // Rating out of 5 stars (1-5)
   feedbackNotes      String?       // Optional additional notes from student
+  attachments        String?       // JSON array of file attachments with 21-day rollover
   feedbackSubmittedAt DateTime?
 
   createdAt          DateTime      @default(now())

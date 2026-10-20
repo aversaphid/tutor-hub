@@ -12,6 +12,23 @@ import crypto from "crypto";
 let lastAutoStartCheck = 0;
 const AUTO_START_INTERVAL_MS = 60_000;
 
+let lastAttachmentCleanupCheck = 0;
+const ATTACHMENT_CLEANUP_INTERVAL_MS = 15 * 60_000; // Run 21-day rollover check every 15 minutes
+
+async function checkAndPurgeExpiredAttachments() {
+  const nowMs = Date.now();
+  if (nowMs - lastAttachmentCleanupCheck < ATTACHMENT_CLEANUP_INTERVAL_MS) {
+    return;
+  }
+  lastAttachmentCleanupCheck = nowMs;
+  try {
+    const { cleanupExpiredAttachments } = await import("@/lib/storage");
+    await cleanupExpiredAttachments(prisma);
+  } catch (err) {
+    console.error("21-day attachment cleanup error:", err);
+  }
+}
+
 async function checkAndAutoStartSessions() {
   const nowMs = Date.now();
   if (nowMs - lastAutoStartCheck < AUTO_START_INTERVAL_MS) {
@@ -109,6 +126,9 @@ export async function GET(request: Request) {
 
     // Auto-start and auto-resolve sessions throttled to at most once every 60 seconds
     await checkAndAutoStartSessions();
+
+    // Background 21-day rolling purge of expired homework attachments
+    checkAndPurgeExpiredAttachments().catch(() => {});
 
     const where: any = {};
 

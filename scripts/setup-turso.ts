@@ -100,6 +100,9 @@ async function setup() {
   try {
     await client.execute(`ALTER TABLE "Session" ADD COLUMN "tutorPay" REAL;`);
   } catch { }
+  try {
+    await client.execute(`ALTER TABLE "Session" ADD COLUMN "attachments" TEXT;`);
+  } catch { }
 
   // 3. Create AuditLog table
   await client.execute(`

@@ -17,8 +17,10 @@ import {
   Sparkles,
   Info,
   ShieldCheck,
+  Paperclip,
 } from "lucide-react";
 import { formatTutorName } from "@/lib/format";
+import HomeworkAttachments from "./homework-attachments";
 
 interface NotesHistoryModalProps {
   isOpen: boolean;
@@ -464,6 +466,37 @@ export default function NotesHistoryModal({
                   ) : (
                     <div className="text-[11px] text-slate-400 dark:text-slate-500 italic">
                       No homework or extra notes entered for this session.
+                    </div>
+                  )}
+
+                  {/* Worksheets & Homework Attachments (Supabase Storage with 21-day rollover) */}
+                  {(Boolean(item.attachments && item.attachments !== "[]") || canEdit) && (
+                    <div className="p-3 rounded-xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-800/50 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+                          <Paperclip className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>Worksheets &amp; Attachments</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.2 rounded-full border border-amber-200/70 dark:border-amber-900/60">
+                          21-Day Rollover
+                        </span>
+                      </div>
+                      <HomeworkAttachments
+                        sessionId={item.id}
+                        attachments={item.attachments}
+                        canUpload={canEdit}
+                        canDelete={canEdit}
+                        onAttachmentsChange={(newAtts) => {
+                          setHistory((prev) =>
+                            prev.map((s) =>
+                              s.id === item.id
+                                ? { ...s, attachments: JSON.stringify(newAtts) }
+                                : s
+                            )
+                          );
+                        }}
+                        compact
+                      />
                     </div>
                   )}
 

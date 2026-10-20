@@ -244,10 +244,12 @@ export async function PATCH(
       if (updates.feedbackCovered !== undefined) updateData.feedbackCovered = updates.feedbackCovered;
       if (updates.feedbackRating !== undefined) updateData.feedbackRating = updates.feedbackRating;
       if (updates.feedbackNotes !== undefined) updateData.feedbackNotes = updates.feedbackNotes;
+      if (updates.attachments !== undefined) updateData.attachments = updates.attachments;
       if (
         updates.feedbackCovered !== undefined ||
         updates.feedbackRating !== undefined ||
-        updates.feedbackNotes !== undefined
+        updates.feedbackNotes !== undefined ||
+        updates.attachments !== undefined
       ) {
         auditDetailsList.push("Lesson report feedback updated.");
       }

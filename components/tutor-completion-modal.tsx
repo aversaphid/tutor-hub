@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Star, CheckCircle2, X, AlertCircle, BookOpen, FileText, Info } from "lucide-react";
+import { Star, CheckCircle2, X, AlertCircle, BookOpen, FileText, Info, Paperclip } from "lucide-react";
+import HomeworkAttachments from "./homework-attachments";
 
 interface TutorCompletionModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export default function TutorCompletionModal({
   const [feedbackRating, setFeedbackRating] = useState<number>(session?.feedbackRating || 5);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [feedbackNotes, setFeedbackNotes] = useState(session?.feedbackNotes || "");
+  const [attachments, setAttachments] = useState<any[]>(session?.attachments || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [draftSavedMsg, setDraftSavedMsg] = useState("");
@@ -42,6 +44,7 @@ export default function TutorCompletionModal({
       setFeedbackRating(session.feedbackRating || 5);
       const chosenNotes = session.feedbackNotes || draftNotes || "";
       setFeedbackNotes(chosenNotes);
+      setAttachments(session.attachments || []);
       setError("");
       setDraftSavedMsg(
         (draftNotes || draftCovered) && (!session.feedbackNotes || !session.feedbackCovered)
@@ -294,6 +297,30 @@ export default function TutorCompletionModal({
               <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
               <span><strong>Disclaimer:</strong> Extra notes and homework entered here are shown directly to the student in their lobby and previous lesson notes.</span>
             </p>
+          </div>
+
+          {/* Attachments & Worksheets (Supabase Storage with 21-day rollover) */}
+          <div className="space-y-2 bg-slate-50/50 dark:bg-slate-800/30 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-[#48A5EE]" />
+                <span>Homework Worksheets &amp; Attachments</span>
+              </label>
+              <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200/70 dark:border-amber-900/60 shrink-0">
+                21-Day Rollover
+              </span>
+            </div>
+
+            <HomeworkAttachments
+              sessionId={session.id}
+              attachments={attachments}
+              canUpload
+              canDelete
+              onAttachmentsChange={(newAtts) => {
+                setAttachments(newAtts);
+                if (session) session.attachments = JSON.stringify(newAtts);
+              }}
+            />
           </div>
 
           {/* Actions */}
