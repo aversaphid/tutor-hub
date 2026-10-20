@@ -26,7 +26,14 @@ export async function checkAndSendUpcomingLessonReminders(): Promise<{ sentCount
     // Don't alert for sessions that are already more than 15 minutes past start
     const pastCutoff = new Date(now - 15 * 60 * 1000);
 
-    const upcomingSessions = await prisma.session.findMany({
+    const upcomingSessions: Array<{
+      id: string;
+      scheduledStartTime: Date;
+      tutorId: string;
+      tuteeId: string;
+      tutor?: { id: string; name: string } | null;
+      tutee?: { id: string; name: string } | null;
+    }> = await (prisma.session as any).findMany({
       where: {
         status: { in: ["SCHEDULED", "DELAYED"] },
         scheduledStartTime: {
@@ -58,7 +65,7 @@ export async function checkAndSendUpcomingLessonReminders(): Promise<{ sentCount
       });
 
       // 1. Mark reminderSentAt FIRST to ensure idempotency and prevent duplicate pushes
-      await prisma.session.update({
+      await (prisma.session as any).update({
         where: { id: session.id },
         data: { reminderSentAt: new Date() },
       });
