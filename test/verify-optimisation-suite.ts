@@ -168,7 +168,9 @@ async function runOptimisationVerification() {
   console.log("==================================================");
 }
 
-runOptimisationVerification().catch((err) => {
-  console.error("Test failed:", err);
-  process.exit(1);
-});
+runOptimisationVerification()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Test failed:", err);
+    process.exit(1);
+  });
