@@ -114,6 +114,7 @@ export default function TutorDashboardPage() {
   const [teamsUrlInput, setTeamsUrlInput] = useState("");
   const [isUpdatingTeams, setIsUpdatingTeams] = useState(false);
   const [teamsSuccess, setTeamsSuccess] = useState("");
+  const [isStartingSessionId, setIsStartingSessionId] = useState<string | null>(null);
 
   // Password Modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -779,23 +780,38 @@ export default function TutorDashboardPage() {
   };
 
   const handleStartLessonNow = async (targetSession?: any) => {
-    const s = targetSession || activeLesson;
-    if (!s) return;
+    // If targetSession is a MouseEvent (e.g. from onClick={handleStartLessonNow}), fall back to activeLesson
+    const s =
+      targetSession && typeof targetSession === "object" && typeof targetSession.id === "string"
+        ? targetSession
+        : activeLesson;
+
+    if (!s || !s.id) return;
+    setIsStartingSessionId(s.id);
+
     try {
-      const res = await fetch(`/api/sessions/${s.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "IN_PROGRESS" }),
+      const res = await fetch(`/api/sessions/${s.id}/start`, {
+        method: "POST",
       });
+
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         playSessionStartChime();
-        setActionMessage(`Lesson for ${s.tutee?.name || "student"} started! Chime played.`);
-        loadLiveSession();
-        loadMySessions();
+        setActionMessage(`Lesson for ${s.tutee?.name || "student"} is now LIVE! Chime played.`);
+        if (data.session) {
+          setActiveLesson(data.session);
+        }
+        await Promise.all([loadLiveSession(), loadMySessions()]);
         setTimeout(() => setActionMessage(""), 4000);
+      } else {
+        alert(data.error || "Failed to start lesson.");
       }
-    } catch { }
+    } catch {
+      alert("Network error starting lesson. Please check your connection.");
+    } finally {
+      setIsStartingSessionId(null);
+    }
   };
 
   const handleOpenDelayModal = (mins: number, targetSession?: any) => {
@@ -1464,11 +1480,20 @@ export default function TutorDashboardPage() {
                 <div data-tour="tutor-lesson-controls" className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
                   {!isLessonLive && (
                     <button
-                      onClick={handleStartLessonNow}
-                      className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                      onClick={() => handleStartLessonNow(activeLesson)}
+                      disabled={isStartingSessionId === activeLesson?.id}
+                      className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>Start Lesson Now (Play Chime)</span>
+                      {isStartingSessionId === activeLesson?.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-white" />
+                      )}
+                      <span>
+                        {isStartingSessionId === activeLesson?.id
+                          ? "Starting Lesson..."
+                          : "Start Lesson Now (Play Chime)"}
+                      </span>
                     </button>
                   )}
 
@@ -1781,11 +1806,18 @@ export default function TutorDashboardPage() {
                     <button
                       type="button"
                       onClick={() => handleStartLessonNow(nextLesson)}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                      disabled={isStartingSessionId === nextLesson?.id}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                       title="Start this upcoming lesson right now"
                     >
-                      <Play className="w-3.5 h-3.5 fill-white" />
-                      <span>Start Lesson Early</span>
+                      {isStartingSessionId === nextLesson?.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 fill-white" />
+                      )}
+                      <span>
+                        {isStartingSessionId === nextLesson?.id ? "Starting..." : "Start Lesson Early"}
+                      </span>
                     </button>
 
                     {/* Cancel */}

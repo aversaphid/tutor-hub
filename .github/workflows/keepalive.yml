@@ -1,0 +1,17 @@
+name: Keep-Alive Healthcheck Ping
+
+on:
+  schedule:
+    # Runs every 10 minutes to keep Deno Deploy isolate and Turso DB warm
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Portal Healthcheck
+        run: |
+          curl -s -f -m 15 https://portal.lbmathstuition.co.uk/api/health || echo "Warmup ping sent"

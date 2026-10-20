@@ -41,10 +41,31 @@ function createPrismaClient() {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+/**
+ * Returns the cached PrismaClient instance or lazily initializes it.
+ * This prevents eager database instantiation during cold start / module evaluation,
+ * drastically reducing isolate boot time and memory spikes on serverless runtimes.
+ */
+export function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-// Ensure the client instance is reused across hot reloads and standalone server worker threads
-globalForPrisma.prisma = prisma;
-
+/**
+ * Transparent proxy that delegates all property/method access to the lazily initialized PrismaClient.
+ * This keeps cold starts instant and prevents gateway timeouts on Deno Deploy.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, _receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client, prop, client);
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
 export default prisma;
 
