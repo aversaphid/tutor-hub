@@ -37,12 +37,17 @@ export default function TutorCompletionModal({
         draftCovered = localStorage.getItem(`tutor_draft_covered_${session.id}`) || "";
       } catch {}
 
-      setFeedbackCovered(draftCovered || session.feedbackCovered || "");
+      const chosenCovered = session.feedbackCovered || draftCovered || "";
+      setFeedbackCovered(chosenCovered);
       setFeedbackRating(session.feedbackRating || 5);
       const chosenNotes = session.feedbackNotes || draftNotes || "";
       setFeedbackNotes(chosenNotes);
       setError("");
-      setDraftSavedMsg(draftNotes && !session.feedbackNotes ? "Restored saved notes draft" : "");
+      setDraftSavedMsg(
+        (draftNotes || draftCovered) && (!session.feedbackNotes || !session.feedbackCovered)
+          ? "Restored saved draft topics & notes"
+          : ""
+      );
     }
   }, [session, isOpen]);
 

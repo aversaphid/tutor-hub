@@ -39,4 +39,20 @@ assert.strictEqual(combinedUpdate.success, true);
 assert.strictEqual(combinedUpdate.data?.feedbackNotes, "Live notes written during the meeting");
 console.log("✅ [PASS] Combined PATCH with teamsMeetingUrl and feedbackNotes succeeded");
 
+// 5. Combined update with both feedbackCovered (partials of what was done) and feedbackNotes
+const liveNotesAndCoveredUpdate = UpdateSessionSchema.safeParse({
+  feedbackCovered: "Worked through circle theorems 1-4 and quadratic equations.",
+  feedbackNotes: "Homework: Worksheet 3 Q 1-8.",
+});
+assert.strictEqual(liveNotesAndCoveredUpdate.success, true);
+assert.strictEqual(
+  liveNotesAndCoveredUpdate.data?.feedbackCovered,
+  "Worked through circle theorems 1-4 and quadratic equations."
+);
+assert.strictEqual(
+  liveNotesAndCoveredUpdate.data?.feedbackNotes,
+  "Homework: Worksheet 3 Q 1-8."
+);
+console.log("✅ [PASS] Combined PATCH with feedbackCovered and feedbackNotes succeeded");
+
 console.log("\n🎉 ALL LIVE LESSON NOTES TESTS PASSED!");

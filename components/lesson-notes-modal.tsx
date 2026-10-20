@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, FileText, Check, Loader2, Info, Sparkles } from "lucide-react";
+import { X, FileText, Check, Loader2, Info, BookOpen, Sparkles } from "lucide-react";
 
 interface LessonNotesModalProps {
   isOpen: boolean;
   onClose: () => void;
   session: any;
-  onSaved: (newNotes: string) => void;
+  onSaved: (newNotes: string, newCovered?: string) => void;
 }
 
 export default function LessonNotesModal({
@@ -16,18 +16,27 @@ export default function LessonNotesModal({
   session,
   onSaved,
 }: LessonNotesModalProps) {
+  const [covered, setCovered] = useState(session?.feedbackCovered || "");
   const [notes, setNotes] = useState(session?.feedbackNotes || "");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
     if (session && isOpen) {
-      setNotes(session.feedbackNotes || "");
+      let draftNotes = "";
+      let draftCovered = "";
+      try {
+        draftNotes = localStorage.getItem(`tutor_draft_notes_${session.id}`) || "";
+        draftCovered = localStorage.getItem(`tutor_draft_covered_${session.id}`) || "";
+      } catch {}
+
+      setCovered(session.feedbackCovered || draftCovered || "");
+      setNotes(session.feedbackNotes || draftNotes || "");
       setSaveMessage("");
     }
   }, [session, isOpen]);
 
-  const saveNotesToApi = async (notesToSave: string): Promise<boolean> => {
+  const saveNotesToApi = async (notesToSave: string, coveredToSave: string): Promise<boolean> => {
     if (!session?.id) return false;
     setIsSaving(true);
     setSaveMessage("");
@@ -35,13 +44,17 @@ export default function LessonNotesModal({
       const res = await fetch(`/api/sessions/${session.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedbackNotes: notesToSave }),
+        body: JSON.stringify({
+          feedbackCovered: coveredToSave || null,
+          feedbackNotes: notesToSave || null,
+        }),
       });
       if (res.ok) {
         try {
           localStorage.setItem(`tutor_draft_notes_${session.id}`, notesToSave);
+          localStorage.setItem(`tutor_draft_covered_${session.id}`, coveredToSave);
         } catch {}
-        onSaved(notesToSave);
+        onSaved(notesToSave, coveredToSave);
         return true;
       } else {
         setSaveMessage("Failed to save");
@@ -57,18 +70,21 @@ export default function LessonNotesModal({
   };
 
   const handleSaveAndClose = async () => {
-    const trimmed = notes.trim();
-    const success = await saveNotesToApi(trimmed);
+    const trimmedNotes = notes.trim();
+    const trimmedCovered = covered.trim();
+    const success = await saveNotesToApi(trimmedNotes, trimmedCovered);
     if (success) {
       onClose();
     }
   };
 
   const handleCloseAndAutoSave = async () => {
-    const trimmed = notes.trim();
-    const original = (session?.feedbackNotes || "").trim();
-    if (session?.id && trimmed !== original) {
-      await saveNotesToApi(trimmed);
+    const trimmedNotes = notes.trim();
+    const trimmedCovered = covered.trim();
+    const originalNotes = (session?.feedbackNotes || "").trim();
+    const originalCovered = (session?.feedbackCovered || "").trim();
+    if (session?.id && (trimmedNotes !== originalNotes || trimmedCovered !== originalCovered)) {
+      await saveNotesToApi(trimmedNotes, trimmedCovered);
     }
     onClose();
   };
@@ -82,7 +98,7 @@ export default function LessonNotesModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, notes, session]);
+  }, [isOpen, notes, covered, session]);
 
   if (!isOpen || !session) return null;
 
@@ -108,7 +124,7 @@ export default function LessonNotesModal({
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
-              <span>Lesson Notes &amp; Homework</span>
+              <span>Lesson Notes &amp; Covered Topics</span>
             </span>
           </div>
           <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
@@ -116,14 +132,41 @@ export default function LessonNotesModal({
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {session.title} &bull;{" "}
-            <span>Jot down notes during the lesson. These will also appear when you complete the lesson.</span>
+            <span>Jot down topics covered and notes during the lesson. All entries are saved and prefilled into your completion report.</span>
           </p>
         </div>
 
-        {/* Content Box */}
-        <div className="space-y-2">
+        {/* 1. What was covered today (partials / progress) - PREFILLS COMPLETION REPORT */}
+        <div className="space-y-2 bg-sky-50/50 dark:bg-sky-950/20 p-3.5 rounded-2xl border border-sky-100 dark:border-sky-900/40">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
+              <span>What was covered today (partials / progress)</span>
+            </label>
+            <span className="text-[10px] font-semibold text-[#48A5EE] bg-[#48A5EE]/10 dark:bg-[#48A5EE]/20 px-2 py-0.5 rounded-full border border-[#48A5EE]/20 shrink-0">
+              Prefills Completion Report
+            </span>
+          </div>
+
+          <textarea
+            rows={3}
+            value={covered}
+            onChange={(e) => setCovered(e.target.value)}
+            placeholder="e.g. Quadratic equations and factorisation. Worked through questions 1-5, practiced exam paper 2 algebra..."
+            className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all text-xs resize-none"
+          />
+
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-[#48A5EE] shrink-0" />
+            <span>Enter topics covered as you go. When you complete the lesson, this will automatically appear in your report box.</span>
+          </p>
+        </div>
+
+        {/* 2. Extra notes & homework assigned - SHOWN TO STUDENT */}
+        <div className="space-y-2 bg-purple-50/40 dark:bg-purple-950/20 p-3.5 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
               <span>Extra notes &amp; homework assigned</span>
             </label>
             <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950/70 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800 shrink-0">
@@ -132,27 +175,22 @@ export default function LessonNotesModal({
           </div>
 
           <textarea
-            rows={5}
+            rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. Set textbook p. 42 Q 1-6 for homework. Reviewed negative signs and brackets..."
-            className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 dark:focus:border-purple-400 transition-all text-xs resize-none"
+            className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-500 dark:focus:border-purple-400 transition-all text-xs resize-none"
           />
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-            <span>Automatically saved when you close this popup or click Save Notes.</span>
-            {notes.length > 0 && <span>{notes.length} characters</span>}
-          </div>
-
-          <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1.5 font-medium bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-800/60">
-            <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-[11px] text-purple-700 dark:text-purple-400 flex items-center gap-1.5 font-medium">
+            <Info className="w-3.5 h-3.5 shrink-0 text-purple-600 dark:text-purple-400" />
             <span>
               <strong>Student View:</strong> Notes and homework entered here are shown in the student&apos;s lobby and their previous lesson review.
             </span>
           </p>
         </div>
 
-        {/* Actions */}
+        {/* Save Status & Actions */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5 text-xs">
             {isSaving ? (
@@ -163,7 +201,9 @@ export default function LessonNotesModal({
               <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> {saveMessage}
               </span>
-            ) : null}
+            ) : (
+              <span className="text-[11px] text-slate-400">Auto-saves on close</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -181,7 +221,7 @@ export default function LessonNotesModal({
               className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{isSaving ? "Saving..." : "Save Notes"}</span>
+              <span>{isSaving ? "Saving..." : "Save Notes & Topics"}</span>
             </button>
           </div>
         </div>

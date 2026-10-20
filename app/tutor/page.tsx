@@ -1528,8 +1528,8 @@ export default function TutorDashboardPage() {
                   >
                     <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                     <span>Notes &amp; Homework</span>
-                    {activeLesson.feedbackNotes && (
-                      <span className="w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400" title="Notes added" />
+                    {(activeLesson.feedbackNotes || activeLesson.feedbackCovered) && (
+                      <span className="w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400" title="Notes or topics added" />
                     )}
                   </button>
 
@@ -3400,12 +3400,28 @@ export default function TutorDashboardPage() {
         isOpen={isNotesModalOpen}
         onClose={() => setIsNotesModalOpen(false)}
         session={activeLesson}
-        onSaved={(newNotes) => {
-          setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
-          setMySessions((prev: any[]) =>
-            prev.map((s) => (s.id === activeLesson?.id ? { ...s, feedbackNotes: newNotes } : s))
+        onSaved={(newNotes, newCovered) => {
+          setActiveLesson((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  feedbackNotes: newNotes,
+                  ...(newCovered !== undefined ? { feedbackCovered: newCovered } : {}),
+                }
+              : null
           );
-          setActionMessage("Lesson notes & homework saved!");
+          setMySessions((prev: any[]) =>
+            prev.map((s) =>
+              s.id === activeLesson?.id
+                ? {
+                    ...s,
+                    feedbackNotes: newNotes,
+                    ...(newCovered !== undefined ? { feedbackCovered: newCovered } : {}),
+                  }
+                : s
+            )
+          );
+          setActionMessage("Lesson notes & topics covered saved!");
           setTimeout(() => setActionMessage(""), 3000);
         }}
       />
