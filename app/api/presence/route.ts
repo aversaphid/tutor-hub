@@ -34,5 +34,11 @@ export async function POST() {
     broadcastPresenceUpdate({ userId: user.id, online: true });
   }
 
+  // Check and dispatch upcoming lesson 15m push notifications in the background
+  try {
+    const { checkAndSendUpcomingLessonReminders } = await import("@/lib/lesson-reminders");
+    checkAndSendUpcomingLessonReminders().catch(() => {});
+  } catch {}
+
   return NextResponse.json({ success: true, online: true });
 }

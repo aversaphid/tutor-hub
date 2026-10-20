@@ -83,6 +83,7 @@ model Session {
 
   // Admin Personal Reminder & Attendance Confirmations
   adminReminder      String?       // Personal reminder set by admin on the lesson
+  reminderSentAt     DateTime?     // When upcoming 15m lesson push reminder was dispatched
   tutorConfirmed     Boolean       @default(false) // Whether the tutor has confirmed attendance
   tuteeConfirmed     Boolean       @default(false) // Whether the tutee/student has confirmed attendance
 

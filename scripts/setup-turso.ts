@@ -103,6 +103,9 @@ async function setup() {
   try {
     await client.execute(`ALTER TABLE "Session" ADD COLUMN "attachments" TEXT;`);
   } catch { }
+  try {
+    await client.execute(`ALTER TABLE "Session" ADD COLUMN "reminderSentAt" DATETIME;`);
+  } catch { }
 
   // 3. Create AuditLog table
   await client.execute(`

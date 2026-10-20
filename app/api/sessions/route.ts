@@ -61,20 +61,41 @@ async function checkAndAutoStartSessions() {
       return;
     }
 
-    // Auto-start any scheduled or delayed lessons that have reached their scheduled start time
-    const started = await prisma.session.updateMany({
+    // Find candidate sessions to auto-start so we can notify tutor and student
+    const candidateStarting = await prisma.session.findMany({
       where: {
         status: { in: ["SCHEDULED", "DELAYED"] },
         scheduledStartTime: { lte: now },
         scheduledEndTime: { gt: now },
       },
-      data: {
-        status: "IN_PROGRESS",
-        actualStartTime: now,
+      select: {
+        id: true,
+        tutorId: true,
+        tuteeId: true,
+        tutor: { select: { name: true } },
+        tutee: { select: { name: true } },
       },
     });
 
-    if (started.count > 0) {
+    if (candidateStarting.length > 0) {
+      await prisma.session.updateMany({
+        where: {
+          id: { in: candidateStarting.map((s) => s.id) },
+        },
+        data: {
+          status: "IN_PROGRESS",
+          actualStartTime: now,
+        },
+      });
+
+      // Notify both student and tutor that lesson has started
+      try {
+        const { sendLessonStartNotification } = await import("@/lib/lesson-reminders");
+        for (const s of candidateStarting) {
+          sendLessonStartNotification(s).catch(() => {});
+        }
+      } catch {}
+
       try {
         const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
         broadcastSessionUpdate({
@@ -129,6 +150,12 @@ export async function GET(request: Request) {
 
     // Background 21-day rolling purge of expired homework attachments
     checkAndPurgeExpiredAttachments().catch(() => {});
+
+    // Background 15-minute upcoming lesson reminders check
+    try {
+      const { checkAndSendUpcomingLessonReminders } = await import("@/lib/lesson-reminders");
+      checkAndSendUpcomingLessonReminders().catch(() => {});
+    } catch {}
 
     const where: any = {};
 
@@ -353,6 +380,14 @@ export async function POST(request: Request) {
     try {
       const { broadcastSessionUpdate } = await import("@/lib/sse-bus");
       broadcastSessionUpdate({ type: "SESSIONS_CREATED" });
+    } catch {}
+
+    // Notify student about newly booked session(s)
+    try {
+      const { sendLessonBookedNotification } = await import("@/lib/lesson-reminders");
+      for (const s of createdSessions) {
+        sendLessonBookedNotification(s).catch(() => {});
+      }
     } catch {}
 
     return NextResponse.json({
