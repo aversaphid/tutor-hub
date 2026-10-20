@@ -10,8 +10,7 @@ import AddToCalendar from "@/components/add-to-calendar";
 import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, getCanonicalPortalUrl, CalendarEvent } from "@/lib/calendar";
 import { parseEmailList } from "@/lib/email-utils";
-import FormulaSheetModal from "@/components/formula-sheet-modal";
-import CasioCalculatorModal from "@/components/casio-calculator-modal";
+import dynamic from "next/dynamic";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import NotesHistoryModal from "@/components/notes-history-modal";
@@ -61,7 +60,6 @@ import {
 import CancelLessonModal from "@/components/cancel-lesson-modal";
 import DelayReasonModal from "@/components/delay-reason-modal";
 import DelayDropdownMenu from "@/components/delay-dropdown-menu";
-import SharedResourcesHub from "@/components/shared-resources-hub";
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -72,11 +70,16 @@ import {
   BillingDurationMode,
   DEFAULT_BILLING_DURATION_MODE,
 } from "@/lib/billing";
-import UserWeeklyCalendarModal from "@/components/user-weekly-calendar-modal";
 import { resolveActiveSession } from "@/lib/session-utils";
 import { useOnlinePresence } from "@/hooks/use-presence";
 import OnlineBadge from "@/components/online-badge";
 import PushNotificationToggle from "@/components/push-notification-toggle";
+
+// Dynamically split heavy secondary modals to optimize initial page bundle and Deno memory limits
+const FormulaSheetModal = dynamic(() => import("@/components/formula-sheet-modal"), { ssr: false });
+const CasioCalculatorModal = dynamic(() => import("@/components/casio-calculator-modal"), { ssr: false });
+const SharedResourcesHub = dynamic(() => import("@/components/shared-resources-hub"), { ssr: false });
+const UserWeeklyCalendarModal = dynamic(() => import("@/components/user-weekly-calendar-modal"), { ssr: false });
 
 export default function TutorDashboardPage() {
   const router = useRouter();
@@ -460,10 +463,11 @@ export default function TutorDashboardPage() {
         (activeLesson.status === "IN_PROGRESS" ||
           new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
 
-      // If SSE is connected, relax polling to 60s (live) / 120s (idle). If disconnected, fall back to 30s / 60s.
+      // If SSE is connected, relax polling to 180s (live) / 300s (idle) to save Deno Deploy HTTP request quotas.
+      // If disconnected from SSE, fall back to faster 30s / 60s polling.
       const isSse = isSseConnectedRef.current;
       const delay = isSse
-        ? (isLiveOrSoon ? 60000 : 120000)
+        ? (isLiveOrSoon ? 180000 : 300000)
         : (isLiveOrSoon ? 30000 : 60000);
 
       pollTimer = setTimeout(async () => {

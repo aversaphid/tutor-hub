@@ -36,7 +36,7 @@ export function useOnlinePresence(currentUserId?: string) {
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Initial fetch of online users
+    // 1. Fetch online users as fallback only if SSE hasn't already provided presence snapshot
     const fetchOnlineUsers = async () => {
       try {
         const res = await fetch("/api/presence");
@@ -49,7 +49,13 @@ export function useOnlinePresence(currentUserId?: string) {
       } catch {}
     };
 
-    fetchOnlineUsers();
+    // If SSE connects and delivers presence-snapshot within 1.2s, skip redundant HTTP fetch
+    const initialFallbackTimer = setTimeout(() => {
+      if (typeof window !== "undefined" && Boolean((window as any).__th_sse_active)) {
+        return;
+      }
+      fetchOnlineUsers();
+    }, 1200);
 
     // 2. Refresh online users on window focus or visibility change to visible (only as fallback when SSE is not streaming)
     let lastVisibilityCheck = 0;
@@ -69,6 +75,7 @@ export function useOnlinePresence(currentUserId?: string) {
 
     return () => {
       isMounted = false;
+      clearTimeout(initialFallbackTimer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleVisibilityChange);
     };
