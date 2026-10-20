@@ -407,6 +407,9 @@ export default function TutorDashboardPage() {
           try {
             const data = JSON.parse(e.data);
             if (!data) return;
+            if (typeof window !== "undefined") {
+              (window as any).__last_calculator_sync = data;
+            }
             if (data?.actionType === "SYNC_TOGGLE" && data?.isSynced) {
               if (data?.sessionId) {
                 setCalculatorSessionId(data.sessionId);

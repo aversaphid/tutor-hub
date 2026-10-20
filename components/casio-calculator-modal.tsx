@@ -221,21 +221,15 @@ export default function CasioCalculatorModal({
   const [items, setItems] = useState<ExprItem[]>([]);
   const [cursor, setCursor] = useState<CursorTarget>({ location: "main" });
 
-  // Live Collaboration & Synced Demo States
-  const isLessonSessionInitial = Boolean(
-    sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo"
-  );
-  const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(isLessonSessionInitial);
-  const isLiveDemoSyncedRef = useRef(isLiveDemoSynced);
+  // Live Collaboration & Synced Demo States - strictly OFF by default until explicitly toggled
+  const [isLiveDemoSynced, setIsLiveDemoSynced] = useState<boolean>(false);
+  const isLiveDemoSyncedRef = useRef(false);
   isLiveDemoSyncedRef.current = isLiveDemoSynced;
 
-  // Auto-sync collaboration when active lesson session changes
+  // Reset sync state when active lesson session changes
   useEffect(() => {
-    const isLessonSession = Boolean(
-      sessionId && sessionId !== "live-demo" && sessionId !== "admin-demo"
-    );
-    setIsLiveDemoSynced(isLessonSession);
-    isLiveDemoSyncedRef.current = isLessonSession;
+    setIsLiveDemoSynced(false);
+    isLiveDemoSyncedRef.current = false;
     setRemoteCursor(null);
     setRemoteActionNotice(null);
   }, [sessionId]);
@@ -488,7 +482,10 @@ export default function CasioCalculatorModal({
     setIsLiveDemoSynced(targetSynced);
     isLiveDemoSyncedRef.current = targetSynced;
 
-    const stateSnapshot = targetSynced ? getCurrentState() : undefined;
+    // Whatever is on the student's calculator screen overwrites the tutor's calculator screen:
+    // If the tutor is toggling sync, do NOT send tutor's state.
+    // If the student is toggling sync, send the student's state so the tutor overwrites with it.
+    const stateSnapshot = targetSynced && userRole === "TUTEE" ? getCurrentState() : undefined;
 
     try {
       await fetch("/api/calculator/sync", {
@@ -2596,17 +2593,44 @@ export default function CasioCalculatorModal({
         const nextSynced = Boolean(data.isSynced);
         setIsLiveDemoSynced(nextSynced);
         isLiveDemoSyncedRef.current = nextSynced;
-        if (nextSynced && data.fullState) {
-          applyFullState(data.fullState);
+
+        if (nextSynced) {
+          if (userRole === "TUTEE") {
+            // Student's screen takes strict precedence:
+            // 1. Student NEVER overwrites their own screen with tutor's screen.
+            // 2. Student immediately broadcasts their current screen state to overwrite tutor's screen.
+            const studentState = getCurrentState();
+            fetch("/api/calculator/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionId,
+                senderId: userId || "local-user",
+                senderName: userName,
+                senderRole: userRole,
+                actionType: "FULL_STATE",
+                isSynced: true,
+                fullState: studentState,
+              }),
+            }).catch(() => {});
+          } else {
+            // Receiver is Tutor/Admin:
+            // If student's fullState was provided, apply it immediately to overwrite tutor's screen
+            if (data.fullState) {
+              applyFullState(data.fullState);
+              setRemoteActionNotice({
+                user: senderDisplay,
+                action: "synced with student's screen",
+                timestamp: Date.now(),
+              });
+            }
+          }
         }
         return;
       }
 
-      // If ANY remote action is received with isSynced === true, ensure receiver is locked into synced collaboration
-      if (data.isSynced && !isLiveDemoSyncedRef.current) {
-        setIsLiveDemoSynced(true);
-        isLiveDemoSyncedRef.current = true;
-      }
+      // Drop all remote cursor/button/nav actions if sync is not currently active on this client
+      if (!isLiveDemoSyncedRef.current) return;
 
       if (data.actionType === "CURSOR_MOVE" && data.cursorPos) {
         if (remoteCursorTimeoutRef.current) clearTimeout(remoteCursorTimeoutRef.current);
@@ -2648,8 +2672,6 @@ export default function CasioCalculatorModal({
         return;
       }
 
-      if (!isLiveDemoSyncedRef.current && !data.isSynced) return;
-
       if (data.actionType === "BUTTON" && data.actionValue) {
         handleButtonRef.current(data.actionValue, true);
         setRemoteActionNotice({
@@ -2668,11 +2690,34 @@ export default function CasioCalculatorModal({
           timestamp: Date.now(),
         });
       } else if (data.actionType === "FULL_STATE" && data.fullState) {
-        applyFullState(data.fullState);
+        // If receiver is tutor/admin, whatever is on the student's screen overwrites the tutor's screen
+        if (userRole !== "TUTEE" || data.senderRole === "TUTEE") {
+          applyFullState(data.fullState);
+          setRemoteActionNotice({
+            user: senderDisplay,
+            action: "synced with student's screen",
+            timestamp: Date.now(),
+          });
+        }
       }
     };
 
     window.addEventListener("th_calculator_sync", handleSyncEvent as EventListener);
+
+    // If modal was opened via an incoming SYNC_TOGGLE event, handle it immediately upon mount
+    if (typeof window !== "undefined") {
+      const lastSync = (window as any).__last_calculator_sync;
+      if (
+        lastSync &&
+        lastSync.sessionId === sessionId &&
+        lastSync.actionType === "SYNC_TOGGLE" &&
+        lastSync.isSynced &&
+        Date.now() - (lastSync.timestamp || 0) < 5000
+      ) {
+        handleSyncEvent({ detail: lastSync });
+      }
+    }
+
     return () => {
       window.removeEventListener("th_calculator_sync", handleSyncEvent as EventListener);
     };
