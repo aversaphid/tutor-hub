@@ -16,6 +16,25 @@ export const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB per file limit
 
+// Supabase Free Tier bucket limit is 1 GB
+export const MAX_STORAGE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1 GB (1,073,741,824 bytes)
+export const EMERGENCY_HEADROOM_TRIGGER_BYTES = 850 * 1024 * 1024; // 850 MB (~83% threshold)
+export const TARGET_SAFE_HEADROOM_BYTES = 750 * 1024 * 1024; // 750 MB target after trim
+
+export interface StorageUsageStats {
+  usedBytes: number;
+  maxBytes: number;
+  availableBytes: number;
+  usedPercent: number; // e.g. 4.2
+  fileCount: number;
+  formattedUsed: string; // e.g. "45.2 MB"
+  formattedMax: string; // "1.0 GB"
+  formattedAvailable: string; // e.g. "978.8 MB"
+  isEmergencyThresholdReached: boolean;
+  emergencyThresholdBytes: number;
+  emergencyThresholdPercent: number;
+}
+
 export const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -189,8 +208,9 @@ export async function deleteFilesFromStorage(
  */
 export async function cleanupExpiredAttachments(
   prisma: PrismaClient
-): Promise<{ deletedCount: number }> {
+): Promise<{ deletedCount: number; freedBytes: number }> {
   let deletedCount = 0;
+  let freedBytes = 0;
   try {
     const sessions = await prisma.session.findMany({
       where: {
@@ -214,6 +234,7 @@ export async function cleanupExpiredAttachments(
         if (isExpired) {
           pathsToDelete.push(att.path);
           deletedCount++;
+          freedBytes += Number(att.size) || 0;
         }
         return !isExpired;
       });
@@ -237,5 +258,195 @@ export async function cleanupExpiredAttachments(
     console.error("[Storage Cleanup Error]:", err);
   }
 
-  return { deletedCount };
+  return { deletedCount, freedBytes };
+}
+
+/**
+ * Get current storage usage statistics across all active homework attachments.
+ */
+export async function getStorageUsageStats(
+  prisma: PrismaClient
+): Promise<StorageUsageStats> {
+  const sessions = await prisma.session.findMany({
+    where: { attachments: { not: null } },
+    select: { attachments: true },
+  });
+
+  let totalBytes = 0;
+  let fileCount = 0;
+
+  for (const session of sessions) {
+    const list = parseAttachments(session.attachments);
+    for (const att of list) {
+      if (!isAttachmentExpired(att)) {
+        totalBytes += Number(att.size) || 0;
+        fileCount++;
+      }
+    }
+  }
+
+  const maxBytes = MAX_STORAGE_CAPACITY_BYTES;
+  const availableBytes = Math.max(0, maxBytes - totalBytes);
+  const usedPercent = Math.min(100, Math.round((totalBytes / maxBytes) * 1000) / 10);
+  const emergencyThresholdPercent = Math.round((EMERGENCY_HEADROOM_TRIGGER_BYTES / maxBytes) * 100);
+
+  return {
+    usedBytes: totalBytes,
+    maxBytes,
+    availableBytes,
+    usedPercent,
+    fileCount,
+    formattedUsed: formatAttachmentSize(totalBytes),
+    formattedMax: formatAttachmentSize(maxBytes),
+    formattedAvailable: formatAttachmentSize(availableBytes),
+    isEmergencyThresholdReached: totalBytes >= EMERGENCY_HEADROOM_TRIGGER_BYTES,
+    emergencyThresholdBytes: EMERGENCY_HEADROOM_TRIGGER_BYTES,
+    emergencyThresholdPercent,
+  };
+}
+
+/**
+ * Emergency Headroom Auto-Trimmer:
+ * Ensures there is sufficient storage capacity before uploading new files.
+ * If total storage usage + incoming file size exceeds EMERGENCY_HEADROOM_TRIGGER_BYTES (850 MB),
+ * it first purges any naturally expired files (>21 days).
+ * If headroom is still needed, it prunes the oldest attachments across all sessions (FIFO by uploadedAt)
+ * until usage drops back down to safe headroom level (TARGET_SAFE_HEADROOM_BYTES = 750 MB).
+ */
+export async function ensureStorageHeadroom(
+  incomingSizeBytes: number = 0,
+  prisma: PrismaClient
+): Promise<{
+  triggered: boolean;
+  expiredCleaned: number;
+  emergencyTrimmed: number;
+  freedBytes: number;
+}> {
+  let expiredCleaned = 0;
+  let emergencyTrimmed = 0;
+  let freedBytes = 0;
+
+  try {
+    // 1. Initial check of current usage
+    let stats = await getStorageUsageStats(prisma);
+    const projectedUsage = stats.usedBytes + incomingSizeBytes;
+
+    // If within safe limits, nothing to do
+    if (projectedUsage < EMERGENCY_HEADROOM_TRIGGER_BYTES) {
+      return { triggered: false, expiredCleaned: 0, emergencyTrimmed: 0, freedBytes: 0 };
+    }
+
+    console.warn(
+      `[Storage Headroom] Projected usage (${formatAttachmentSize(projectedUsage)}) exceeds emergency threshold of ${formatAttachmentSize(EMERGENCY_HEADROOM_TRIGGER_BYTES)}. Triggering auto-trimmer...`
+    );
+
+    // 2. Step 1: Clean naturally expired files (>21 days) first
+    const expireResult = await cleanupExpiredAttachments(prisma);
+    expiredCleaned = expireResult.deletedCount;
+    freedBytes += expireResult.freedBytes;
+
+    // Check if cleaning expired files freed enough headroom
+    stats = await getStorageUsageStats(prisma);
+    if (stats.usedBytes + incomingSizeBytes < EMERGENCY_HEADROOM_TRIGGER_BYTES) {
+      console.log(
+        `[Storage Headroom] Purged ${expiredCleaned} naturally expired files (${formatAttachmentSize(freedBytes)}). Safe headroom restored.`
+      );
+      return {
+        triggered: true,
+        expiredCleaned,
+        emergencyTrimmed: 0,
+        freedBytes,
+      };
+    }
+
+    // 3. Step 2: Emergency FIFO Trimming
+    // Storage is still above 850 MB even after clearing 21-day expired files!
+    // We must prune the oldest files across all sessions until usage drops below TARGET_SAFE_HEADROOM_BYTES (750 MB)
+    const sessions = await prisma.session.findMany({
+      where: { attachments: { not: null } },
+      select: { id: true, attachments: true },
+    });
+
+    interface FlatAttachmentItem {
+      sessionId: string;
+      attachment: FileAttachment;
+    }
+
+    const allItems: FlatAttachmentItem[] = [];
+    for (const session of sessions) {
+      const list = parseAttachments(session.attachments);
+      for (const att of list) {
+        if (!isAttachmentExpired(att)) {
+          allItems.push({ sessionId: session.id, attachment: att });
+        }
+      }
+    }
+
+    // Sort ascending by uploadedAt (oldest first - FIFO)
+    allItems.sort((a, b) => (a.attachment.uploadedAt || 0) - (b.attachment.uploadedAt || 0));
+
+    let currentUsed = stats.usedBytes;
+    const itemsToDelete: FlatAttachmentItem[] = [];
+
+    for (const item of allItems) {
+      // Stop once usage + incoming file fits comfortably below TARGET_SAFE_HEADROOM_BYTES
+      if (currentUsed + incomingSizeBytes <= TARGET_SAFE_HEADROOM_BYTES) {
+        break;
+      }
+      itemsToDelete.push(item);
+      const size = Number(item.attachment.size) || 0;
+      currentUsed -= size;
+      freedBytes += size;
+      emergencyTrimmed++;
+    }
+
+    if (itemsToDelete.length > 0) {
+      const pathsToDelete = itemsToDelete.map((i) => i.attachment.path);
+      console.warn(
+        `[Storage Headroom Emergency Trim] Purging ${itemsToDelete.length} oldest attachments to free ${formatAttachmentSize(freedBytes)}...`
+      );
+
+      // Delete physical files from Supabase Storage
+      await deleteFilesFromStorage(pathsToDelete);
+
+      // Group deletions by session to update database
+      const deletedIdsBySession = new Map<string, Set<string>>();
+      for (const item of itemsToDelete) {
+        if (!deletedIdsBySession.has(item.sessionId)) {
+          deletedIdsBySession.set(item.sessionId, new Set());
+        }
+        deletedIdsBySession.get(item.sessionId)!.add(item.attachment.id);
+      }
+
+      for (const [sessionId, deletedIds] of deletedIdsBySession.entries()) {
+        const sessionRecord = sessions.find((s) => s.id === sessionId);
+        if (!sessionRecord) continue;
+        const currentList = parseAttachments(sessionRecord.attachments);
+        const retained = currentList.filter(
+          (att) => !deletedIds.has(att.id) && !isAttachmentExpired(att)
+        );
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: {
+            attachments: retained.length > 0 ? JSON.stringify(retained) : null,
+          },
+        });
+      }
+    }
+
+    return {
+      triggered: true,
+      expiredCleaned,
+      emergencyTrimmed,
+      freedBytes,
+    };
+  } catch (err) {
+    console.error("[Storage Headroom Error]:", err);
+    return {
+      triggered: true,
+      expiredCleaned,
+      emergencyTrimmed,
+      freedBytes,
+    };
+  }
 }

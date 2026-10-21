@@ -9,6 +9,7 @@ import {
   invalidateSettingsCache,
 } from "@/lib/settings-cache";
 import { DEFAULT_BILLING_DURATION_MODE, BillingDurationMode } from "@/lib/billing";
+import { getStorageUsageStats } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export async function GET() {
   }
 
   try {
+    const storageUsage = await getStorageUsageStats(prisma);
     const cachedSubway = getCachedSubwaySurfersSetting();
     const cachedBilling = getCachedBillingDurationMode();
 
@@ -26,6 +28,7 @@ export async function GET() {
       return NextResponse.json({
         subwaySurfersEnabled: cachedSubway,
         billingDurationMode: cachedBilling,
+        storageUsage,
       });
     }
 
@@ -48,6 +51,7 @@ export async function GET() {
     return NextResponse.json({
       subwaySurfersEnabled,
       billingDurationMode,
+      storageUsage,
     });
   } catch (error) {
     console.error("Failed to fetch admin settings:", error);

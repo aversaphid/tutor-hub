@@ -10,6 +10,7 @@ import {
   getDaysRemaining,
   isAttachmentExpired,
   cleanupExpiredAttachments,
+  ensureStorageHeadroom,
 } from "@/lib/storage";
 import crypto from "crypto";
 
@@ -167,6 +168,9 @@ export async function POST(
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const attachmentId = crypto.randomUUID();
     const storagePath = `sessions/${id}/${attachmentId}-${sanitizedName}`;
+
+    // Emergency Headroom Auto-Trimmer: Ensure sufficient headroom before writing to Supabase
+    await ensureStorageHeadroom(file.size, prisma);
 
     // Upload to Supabase Storage
     const uploadResult = await uploadAttachmentToStorage(

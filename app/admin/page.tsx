@@ -49,6 +49,7 @@ import {
   ChevronDown,
   GraduationCap,
   Edit3,
+  HardDrive,
   Database,
   UploadCloud,
   TrendingUp,
@@ -120,6 +121,21 @@ export default function AdminPage() {
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [isCalendarSubOpen, setIsCalendarSubOpen] = useState(false);
+  const [storageUsage, setStorageUsage] = useState<{
+    usedBytes: number;
+    maxBytes: number;
+    availableBytes: number;
+    usedPercent: number;
+    fileCount: number;
+    formattedUsed: string;
+    formattedMax: string;
+    formattedAvailable: string;
+    isEmergencyThresholdReached: boolean;
+    emergencyThresholdBytes: number;
+    emergencyThresholdPercent: number;
+  } | null>(null);
+  const [isCleaningStorage, setIsCleaningStorage] = useState(false);
+  const [storageCleanMessage, setStorageCleanMessage] = useState("");
 
   // Search, filter, and sort state for lessons
   const [lessonSearchTerm, setLessonSearchTerm] = useState("");
@@ -822,6 +838,9 @@ export default function AdminPage() {
         if (d.billingDurationMode === "ROUND_NEAREST_HOUR" || d.billingDurationMode === "PROPORTIONAL") {
           setBillingDurationMode(d.billingDurationMode);
         }
+        if (d.storageUsage) {
+          setStorageUsage(d.storageUsage);
+        }
       }
       // If the admin is actively viewing the audit logs tab, refresh them too
       if (auditLogsLoaded) {
@@ -899,6 +918,28 @@ export default function AdminPage() {
       setSettingsMessage(err.message || "Network error updating settings.");
     } finally {
       setIsUpdatingSettings(false);
+    }
+  };
+
+  // Manual Storage Cleanup & Headroom Check
+  const handleManualStorageCleanup = async () => {
+    setIsCleaningStorage(true);
+    setStorageCleanMessage("");
+    try {
+      const res = await fetch("/api/admin/storage/cleanup", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.storageUsage) {
+          setStorageUsage(data.storageUsage);
+        }
+        setStorageCleanMessage(data.message || "Storage cleanup completed successfully.");
+      } else {
+        setStorageCleanMessage(data.error || "Failed to run storage cleanup.");
+      }
+    } catch (err: any) {
+      setStorageCleanMessage(err.message || "Network error running storage cleanup.");
+    } finally {
+      setIsCleaningStorage(false);
     }
   };
 
@@ -5986,6 +6027,170 @@ export default function AdminPage() {
                         <Calendar className="w-3.5 h-3.5 text-[#48A5EE]" />
                         <span>Download Week (.ics)</span>
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Homework File Storage & Rollover Capacity Card */}
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-[#48A5EE]" />
+                      <span>Homework File Storage &amp; Rollover</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Monitor Supabase cloud storage usage for student homework and lesson note attachments.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={isCleaningStorage}
+                      onClick={handleManualStorageCleanup}
+                      className="py-2 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Purge expired files (>21 days) or verify headroom"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-[#48A5EE] ${isCleaningStorage ? "animate-spin" : ""}`} />
+                      <span>{isCleaningStorage ? "Cleaning..." : "Clean Expired Files"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {storageCleanMessage && (
+                  <div className="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-[#3292dc] dark:text-blue-300 text-xs flex items-center justify-between animate-in fade-in">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#48A5EE] shrink-0" />
+                      <span>{storageCleanMessage}</span>
+                    </span>
+                    <button
+                      onClick={() => setStorageCleanMessage("")}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold px-2 py-0.5 cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Storage Capacity Meter
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        ({storageUsage ? `${storageUsage.formattedUsed} of ${storageUsage.formattedMax} used` : "Calculating..."})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase flex items-center gap-1.5 ${
+                          !storageUsage || storageUsage.usedPercent < 70
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : storageUsage.usedPercent < 85
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 animate-pulse"
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            !storageUsage || storageUsage.usedPercent < 70
+                              ? "bg-emerald-500"
+                              : storageUsage.usedPercent < 85
+                              ? "bg-amber-500"
+                              : "bg-rose-500"
+                          }`}
+                        />
+                        <span>
+                          {!storageUsage || storageUsage.usedPercent < 70
+                            ? "Storage Healthy"
+                            : storageUsage.usedPercent < 85
+                            ? "Storage Elevated"
+                            : "Headroom Auto-Trimmer Active"}
+                        </span>
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
+                        {storageUsage ? `${storageUsage.usedPercent}%` : "0%"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Visual Storage Meter Bar */}
+                  <div className="space-y-1.5">
+                    <div className="relative h-4 w-full bg-slate-200 dark:bg-slate-700/80 rounded-full overflow-hidden p-0.5 border border-slate-300 dark:border-slate-600">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          !storageUsage || storageUsage.usedPercent < 70
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                            : storageUsage.usedPercent < 85
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                            : "bg-gradient-to-r from-rose-500 to-red-600"
+                        }`}
+                        style={{ width: `${Math.max(storageUsage ? storageUsage.usedPercent : 0, 1)}%` }}
+                      />
+                      {/* 850 MB Auto-Trim Threshold Line (83%) */}
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-rose-500/80 z-10"
+                        style={{ left: "83%" }}
+                        title="850 MB Auto-Trimmer Headroom Threshold"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                      <span>0 MB</span>
+                      <span className="text-rose-500 dark:text-rose-400 font-semibold flex items-center gap-1">
+                        <span>▲ 850 MB Headroom Threshold</span>
+                      </span>
+                      <span>1,024 MB (1.0 GB)</span>
+                    </div>
+                  </div>
+
+                  {/* Metric Stat Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Active Attachments
+                      </div>
+                      <div className="text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
+                        {storageUsage?.fileCount ?? 0}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Current unexpired files
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Available Headroom
+                      </div>
+                      <div className="text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
+                        {storageUsage?.formattedAvailable ?? "1.0 GB"}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Remaining in free tier
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Safety Policies
+                      </div>
+                      <div className="text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5 flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>21-Day Rollover</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Oldest-first FIFO auto-trim
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Policy & Protection Details */}
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800/60 leading-relaxed flex items-start gap-2">
+                    <Info className="w-4 h-4 text-[#48A5EE] shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Automatic Headroom Protection:</strong> Homework files automatically expire and are purged after <strong>21 days (3 weeks)</strong>. If storage ever exceeds <strong>850 MB</strong> before the 21-day mark, the <strong>Emergency Headroom Auto-Trimmer</strong> automatically purges the oldest files first (FIFO) so uploads never fail or lock out tutors.
                     </div>
                   </div>
                 </div>
