@@ -2786,6 +2786,41 @@ export default function AdminPage() {
                   >
                     (Enter ~{(activeLesson?.unlockEarlyMinutes ?? 5) + 5} mins before lesson):
                   </span>
+                  {activeLesson?.teamsMeetingUrl ? (
+                    teamsUrlInput.trim() === activeLesson.teamsMeetingUrl.trim() ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs"
+                        title="Teams meeting link is saved and active for this lesson"
+                      >
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>Saved &amp; Sent to Student</span>
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs"
+                        title="You have unsaved changes in the input. Click 'Save Link' to update."
+                      >
+                        <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span>Unsaved Changes</span>
+                      </span>
+                    )
+                  ) : teamsUrlInput.trim() ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs"
+                      title="Click 'Save Link' to save and send to student"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Unsaved Link</span>
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 dark:bg-slate-800/80 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                      title="No Teams meeting link has been saved yet"
+                    >
+                      <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>Link Pending</span>
+                    </span>
+                  )}
                 </span>
                 {teamsSuccess && (
                   <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{teamsSuccess}</span>
