@@ -135,71 +135,94 @@ export async function POST(
     }
 
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+    // Support single file ("file") or multiple files ("files" or multiple "file" entries)
+    const rawFiles = [
+      ...formData.getAll("files"),
+      ...formData.getAll("file"),
+    ];
+    const files = rawFiles.filter(
+      (f): f is File => f instanceof File && f.size > 0
+    );
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided in form data." }, { status: 400 });
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (files.length === 0) {
       return NextResponse.json(
-        { error: "File exceeds 10 MB size limit. Please upload a smaller file." },
+        { error: "No file provided in form data." },
         { status: 400 }
       );
     }
 
-    // Validate MIME type & file extension
-    const extension = file.name.split(".").pop()?.toLowerCase() || "";
-    const isAllowedMime = ALLOWED_MIME_TYPES.has(file.type);
-    const isAllowedExt = ALLOWED_EXTENSIONS.has(extension);
+    // Validate size and extensions for all files
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json(
+          {
+            error: `File "${file.name}" exceeds 10 MB size limit. Please upload a smaller file.`,
+          },
+          { status: 400 }
+        );
+      }
 
-    if (!isAllowedMime && !isAllowedExt) {
-      return NextResponse.json(
-        {
-          error:
-            "Unsupported file type. Supported types: PDF, Images (PNG, JPG, WebP), Word (.docx, .doc), and Excel (.xlsx).",
-        },
-        { status: 400 }
-      );
+      const extension = file.name.split(".").pop()?.toLowerCase() || "";
+      const isAllowedMime = ALLOWED_MIME_TYPES.has(file.type);
+      const isAllowedExt = ALLOWED_EXTENSIONS.has(extension);
+
+      if (!isAllowedMime && !isAllowedExt) {
+        return NextResponse.json(
+          {
+            error: `Unsupported file type for "${file.name}". Supported types: PDF, Images (PNG, JPG, WebP), Word (.docx, .doc), and Excel (.xlsx).`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    const fileBytes = await file.arrayBuffer();
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const attachmentId = crypto.randomUUID();
-    const storagePath = `sessions/${id}/${attachmentId}-${sanitizedName}`;
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
 
     // Emergency Headroom Auto-Trimmer: Ensure sufficient headroom before writing to Supabase
-    await ensureStorageHeadroom(file.size, prisma);
+    await ensureStorageHeadroom(totalBytes, prisma);
 
-    // Upload to Supabase Storage
-    const uploadResult = await uploadAttachmentToStorage(
-      storagePath,
-      fileBytes,
-      file.type || "application/octet-stream"
-    );
+    const newAttachments: FileAttachment[] = [];
 
-    if (!uploadResult.success) {
-      return NextResponse.json(
-        { error: uploadResult.error || "Failed to upload file to storage." },
-        { status: 502 }
+    // Upload each file to Supabase Storage
+    for (const file of files) {
+      const fileBytes = await file.arrayBuffer();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const attachmentId = crypto.randomUUID();
+      const storagePath = `sessions/${id}/${attachmentId}-${sanitizedName}`;
+
+      const uploadResult = await uploadAttachmentToStorage(
+        storagePath,
+        fileBytes,
+        file.type || "application/octet-stream"
       );
+
+      if (!uploadResult.success) {
+        return NextResponse.json(
+          { error: uploadResult.error || `Failed to upload "${file.name}" to storage.` },
+          { status: 502 }
+        );
+      }
+
+      newAttachments.push({
+        id: attachmentId,
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+        path: storagePath,
+        uploadedAt: Date.now(),
+      });
     }
 
-    const newAttachment: FileAttachment = {
-      id: attachmentId,
-      name: file.name,
-      size: file.size,
-      type: file.type || "application/octet-stream",
-      path: storagePath,
-      uploadedAt: Date.now(),
-    };
+    // Re-fetch latest session attachments to prevent stale reads
+    const latestSession = await prisma.session.findUnique({
+      where: { id },
+      select: { attachments: true },
+    });
 
-    // Filter out expired attachments and append the new one
-    const existingList = parseAttachments(session.attachments).filter(
-      (att) => !isAttachmentExpired(att)
-    );
-    const updatedList = [...existingList, newAttachment];
+    const existingList = parseAttachments(
+      latestSession?.attachments || session.attachments
+    ).filter((att) => !isAttachmentExpired(att));
+    const updatedList = [...existingList, ...newAttachments];
 
     await prisma.session.update({
       where: { id },
@@ -220,10 +243,17 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      attachment: {
-        ...newAttachment,
-        daysRemaining: getDaysRemaining(newAttachment),
-      },
+      attachment:
+        newAttachments.length === 1
+          ? {
+              ...newAttachments[0],
+              daysRemaining: getDaysRemaining(newAttachments[0]),
+            }
+          : undefined,
+      addedAttachments: newAttachments.map((att) => ({
+        ...att,
+        daysRemaining: getDaysRemaining(att),
+      })),
       attachments: updatedList.map((att) => ({
         ...att,
         daysRemaining: getDaysRemaining(att),

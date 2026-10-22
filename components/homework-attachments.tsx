@@ -37,6 +37,11 @@ export default function HomeworkAttachments({
   compact = false,
 }: HomeworkAttachmentsProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{
+    current: number;
+    total: number;
+    name: string;
+  } | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -53,6 +58,35 @@ export default function HomeworkAttachments({
     } catch {}
     return [];
   }, [rawAttachments]);
+
+  const parseApiResponse = async (res: Response) => {
+    const text = await res.text();
+    let data: any = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      // Non-JSON response (e.g. HTML 502/504 Bad Gateway from proxy)
+    }
+
+    if (!res.ok) {
+      if (data && typeof data === "object" && data.error) {
+        throw new Error(data.error);
+      }
+      if (res.status === 413) {
+        throw new Error("File is too large for the server to process (413). Please upload a smaller file.");
+      }
+      if (res.status === 502 || res.status === 504) {
+        throw new Error("Server or storage service is temporarily unavailable (502/504). Please try again in a moment.");
+      }
+      throw new Error(`Server returned error (${res.status}). Please try again.`);
+    }
+
+    if (!data) {
+      throw new Error("Invalid response received from server.");
+    }
+
+    return data;
+  };
 
   const getFileIcon = (fileName: string, mimeType?: string) => {
     const ext = fileName.split(".").pop()?.toLowerCase();
@@ -71,38 +105,52 @@ export default function HomeworkAttachments({
     return <FileIcon className="w-4 h-4 text-blue-500 shrink-0" />;
   };
 
-  const handleUploadFile = async (file: File) => {
+  const handleUploadFiles = async (files: File[]) => {
     if (!sessionId) return;
     setErrorMsg(null);
 
-    // Max 10MB check
-    if (file.size > 10 * 1024 * 1024) {
-      setErrorMsg("File exceeds 10 MB limit.");
-      return;
+    const validFiles = files.filter((f) => f && f.size > 0);
+    if (validFiles.length === 0) return;
+
+    // Check 10MB limit on all files upfront before initiating uploads
+    for (const f of validFiles) {
+      if (f.size > 10 * 1024 * 1024) {
+        setErrorMsg(`"${f.name}" exceeds 10 MB limit.`);
+        return;
+      }
     }
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/attachments`, {
-        method: "POST",
-        body: formData,
-      });
+      // Upload files sequentially to avoid hitting proxy request size limits and race conditions
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
+        setUploadStatus({
+          current: i + 1,
+          total: validFiles.length,
+          name: file.name,
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Upload failed");
-      }
+        const formData = new FormData();
+        formData.append("file", file);
 
-      if (onAttachmentsChange && data.attachments) {
-        onAttachmentsChange(data.attachments);
+        const res = await fetch(`/api/sessions/${sessionId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await parseApiResponse(res);
+
+        if (onAttachmentsChange && data.attachments) {
+          onAttachmentsChange(data.attachments);
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to upload file");
     } finally {
       setIsUploading(false);
+      setUploadStatus(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -115,11 +163,7 @@ export default function HomeworkAttachments({
     try {
       const query = studentMagicKey ? `?key=${encodeURIComponent(studentMagicKey)}` : "";
       const res = await fetch(`/api/sessions/${sessionId}/attachments/${attachment.id}${query}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate download link.");
-      }
+      const data = await parseApiResponse(res);
 
       if (data.downloadUrl) {
         // Open/download link
@@ -149,11 +193,7 @@ export default function HomeworkAttachments({
       const res = await fetch(`/api/sessions/${sessionId}/attachments/${attachment.id}`, {
         method: "DELETE",
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete file.");
-      }
+      const data = await parseApiResponse(res);
 
       if (onAttachmentsChange && data.attachments) {
         onAttachmentsChange(data.attachments);
@@ -173,10 +213,11 @@ export default function HomeworkAttachments({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleUploadFile(file);
+              const files = e.target.files ? Array.from(e.target.files) : [];
+              if (files.length > 0) handleUploadFiles(files);
             }}
             accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.doc,.xlsx"
           />
@@ -190,8 +231,8 @@ export default function HomeworkAttachments({
             onDrop={(e) => {
               e.preventDefault();
               setIsDragOver(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) handleUploadFile(file);
+              const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+              if (files.length > 0) handleUploadFiles(files);
             }}
             onClick={() => !isUploading && fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-3 sm:p-4 text-center cursor-pointer transition-all ${
@@ -202,8 +243,14 @@ export default function HomeworkAttachments({
           >
             {isUploading ? (
               <div className="flex items-center justify-center gap-2 text-xs font-semibold text-purple-600 dark:text-purple-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Uploading attachment to Supabase...</span>
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <span className="truncate max-w-xs sm:max-w-md">
+                  {uploadStatus && uploadStatus.total > 1
+                    ? `Uploading (${uploadStatus.current}/${uploadStatus.total}): ${uploadStatus.name}...`
+                    : uploadStatus
+                    ? `Uploading ${uploadStatus.name}...`
+                    : "Uploading attachment to Supabase..."}
+                </span>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2.5 text-xs text-slate-600 dark:text-slate-300">
@@ -214,7 +261,7 @@ export default function HomeworkAttachments({
                   <span className="font-bold text-purple-600 dark:text-purple-400 hover:underline">
                     Click to upload
                   </span>{" "}
-                  or drag &amp; drop homework worksheet
+                  or drag &amp; drop files (PDFs, worksheets, etc.)
                 </div>
                 <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
                   <span>PDF, Images, Word, Excel (max 10MB)</span>
