@@ -7,6 +7,7 @@ import { CreateSessionSchema } from "@/lib/validations";
 import { detectSessionConflict } from "@/lib/conflict-detector";
 import { logSessionAudit } from "@/lib/audit";
 import { sanitizeSessionsForRole } from "@/lib/session-sanitizer";
+import { addDaysPreservingWallClock } from "@/lib/timezone";
 import crypto from "crypto";
 
 let lastAutoStartCheck = 0;
@@ -318,7 +319,7 @@ export async function POST(request: Request) {
     // 1. Conflict detection engine across all scheduled sessions (unless explicitly overridden)
     if (!allowOverlap) {
       for (let w = 0; w < weeksToSchedule; w++) {
-        const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
+        const sessionStart = addDaysPreservingWallClock(baseStart, w * intervalDays);
         const sessionEnd = new Date(sessionStart.getTime() + durationMs);
 
         const conflict = await detectSessionConflict({
@@ -341,7 +342,7 @@ export async function POST(request: Request) {
     // 2. Create the sessions
     const createdSessions = [];
     for (let w = 0; w < weeksToSchedule; w++) {
-      const sessionStart = new Date(baseStart.getTime() + w * intervalDays * 24 * 3600 * 1000);
+      const sessionStart = addDaysPreservingWallClock(baseStart, w * intervalDays);
       const sessionEnd = new Date(sessionStart.getTime() + durationMs);
 
       const session = await prisma.session.create({

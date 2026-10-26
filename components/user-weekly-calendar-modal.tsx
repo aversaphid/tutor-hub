@@ -25,6 +25,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import { addDaysPreservingWallClock } from "@/lib/timezone";
 import { getSessionTutorPay, calculateSessionAmounts } from "@/lib/billing";
 import TimeSelect from "@/components/time-select";
 import StudentCombobox from "@/components/student-combobox";
@@ -797,7 +798,7 @@ export default function UserWeeklyCalendarModal({
 
     if (!targetTutorId) return;
 
-    const nextMonday = new Date(monday.getTime() + 7 * 24 * 3600 * 1000);
+    const nextMonday = addDaysPreservingWallClock(monday, 7);
     const confirmMsg = `Copy all hourly blackout blocks from this week (${monday.toLocaleDateString([], { month: "short", day: "numeric" })}) into next week (${nextMonday.toLocaleDateString([], { month: "short", day: "numeric" })})?`;
     if (!confirm(confirmMsg)) return;
 
@@ -830,8 +831,11 @@ export default function UserWeeklyCalendarModal({
   // Copy a single selected blackout block into subsequent weeks
   const handleCopySingleBlackout = async (weeksAhead: number) => {
     if (!selectedUnavailability) return;
-    const start = new Date(new Date(selectedUnavailability.startTime).getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
-    const end = new Date(new Date(selectedUnavailability.endTime).getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
+    const origStart = new Date(selectedUnavailability.startTime);
+    const origEnd = new Date(selectedUnavailability.endTime);
+    const durationMs = origEnd.getTime() - origStart.getTime();
+    const start = addDaysPreservingWallClock(origStart, weeksAhead * 7);
+    const end = new Date(start.getTime() + durationMs);
 
     try {
       const res = await fetch("/api/tutor/unavailability", {

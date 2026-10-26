@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { addDaysPreservingWallClock } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -97,9 +98,9 @@ export async function POST(request: Request) {
         );
       }
       const srcStart = new Date(sourceMonday);
-      const srcEnd = new Date(srcStart.getTime() + 7 * 24 * 3600 * 1000);
+      const srcEnd = addDaysPreservingWallClock(srcStart, 7);
       const tgtStart = new Date(targetMonday);
-      const diffMs = tgtStart.getTime() - srcStart.getTime();
+      const daysDiff = Math.round((tgtStart.getTime() - srcStart.getTime()) / (24 * 3600 * 1000));
 
       let totalCreated = 0;
       let totalSkipped = 0;
@@ -114,8 +115,9 @@ export async function POST(request: Request) {
         });
 
         for (const block of sourceBlocks) {
-          const newStart = new Date(new Date(block.startTime).getTime() + diffMs);
-          const newEnd = new Date(new Date(block.endTime).getTime() + diffMs);
+          const blockDurationMs = new Date(block.endTime).getTime() - new Date(block.startTime).getTime();
+          const newStart = addDaysPreservingWallClock(new Date(block.startTime), daysDiff);
+          const newEnd = new Date(newStart.getTime() + blockDurationMs);
 
           const conflictSession = await prisma.session.findFirst({
             where: {
@@ -193,10 +195,12 @@ export async function POST(request: Request) {
     const skippedWeeks = [];
     const skippedConflicts: string[] = [];
 
+    const durationMs = endDate.getTime() - startDate.getTime();
+
     for (const tutor of targetTutors) {
       for (let w = 0; w <= repeatCount; w++) {
-        const wStartDate = new Date(startDate.getTime() + w * 7 * 24 * 3600 * 1000);
-        const wEndDate = new Date(endDate.getTime() + w * 7 * 24 * 3600 * 1000);
+        const wStartDate = addDaysPreservingWallClock(startDate, w * 7);
+        const wEndDate = new Date(wStartDate.getTime() + durationMs);
 
         // Safety check: Are there any scheduled active lessons during this requested period?
         const overlappingSessions = await prisma.session.findMany({

@@ -82,6 +82,7 @@ const FindOpenSlotModal = dynamic(() => import("@/components/find-open-slot-moda
 const RevenueAnalyticsHub = dynamic(() => import("@/components/revenue-analytics-hub"), { ssr: false });
 import { playSessionStartChime, playDelayAlertChime } from "@/lib/audio-cues";
 import { formatTutorName, formatCurrency, TIME_OPTIONS_5MIN, addMinutesToTime } from "@/lib/format";
+import { addDaysPreservingWallClock, getZonedParts } from "@/lib/timezone";
 import TimeSelect from "@/components/time-select";
 import StudentCombobox from "@/components/student-combobox";
 import { useRouter } from "next/navigation";
@@ -1316,15 +1317,15 @@ export default function AdminPage() {
     setSelectedTutorId(session.tutorId || session.tutor?.id || "");
     const origStart = new Date(session.scheduledStartTime);
     const origEnd = new Date(session.scheduledEndTime);
-    const nextStart = new Date(origStart.getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
-    const nextEnd = new Date(origEnd.getTime() + weeksAhead * 7 * 24 * 3600 * 1000);
+    const nextStart = addDaysPreservingWallClock(origStart, weeksAhead * 7);
+    const nextEnd = addDaysPreservingWallClock(origEnd, weeksAhead * 7);
 
+    const parts = getZonedParts(nextStart);
+    const endParts = getZonedParts(nextEnd);
     const pad = (n: number) => String(n).padStart(2, "0");
-    const dateStr = `${nextStart.getFullYear()}-${pad(nextStart.getMonth() + 1)}-${pad(nextStart.getDate())}`;
-    const startMin = Math.floor(nextStart.getMinutes() / 5) * 5;
-    const endMin = Math.floor(nextEnd.getMinutes() / 5) * 5;
-    const startStr = `${pad(nextStart.getHours())}:${pad(startMin)}`;
-    const endStr = `${pad(nextEnd.getHours())}:${pad(endMin)}`;
+    const dateStr = `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+    const startStr = `${pad(parts.hour)}:${pad(parts.minute)}`;
+    const endStr = `${pad(endParts.hour)}:${pad(endParts.minute)}`;
 
     setLessonDate(dateStr);
     setLessonStartTime(startStr);

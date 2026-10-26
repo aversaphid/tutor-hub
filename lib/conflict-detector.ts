@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { formatTutorName } from "./format";
+import { formatLondonTime, formatLondonDate } from "./timezone";
 
 export interface ConflictCheckParams {
   tutorId: string;
@@ -50,14 +51,8 @@ export async function detectSessionConflict(
   });
 
   if (tutorOverlap) {
-    const startStr = tutorOverlap.scheduledStartTime.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const endStr = tutorOverlap.scheduledEndTime.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const startStr = formatLondonTime(tutorOverlap.scheduledStartTime);
+    const endStr = formatLondonTime(tutorOverlap.scheduledEndTime);
 
     return {
       hasConflict: true,
@@ -82,14 +77,8 @@ export async function detectSessionConflict(
   });
 
   if (tuteeOverlap) {
-    const startStr = tuteeOverlap.scheduledStartTime.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const endStr = tuteeOverlap.scheduledEndTime.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const startStr = formatLondonTime(tuteeOverlap.scheduledStartTime);
+    const endStr = formatLondonTime(tuteeOverlap.scheduledEndTime);
 
     return {
       hasConflict: true,
@@ -113,23 +102,17 @@ export async function detectSessionConflict(
   if (unavailabilityOverlap) {
     const isHoliday = unavailabilityOverlap.type === "HOLIDAY";
     const startStr = isHoliday
-      ? unavailabilityOverlap.startTime.toLocaleDateString([], {
+      ? formatLondonDate(unavailabilityOverlap.startTime, {
           month: "short",
           day: "numeric",
         })
-      : unavailabilityOverlap.startTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+      : formatLondonTime(unavailabilityOverlap.startTime);
     const endStr = isHoliday
-      ? unavailabilityOverlap.endTime.toLocaleDateString([], {
+      ? formatLondonDate(unavailabilityOverlap.endTime, {
           month: "short",
           day: "numeric",
         })
-      : unavailabilityOverlap.endTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+      : formatLondonTime(unavailabilityOverlap.endTime);
     const label = isHoliday ? "Holiday / Out of Office" : "Unavailable";
     const reasonText = unavailabilityOverlap.reason
       ? ` ("${unavailabilityOverlap.reason}")`

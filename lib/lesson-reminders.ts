@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { formatTutorName } from "./format";
 import { sendPushToUser } from "./web-push";
+import { formatLondonTime, formatLondonDate } from "./timezone";
 
 let lastReminderCheck = 0;
 const REMINDER_CHECK_THROTTLE_MS = 25_000; // Check at most once every 25 seconds per server instance
@@ -59,10 +60,7 @@ export async function checkAndSendUpcomingLessonReminders(): Promise<{ sentCount
       const tutorName = formatTutorName(session.tutor?.name) || "Your tutor";
       const studentName = session.tutee?.name || "Student";
 
-      const timeFormatted = new Date(session.scheduledStartTime).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      const timeFormatted = formatLondonTime(session.scheduledStartTime);
 
       // 1. Mark reminderSentAt FIRST to ensure idempotency and prevent duplicate pushes
       await (prisma.session as any).update({
@@ -149,15 +147,12 @@ export async function sendLessonBookedNotification(session: {
   if (!session.tuteeId) return;
 
   const startDate = new Date(session.scheduledStartTime);
-  const dateFormatted = startDate.toLocaleDateString("en-GB", {
+  const dateFormatted = formatLondonDate(startDate, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
-  const timeFormatted = startDate.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timeFormatted = formatLondonTime(startDate);
   const tutorName = formatTutorName(session.tutor?.name) || "Your tutor";
 
   sendPushToUser(session.tuteeId, {
