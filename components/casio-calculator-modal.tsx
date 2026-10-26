@@ -531,17 +531,17 @@ export default function CasioCalculatorModal({
     if (!isLiveDemoSyncedRef.current || !chassisRef.current) return;
     if (!sessionId || sessionId === "live-demo" || sessionId === "admin-demo") return;
     const now = Date.now();
-    if (now - lastCursorSendRef.current < 60) return; // ~16.6 fps throttle (60ms)
+    if (now - lastCursorSendRef.current < 80) return; // ~12.5 fps throttle (80ms)
 
     const rect = chassisRef.current.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
     const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
 
-    // Jitter suppression: ignore micro-movements < 0.35%
+    // Jitter suppression: ignore micro-movements < 0.5%
     if (
-      Math.abs(x - lastSentPosRef.current.x) < 0.35 &&
-      Math.abs(y - lastSentPosRef.current.y) < 0.35
+      Math.abs(x - lastSentPosRef.current.x) < 0.5 &&
+      Math.abs(y - lastSentPosRef.current.y) < 0.5
     ) {
       return;
     }

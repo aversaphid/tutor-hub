@@ -3,6 +3,15 @@ import { getCurrentUser } from "@/lib/auth";
 import { broadcastCalculatorAction } from "@/lib/sse-bus";
 import { prisma } from "@/lib/prisma";
 
+interface CachedSessionParticipants {
+  tutorId: string;
+  tuteeId: string;
+  expiresAt: number;
+}
+
+const sessionParticipantsCache = new Map<string, CachedSessionParticipants>();
+const SESSION_PARTICIPANTS_CACHE_TTL_MS = 10 * 60_000; // 10-minute in-memory cache
+
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
@@ -37,13 +46,25 @@ export async function POST(req: Request) {
 
     // Strictly validate lesson session and isolate recipients to participants of this specific lesson
     if (body.sessionId && body.sessionId !== "live-demo" && body.sessionId !== "admin-demo") {
-      const session = await prisma.session.findUnique({
-        where: { id: body.sessionId },
-        select: { id: true, tutorId: true, tuteeId: true },
-      });
+      const now = Date.now();
+      let session = sessionParticipantsCache.get(body.sessionId);
 
-      if (!session) {
-        return NextResponse.json({ error: "Session not found." }, { status: 404 });
+      if (!session || session.expiresAt <= now) {
+        const dbSession = await prisma.session.findUnique({
+          where: { id: body.sessionId },
+          select: { id: true, tutorId: true, tuteeId: true },
+        });
+
+        if (!dbSession) {
+          return NextResponse.json({ error: "Session not found." }, { status: 404 });
+        }
+
+        session = {
+          tutorId: dbSession.tutorId,
+          tuteeId: dbSession.tuteeId,
+          expiresAt: now + SESSION_PARTICIPANTS_CACHE_TTL_MS,
+        };
+        sessionParticipantsCache.set(body.sessionId, session);
       }
 
       const isParticipant =
