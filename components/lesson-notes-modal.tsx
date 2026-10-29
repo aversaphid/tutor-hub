@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, FileText, Check, Loader2, Info, BookOpen, Sparkles, Paperclip } from "lucide-react";
+import { X, FileText, Check, Loader2, Info, BookOpen, Sparkles, Paperclip, AlertCircle } from "lucide-react";
 import HomeworkAttachments from "./homework-attachments";
 
 interface LessonNotesModalProps {
@@ -21,6 +21,7 @@ export default function LessonNotesModal({
   const [notes, setNotes] = useState(session?.feedbackNotes || "");
   const [attachments, setAttachments] = useState<any[]>(session?.attachments || []);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function LessonNotesModal({
       setCovered(session.feedbackCovered || draftCovered || "");
       setNotes(session.feedbackNotes || draftNotes || "");
       setAttachments(session.attachments || []);
+      setSaveStatus(null);
       setSaveMessage("");
     }
   }, [session, isOpen]);
@@ -42,6 +44,7 @@ export default function LessonNotesModal({
   const saveNotesToApi = async (notesToSave: string, coveredToSave: string): Promise<boolean> => {
     if (!session?.id) return false;
     setIsSaving(true);
+    setSaveStatus(null);
     setSaveMessage("");
     try {
       const res = await fetch(`/api/sessions/${session.id}`, {
@@ -57,14 +60,23 @@ export default function LessonNotesModal({
           localStorage.setItem(`tutor_draft_notes_${session.id}`, notesToSave);
           localStorage.setItem(`tutor_draft_covered_${session.id}`, coveredToSave);
         } catch {}
+        setSaveStatus("success");
+        setSaveMessage("Saved!");
+        setTimeout(() => {
+          setSaveMessage("");
+          setSaveStatus(null);
+        }, 2500);
         onSaved(notesToSave, coveredToSave);
         return true;
       } else {
-        setSaveMessage("Failed to save");
+        const errorData = await res.json().catch(() => null);
+        setSaveStatus("error");
+        setSaveMessage(errorData?.error || "Failed to save");
         return false;
       }
     } catch (err) {
       console.error("Failed to save lesson notes:", err);
+      setSaveStatus("error");
       setSaveMessage("Error saving");
       return false;
     } finally {
@@ -224,9 +236,15 @@ export default function LessonNotesModal({
               <span className="text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
               </span>
-            ) : saveMessage ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> {saveMessage}
+            ) : saveStatus === "error" ? (
+              <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200 dark:border-rose-900/60 animate-in fade-in duration-150">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                <span>{saveMessage || "Failed to save"}</span>
+              </span>
+            ) : saveStatus === "success" && saveMessage ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 animate-in fade-in duration-150">
+                <Check className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                <span>{saveMessage}</span>
               </span>
             ) : (
               <span className="text-[11px] text-slate-400">Auto-saves on close</span>

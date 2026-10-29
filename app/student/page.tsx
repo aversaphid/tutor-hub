@@ -30,6 +30,7 @@ import {
   HelpCircle,
   Edit3,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -72,6 +73,7 @@ function StudentLobbyContent() {
   // Student topic for lesson
   const [topicInput, setTopicInput] = useState("");
   const [topicSaved, setTopicSaved] = useState(false);
+  const [topicError, setTopicError] = useState(false);
   const [isSavingTopic, setIsSavingTopic] = useState(false);
 
   // Parent / Guardian contact email state
@@ -119,6 +121,8 @@ function StudentLobbyContent() {
   const handleSaveTopic = async () => {
     if (!activeSession) return;
     setIsSavingTopic(true);
+    setTopicSaved(false);
+    setTopicError(false);
     try {
       const res = await fetch(`/api/sessions/${activeSession.id}/topic`, {
         method: "PATCH",
@@ -128,8 +132,14 @@ function StudentLobbyContent() {
       if (res.ok) {
         setTopicSaved(true);
         setTimeout(() => setTopicSaved(false), 2500);
+      } else {
+        setTopicError(true);
+        setTimeout(() => setTopicError(false), 3000);
       }
-    } catch { }
+    } catch {
+      setTopicError(true);
+      setTimeout(() => setTopicError(false), 3000);
+    }
     setIsSavingTopic(false);
   };
 
@@ -777,17 +787,33 @@ function StudentLobbyContent() {
                         type="button"
                         onClick={handleSaveTopic}
                         disabled={isSavingTopic}
-                        className="px-3 py-1.5 rounded-xl bg-[#48A5EE] hover:bg-[#3292dc] text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 cursor-pointer shrink-0 ${
+                          topicError
+                            ? "bg-rose-600 hover:bg-rose-700 text-white"
+                            : topicSaved
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-[#48A5EE] hover:bg-[#3292dc] text-white"
+                        }`}
                       >
-                        {topicSaved ? (
+                        {isSavingTopic ? (
                           <>
-                            <Check className="w-3 h-3" />
+                            <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                            <span>...</span>
+                          </>
+                        ) : topicError ? (
+                          <>
+                            <AlertCircle className="w-3 h-3 shrink-0" />
+                            <span>Failed to save</span>
+                          </>
+                        ) : topicSaved ? (
+                          <>
+                            <Check className="w-3 h-3 shrink-0" />
                             <span>Saved!</span>
                           </>
                         ) : (
                           <>
-                            <Send className="w-3 h-3" />
-                            <span>{isSavingTopic ? "..." : "Save"}</span>
+                            <Send className="w-3 h-3 shrink-0" />
+                            <span>Save</span>
                           </>
                         )}
                       </button>
