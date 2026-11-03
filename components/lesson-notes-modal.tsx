@@ -54,6 +54,7 @@ export default function LessonNotesModal({
           feedbackCovered: coveredToSave || null,
           feedbackNotes: notesToSave || null,
         }),
+        keepalive: true,
       });
       if (res.ok) {
         try {

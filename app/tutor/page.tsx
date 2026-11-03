@@ -3456,12 +3456,28 @@ export default function TutorDashboardPage() {
           setSessionToComplete(null);
         }}
         session={sessionToComplete}
-        onNotesSaved={(newNotes) => {
+        onNotesSaved={(newNotes, newCovered) => {
           if (activeLesson && sessionToComplete?.id === activeLesson.id) {
-            setActiveLesson((prev: any) => prev ? { ...prev, feedbackNotes: newNotes } : null);
+            setActiveLesson((prev: any) =>
+              prev
+                ? {
+                    ...prev,
+                    feedbackNotes: newNotes,
+                    ...(newCovered !== undefined ? { feedbackCovered: newCovered } : {}),
+                  }
+                : null
+            );
           }
           setMySessions((prev: any[]) =>
-            prev.map((s) => (s.id === sessionToComplete?.id ? { ...s, feedbackNotes: newNotes } : s))
+            prev.map((s) =>
+              s.id === sessionToComplete?.id
+                ? {
+                    ...s,
+                    feedbackNotes: newNotes,
+                    ...(newCovered !== undefined ? { feedbackCovered: newCovered } : {}),
+                  }
+                : s
+            )
           );
         }}
         onCompleted={(updated) => {

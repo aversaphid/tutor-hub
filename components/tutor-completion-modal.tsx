@@ -9,7 +9,7 @@ interface TutorCompletionModalProps {
   onClose: () => void;
   session: any;
   onCompleted: (updatedSession: any) => void;
-  onNotesSaved?: (newNotes: string) => void;
+  onNotesSaved?: (newNotes: string, newCovered?: string) => void;
 }
 
 export default function TutorCompletionModal({
@@ -30,8 +30,16 @@ export default function TutorCompletionModal({
   const [error, setError] = useState("");
   const [draftSavedMsg, setDraftSavedMsg] = useState("");
 
+  const isClosingRef = React.useRef(false);
+  const latestStateRef = React.useRef({ feedbackNotes, feedbackCovered, session });
+
+  useEffect(() => {
+    latestStateRef.current = { feedbackNotes, feedbackCovered, session };
+  }, [feedbackNotes, feedbackCovered, session]);
+
   useEffect(() => {
     if (session && isOpen) {
+      isClosingRef.current = false;
       let draftNotes = "";
       let draftCovered = "";
       try {
@@ -54,25 +62,50 @@ export default function TutorCompletionModal({
     }
   }, [session, isOpen]);
 
-  // Auto-save changes to notes when closing the modal so tutors never lose what they typed
+  // Auto-save changes to covered topics and notes when closing the modal so tutors never lose what they typed
   const handleCloseModal = async () => {
-    const trimmedNotes = feedbackNotes.trim();
-    const originalNotes = (session?.feedbackNotes || "").trim();
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
 
-    if (session?.id && trimmedNotes !== originalNotes) {
+    const currentNotes = latestStateRef.current.feedbackNotes;
+    const currentCovered = latestStateRef.current.feedbackCovered;
+    const currentSession = latestStateRef.current.session;
+
+    const trimmedNotes = currentNotes.trim();
+    const trimmedCovered = currentCovered.trim();
+    const originalNotes = (currentSession?.feedbackNotes || "").trim();
+    const originalCovered = (currentSession?.feedbackCovered || "").trim();
+
+    const notesChanged = trimmedNotes !== originalNotes;
+    const coveredChanged = trimmedCovered !== originalCovered;
+
+    if (currentSession?.id && (notesChanged || coveredChanged)) {
       try {
-        const res = await fetch(`/api/sessions/${session.id}`, {
+        const payload: Record<string, any> = {};
+        if (notesChanged) payload.feedbackNotes = trimmedNotes || null;
+        if (coveredChanged) payload.feedbackCovered = trimmedCovered || null;
+
+        const res = await fetch(`/api/sessions/${currentSession.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ feedbackNotes: trimmedNotes }),
+          body: JSON.stringify(payload),
+          keepalive: true,
         });
         if (res.ok) {
+          if (currentSession) {
+            if (notesChanged) currentSession.feedbackNotes = trimmedNotes;
+            if (coveredChanged) currentSession.feedbackCovered = trimmedCovered;
+          }
+          try {
+            localStorage.setItem(`tutor_draft_notes_${currentSession.id}`, trimmedNotes);
+            localStorage.setItem(`tutor_draft_covered_${currentSession.id}`, trimmedCovered);
+          } catch {}
           if (onNotesSaved) {
-            onNotesSaved(trimmedNotes);
+            onNotesSaved(trimmedNotes, trimmedCovered);
           }
         }
       } catch (err) {
-        console.error("Auto-save feedbackNotes on modal close error:", err);
+        console.error("Auto-save feedback on modal close error:", err);
       }
     }
     onClose();
@@ -87,7 +120,41 @@ export default function TutorCompletionModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, feedbackNotes, session]);
+  }, [isOpen]);
+
+  // Auto-save on page refresh/close tab
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const currentNotes = latestStateRef.current.feedbackNotes;
+      const currentCovered = latestStateRef.current.feedbackCovered;
+      const currentSession = latestStateRef.current.session;
+      if (!currentSession?.id) return;
+
+      const trimmedNotes = currentNotes.trim();
+      const trimmedCovered = currentCovered.trim();
+      const originalNotes = (currentSession.feedbackNotes || "").trim();
+      const originalCovered = (currentSession.feedbackCovered || "").trim();
+
+      const notesChanged = trimmedNotes !== originalNotes;
+      const coveredChanged = trimmedCovered !== originalCovered;
+
+      if (notesChanged || coveredChanged) {
+        const payload: Record<string, any> = {};
+        if (notesChanged) payload.feedbackNotes = trimmedNotes || null;
+        if (coveredChanged) payload.feedbackCovered = trimmedCovered || null;
+
+        fetch(`/api/sessions/${currentSession.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   if (!isOpen || !session) return null;
 
@@ -104,6 +171,7 @@ export default function TutorCompletionModal({
     try {
       localStorage.setItem(`tutor_draft_covered_${session.id}`, val);
     } catch {}
+    setDraftSavedMsg("Draft saved");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,9 +285,16 @@ export default function TutorCompletionModal({
                 <BookOpen className="w-3.5 h-3.5 text-[#48A5EE]" />
                 <span>What did you cover in this lesson? How did it go? <span className="text-rose-500">*</span></span>
               </label>
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 shrink-0">
-                Shown to Admin
-              </span>
+              <div className="flex items-center gap-1.5">
+                {draftSavedMsg && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    {draftSavedMsg}
+                  </span>
+                )}
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 shrink-0">
+                  Shown to Admin
+                </span>
+              </div>
             </div>
             <textarea
               required
@@ -229,9 +304,9 @@ export default function TutorCompletionModal({
               placeholder="e.g. Quadratic equations and factorisation. Went well — student picked up the methods quickly and solved exam questions independently..."
               className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#48A5EE] transition-all resize-none text-xs"
             />
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              This summary is shown to admin for lesson reviews and quality tracking.
-            </p>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <span>Automatically saved even if you close or cancel this window.</span>
+            </div>
           </div>
 
           {/* 5-Star Rating (Required) - How lesson went overall */}
