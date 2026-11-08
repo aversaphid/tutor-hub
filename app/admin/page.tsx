@@ -5643,52 +5643,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Subway Surfers Mode Control */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl" role="img" aria-label="skateboard">
-                      🛹
-                    </span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                      Subway Surfers Focus Mode
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${subwaySurfersEnabled
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                        }`}
-                    >
-                      {subwaySurfersEnabled ? "Active" : "Disabled / Hidden"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-                    Controls whether the secret Subway Surfers focus stream is available in the student and tutor accessibility menu. When toggled off, the feature disappears from the entire platform.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {subwaySurfersEnabled ? "Enabled" : "Hidden"}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    disabled={isUpdatingSettings}
-                    aria-checked={subwaySurfersEnabled}
-                    onClick={() => handleToggleSubwaySurfers(!subwaySurfersEnabled)}
-                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${subwaySurfersEnabled ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
-                      } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
-                    title={subwaySurfersEnabled ? "Click to hide Subway Surfers mode" : "Click to enable Subway Surfers mode"}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${subwaySurfersEnabled ? "translate-x-7" : "translate-x-0"
-                        }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
               {/* Lesson Duration & Billing Calculation Control */}
               <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -6376,6 +6330,52 @@ export default function AdminPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Subway Surfers Mode Control */}
+              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl" role="img" aria-label="skateboard">
+                      🛹
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Subway Surfers Focus Mode
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${subwaySurfersEnabled
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                        }`}
+                    >
+                      {subwaySurfersEnabled ? "Active" : "Disabled / Hidden"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                    Controls whether the secret Subway Surfers focus stream is available in the student and tutor accessibility menu. When toggled off, the feature disappears from the entire platform.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {subwaySurfersEnabled ? "Enabled" : "Hidden"}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    disabled={isUpdatingSettings}
+                    aria-checked={subwaySurfersEnabled}
+                    onClick={() => handleToggleSubwaySurfers(!subwaySurfersEnabled)}
+                    className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${subwaySurfersEnabled ? "bg-[#48A5EE]" : "bg-slate-300 dark:bg-slate-700"
+                      } ${isUpdatingSettings ? "opacity-60 cursor-not-allowed" : ""}`}
+                    title={subwaySurfersEnabled ? "Click to hide Subway Surfers mode" : "Click to enable Subway Surfers mode"}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${subwaySurfersEnabled ? "translate-x-7" : "translate-x-0"
+                        }`}
+                    />
+                  </button>
                 </div>
               </div>
             </div>
