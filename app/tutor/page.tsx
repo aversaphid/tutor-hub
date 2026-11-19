@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import CalendarSubscriptionModal from "@/components/calendar-subscription-modal";
 import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import NotesHistoryModal from "@/components/notes-history-modal";
+import EmailTemplateModal from "@/components/email-template-modal";
 import {
   Calendar,
   Users,
@@ -143,6 +144,85 @@ export default function TutorDashboardPage() {
   const openNotesHistoryForStudent = (student: { id: string; name: string }) => {
     setNotesHistoryStudent(student);
     setIsNotesHistoryOpen(true);
+  };
+
+  // Email Template Modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailModalStudent, setEmailModalStudent] = useState<any>(null);
+  const [emailModalInitialEmail, setEmailModalInitialEmail] = useState<string | null>(null);
+  const [emailModalSelectAll, setEmailModalSelectAll] = useState(false);
+  const [emailModalTeamsUrl, setEmailModalTeamsUrl] = useState("");
+
+  const handleOpenEmailModal = (
+    studentData: any,
+    initialEmail?: string | null,
+    selectAll: boolean = false,
+    explicitTeamsUrl?: string | null
+  ) => {
+    if (!studentData) return;
+    const matched = assignedStudents.find(
+      (s) => s.id === (studentData.id || studentData.tuteeId)
+    );
+    const enrichedStudent = matched ? { ...matched, ...studentData } : studentData;
+
+    setEmailModalStudent(enrichedStudent);
+    setEmailModalInitialEmail(initialEmail || null);
+    setEmailModalSelectAll(selectAll);
+
+    let teamsUrl = (explicitTeamsUrl || "").trim();
+    if (!teamsUrl && enrichedStudent?.id) {
+      if (activeLesson && (activeLesson.tuteeId === enrichedStudent.id || activeLesson.tutee?.id === enrichedStudent.id)) {
+        teamsUrl = (activeLesson.teamsMeetingUrl || teamsUrlInput || activeLessonPrevTeamsUrl || "").trim();
+      } else {
+        const candidateSession =
+          mySessions.find(
+            (s: any) =>
+              (s.tuteeId === enrichedStudent.id || s.tutee?.id === enrichedStudent.id) &&
+              s.teamsMeetingUrl?.trim() &&
+              (s.status === "IN_PROGRESS" || s.status === "SCHEDULED" || s.status === "DELAYED")
+          ) ||
+          mySessions.find(
+            (s: any) =>
+              (s.tuteeId === enrichedStudent.id || s.tutee?.id === enrichedStudent.id) &&
+              s.teamsMeetingUrl?.trim()
+          );
+
+        if (candidateSession?.teamsMeetingUrl) {
+          teamsUrl = candidateSession.teamsMeetingUrl.trim();
+        }
+      }
+    }
+
+    // Global fallbacks if student doesn't have a unique Teams link yet:
+    if (!teamsUrl) {
+      if (teamsUrlInput.trim()) {
+        teamsUrl = teamsUrlInput.trim();
+      } else if (activeLesson?.teamsMeetingUrl?.trim()) {
+        teamsUrl = activeLesson.teamsMeetingUrl.trim();
+      } else if (nextTeamsUrlInput.trim()) {
+        teamsUrl = nextTeamsUrlInput.trim();
+      } else if (nextLesson?.teamsMeetingUrl?.trim()) {
+        teamsUrl = nextLesson.teamsMeetingUrl.trim();
+      } else {
+        const anySessionWithTeams = mySessions.find((s: any) => s.teamsMeetingUrl?.trim());
+        if (anySessionWithTeams?.teamsMeetingUrl) {
+          teamsUrl = anySessionWithTeams.teamsMeetingUrl.trim();
+        } else {
+          try {
+            teamsUrl = (localStorage.getItem("tutor_default_teams_url") || "").trim();
+          } catch {}
+        }
+      }
+    }
+
+    if (teamsUrl) {
+      try {
+        localStorage.setItem("tutor_default_teams_url", teamsUrl);
+      } catch {}
+    }
+
+    setEmailModalTeamsUrl(teamsUrl);
+    setIsEmailModalOpen(true);
   };
 
   // Delay Reason Modal
@@ -631,6 +711,11 @@ export default function TutorDashboardPage() {
 
       const data = await res.json();
       if (res.ok) {
+        try {
+          if (teamsUrlInput.trim()) {
+            localStorage.setItem("tutor_default_teams_url", teamsUrlInput.trim());
+          }
+        } catch {}
         setTeamsSuccess("Teams meeting link saved and student alerted!");
         setActiveLesson(data.session);
         loadMySessions();
@@ -659,6 +744,11 @@ export default function TutorDashboardPage() {
 
       const data = await res.json();
       if (res.ok) {
+        try {
+          if (nextTeamsUrlInput.trim()) {
+            localStorage.setItem("tutor_default_teams_url", nextTeamsUrlInput.trim());
+          }
+        } catch {}
         setNextTeamsSuccess("Teams link saved for upcoming lesson!");
         loadMySessions();
         setTimeout(() => setNextTeamsSuccess(""), 3500);
@@ -1303,13 +1393,21 @@ export default function TutorDashboardPage() {
                           return (
                             <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-normal">
                               <Mail className="w-3 h-3 text-[#48A5EE]" />
-                              <a
-                                href={`mailto:${emailList[0]}`}
-                                className="hover:underline hover:text-[#48A5EE] font-medium"
-                                title={`Contact Parent/Guardian: ${emailList[0]}`}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenEmailModal(
+                                    activeLesson.tutee,
+                                    emailList[0],
+                                    false,
+                                    activeLesson.teamsMeetingUrl || teamsUrlInput || activeLessonPrevTeamsUrl
+                                  )
+                                }
+                                className="hover:underline hover:text-[#48A5EE] font-medium cursor-pointer text-left"
+                                title={`Compose Email to Parent/Guardian: ${emailList[0]}`}
                               >
                                 Parent: {emailList[0]}
-                              </a>
+                              </button>
                             </span>
                           );
                         }
@@ -1317,22 +1415,38 @@ export default function TutorDashboardPage() {
                           <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-normal flex-wrap">
                             <Mail className="w-3 h-3 text-[#48A5EE]" />
                             <span className="font-medium text-slate-700 dark:text-slate-300">Parents:</span>
-                            <a
-                              href={`mailto:${emailList.join(",")}`}
-                              className="text-[10px] font-bold text-[#48A5EE] hover:underline"
-                              title={`Email all ${emailList.length} addresses: ${emailList.join(", ")}`}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleOpenEmailModal(
+                                  activeLesson.tutee,
+                                  null,
+                                  true,
+                                  activeLesson.teamsMeetingUrl || teamsUrlInput || activeLessonPrevTeamsUrl
+                                )
+                              }
+                              className="text-[10px] font-bold text-[#48A5EE] hover:underline cursor-pointer"
+                              title={`Compose Email to all ${emailList.length} addresses: ${emailList.join(", ")}`}
                             >
                               Email All ({emailList.length})
-                            </a>
+                            </button>
                             {emailList.map((em, idx) => (
-                              <a
+                              <button
                                 key={idx}
-                                href={`mailto:${em}`}
-                                className="hover:underline hover:text-[#48A5EE] font-medium text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
-                                title={`Contact: ${em}`}
+                                type="button"
+                                onClick={() =>
+                                  handleOpenEmailModal(
+                                    activeLesson.tutee,
+                                    em,
+                                    false,
+                                    activeLesson.teamsMeetingUrl || teamsUrlInput || activeLessonPrevTeamsUrl
+                                  )
+                                }
+                                className="hover:underline hover:text-[#48A5EE] font-medium text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded cursor-pointer"
+                                title={`Compose Email to: ${em}`}
                               >
                                 {em}
-                              </a>
+                              </button>
                             ))}
                           </span>
                         );
@@ -2111,13 +2225,14 @@ export default function TutorDashboardPage() {
                               return (
                                 <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                                   <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
-                                  <a
-                                    href={`mailto:${emailList[0]}`}
-                                    className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px]"
-                                    title={`Contact Parent: ${emailList[0]}`}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEmailModal(student, emailList[0], false)}
+                                    className="hover:underline hover:text-[#48A5EE] font-medium truncate max-w-[170px] text-left cursor-pointer"
+                                    title={`Compose Email to Parent: ${emailList[0]}`}
                                   >
                                     {emailList[0]}
-                                  </a>
+                                  </button>
                                   <span className="text-[10px] text-slate-400">(Parent)</span>
                                 </span>
                               );
@@ -2125,22 +2240,24 @@ export default function TutorDashboardPage() {
                             return (
                               <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 flex-wrap">
                                 <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
-                                <a
-                                  href={`mailto:${emailList.join(",")}`}
-                                  className="text-[10px] font-bold text-[#48A5EE] hover:underline"
-                                  title={`Email all ${emailList.length} parent contacts: ${emailList.join(", ")}`}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEmailModal(student, null, true)}
+                                  className="text-[10px] font-bold text-[#48A5EE] hover:underline cursor-pointer"
+                                  title={`Compose Email to all ${emailList.length} parent contacts: ${emailList.join(", ")}`}
                                 >
                                   Email All ({emailList.length})
-                                </a>
+                                </button>
                                 {emailList.map((em, idx) => (
-                                  <a
+                                  <button
                                     key={idx}
-                                    href={`mailto:${em}`}
-                                    className="hover:underline hover:text-[#48A5EE] font-medium text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[130px]"
-                                    title={`Contact: ${em}`}
+                                    type="button"
+                                    onClick={() => handleOpenEmailModal(student, em, false)}
+                                    className="hover:underline hover:text-[#48A5EE] font-medium text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[130px] cursor-pointer"
+                                    title={`Compose Email to: ${em}`}
                                   >
                                     {em}
-                                  </a>
+                                  </button>
                                 ))}
                               </span>
                             );
@@ -3625,6 +3742,20 @@ export default function TutorDashboardPage() {
         onClose={() => setIsCalendarSubOpen(false)}
         title="My Teaching Schedule Feed"
         subtitle="Subscribe your phone or computer calendar to your teaching schedule. Changes, reschedules, or new bookings sync automatically."
+      />
+
+      {/* Email Template Modal */}
+      <EmailTemplateModal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false);
+          setEmailModalStudent(null);
+        }}
+        student={emailModalStudent}
+        initialSelectedEmail={emailModalInitialEmail}
+        initialSelectAll={emailModalSelectAll}
+        teamsMeetingUrl={emailModalTeamsUrl}
+        tutorName={formatTutorName(currentUser?.name) || "Your Tutor"}
       />
 
       <Footer

@@ -9,6 +9,7 @@ import { exportSessionsToCSV } from "@/lib/csv-export";
 import { downloadMultiEventICS, getCanonicalPortalUrl, CalendarEvent } from "@/lib/calendar";
 import { parseEmailList } from "@/lib/email-utils";
 import FormulaSheetModal from "@/components/formula-sheet-modal";
+import EmailTemplateModal from "@/components/email-template-modal";
 import LessonCountdownBadge from "@/components/lesson-countdown-badge";
 import {
   Calendar,
@@ -153,6 +154,61 @@ export default function AdminPage() {
   const [studentSortBy, setStudentSortBy] = useState<"name_asc" | "name_desc" | "tutor" | "newest">("name_asc");
   const [unlockingStudentId, setUnlockingStudentId] = useState<string | null>(null);
   const [pinResetSuccessMessage, setPinResetSuccessMessage] = useState("");
+
+  // Email Template Modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailModalStudent, setEmailModalStudent] = useState<any>(null);
+  const [emailModalInitialEmail, setEmailModalInitialEmail] = useState<string | null>(null);
+  const [emailModalSelectAll, setEmailModalSelectAll] = useState(false);
+  const [emailModalTeamsUrl, setEmailModalTeamsUrl] = useState("");
+  const [emailModalTutorName, setEmailModalTutorName] = useState("");
+
+  const handleOpenEmailModal = (
+    student: any,
+    initialEmail?: string | null,
+    selectAll: boolean = false
+  ) => {
+    if (!student) return;
+    setEmailModalStudent(student);
+    setEmailModalInitialEmail(initialEmail || null);
+    setEmailModalSelectAll(selectAll);
+
+    const assignedTutor = tutors.find((t: any) => t.id === student.assignedTutorId);
+    const tutorName = assignedTutor?.name || currentUser?.name || "Your Tutor";
+    setEmailModalTutorName(tutorName);
+
+    let teamsUrl = "";
+    const candidateSession =
+      sessions.find(
+        (s: any) =>
+          (s.tuteeId === student.id || s.tutee?.id === student.id) &&
+          s.teamsMeetingUrl?.trim() &&
+          (s.status === "IN_PROGRESS" || s.status === "SCHEDULED" || s.status === "DELAYED")
+      ) ||
+      sessions.find(
+        (s: any) =>
+          (s.tuteeId === student.id || s.tutee?.id === student.id) &&
+          s.teamsMeetingUrl?.trim()
+      );
+
+    if (candidateSession?.teamsMeetingUrl) {
+      teamsUrl = candidateSession.teamsMeetingUrl.trim();
+    } else if (teamsUrlInput.trim()) {
+      teamsUrl = teamsUrlInput.trim();
+    } else {
+      const anyTeams = sessions.find((s: any) => s.teamsMeetingUrl?.trim())?.teamsMeetingUrl;
+      if (anyTeams) {
+        teamsUrl = anyTeams.trim();
+      } else {
+        try {
+          teamsUrl = (localStorage.getItem("tutor_default_teams_url") || "").trim();
+        } catch {}
+      }
+    }
+
+    setEmailModalTeamsUrl(teamsUrl);
+    setIsEmailModalOpen(true);
+  };
 
   // Search, filter, and sort state for Tutors directory
   const [tutorSearchTerm, setTutorSearchTerm] = useState("");
@@ -5001,13 +5057,14 @@ export default function AdminPage() {
                                 return (
                                   <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                                     <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                                    <a
-                                      href={`mailto:${emailList[0]}`}
-                                      className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px]"
-                                      title={`Contact Parent/Guardian: ${emailList[0]}`}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEmailModal(st, emailList[0], false)}
+                                      className="hover:text-[#48A5EE] hover:underline truncate max-w-[170px] text-left cursor-pointer"
+                                      title={`Compose Email to Parent/Guardian: ${emailList[0]}`}
                                     >
                                       {emailList[0]}
-                                    </a>
+                                    </button>
                                   </div>
                                 );
                               }
@@ -5015,24 +5072,26 @@ export default function AdminPage() {
                                 <div className="flex flex-col gap-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                                   <div className="flex items-center gap-1">
                                     <Mail className="w-3 h-3 text-[#48A5EE] shrink-0" />
-                                    <a
-                                      href={`mailto:${emailList.join(",")}`}
-                                      className="text-[10px] font-semibold text-[#48A5EE] hover:underline"
-                                      title={`Email all ${emailList.length} addresses: ${emailList.join(", ")}`}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEmailModal(st, null, true)}
+                                      className="text-[10px] font-semibold text-[#48A5EE] hover:underline cursor-pointer"
+                                      title={`Compose Email to all ${emailList.length} addresses: ${emailList.join(", ")}`}
                                     >
                                       Email All ({emailList.length})
-                                    </a>
+                                    </button>
                                   </div>
                                   <div className="flex flex-wrap gap-1">
                                     {emailList.map((em, idx) => (
-                                      <a
+                                      <button
                                         key={idx}
-                                        href={`mailto:${em}`}
-                                        className="hover:text-[#48A5EE] hover:underline text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md truncate max-w-[140px]"
-                                        title={`Contact: ${em}`}
+                                        type="button"
+                                        onClick={() => handleOpenEmailModal(st, em, false)}
+                                        className="hover:text-[#48A5EE] hover:underline text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md truncate max-w-[140px] cursor-pointer"
+                                        title={`Compose Email to: ${em}`}
                                       >
                                         {em}
-                                      </a>
+                                      </button>
                                     ))}
                                   </div>
                                 </div>
@@ -7726,6 +7785,20 @@ export default function AdminPage() {
         onClose={() => setIsCalendarSubOpen(false)}
         title="Platform Master Calendar Feed"
         subtitle="Subscribe your phone or computer calendar to live syncing lessons across LB Maths Tuition."
+      />
+
+      {/* Email Template Modal */}
+      <EmailTemplateModal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false);
+          setEmailModalStudent(null);
+        }}
+        student={emailModalStudent}
+        initialSelectedEmail={emailModalInitialEmail}
+        initialSelectAll={emailModalSelectAll}
+        teamsMeetingUrl={emailModalTeamsUrl}
+        tutorName={emailModalTutorName}
       />
 
       <Footer
