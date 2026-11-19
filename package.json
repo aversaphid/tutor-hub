@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build --webpack",
+    "build:cf": "prisma generate && opennextjs-cloudflare build",
+    "preview:cf": "npm run build:cf && wrangler dev",
+    "deploy:cf": "npm run build:cf && wrangler deploy",
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
@@ -56,8 +59,10 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.17",
     "eslint": "^9",
     "eslint-config-next": "^16.3.8",
-    "tsx": "^4.23.13"
+    "tsx": "^4.23.13",
+    "wrangler": "^4.165.0"
   }
 }
