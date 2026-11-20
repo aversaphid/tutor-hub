@@ -76,7 +76,7 @@ import { useOnlinePresence } from "@/hooks/use-presence";
 import OnlineBadge from "@/components/online-badge";
 import PushNotificationToggle from "@/components/push-notification-toggle";
 
-// Dynamically split heavy secondary modals to optimize initial page bundle and Deno memory limits
+// Dynamically split heavy secondary modals to optimize initial page bundle and serverless memory limits
 const FormulaSheetModal = dynamic(() => import("@/components/formula-sheet-modal"), { ssr: false });
 const CasioCalculatorModal = dynamic(() => import("@/components/casio-calculator-modal"), { ssr: false });
 const SharedResourcesHub = dynamic(() => import("@/components/shared-resources-hub"), { ssr: false });
@@ -546,7 +546,7 @@ export default function TutorDashboardPage() {
         (activeLesson.status === "IN_PROGRESS" ||
           new Date(activeLesson.scheduledStartTime).getTime() - now < 10 * 60 * 1000);
 
-      // If SSE is connected, relax polling to 180s (live) / 300s (idle) to save Deno Deploy HTTP request quotas.
+      // If SSE is connected, relax polling to 180s (live) / 300s (idle) to save serverless HTTP request quotas.
       // If disconnected from SSE, fall back to faster 30s / 60s polling.
       const isSse = isSseConnectedRef.current;
       const delay = isSse

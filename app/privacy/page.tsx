@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           </p>
           <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
             <li><strong>Cloud Database:</strong> <strong>Turso (ChiselStrike Inc.)</strong> hosted on <strong>AWS EU-West-1 (Europe/Ireland)</strong>. All database records remain strictly within the UK/EEA.</li>
-            <li><strong>Web Hosting:</strong> <strong>Deno Deploy</strong> (Deno Land Inc.) — Serverless execution and application hosting.</li>
+            <li><strong>Web Hosting:</strong> <strong>Cloudflare</strong> (Cloudflare, Inc.) / <strong>Deno Deploy</strong> (Deno Land Inc.) — Serverless edge execution and application hosting.</li>
             <li><strong>Video Meetings:</strong> <strong>Microsoft Ireland Operations Limited (Microsoft Teams)</strong> — Live video calling. <em>No audio or video recordings are made or retained on the platform.</em></li>
           </ul>
         </section>

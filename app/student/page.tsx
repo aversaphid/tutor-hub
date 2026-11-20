@@ -342,7 +342,7 @@ function StudentLobbyContent() {
         (activeSession.status === "IN_PROGRESS" ||
           new Date(activeSession.scheduledStartTime).getTime() - now < 5 * 60 * 1000);
 
-      // If SSE is connected, relax polling to 180s (live) / 300s (idle) to save Deno Deploy HTTP request quotas.
+      // If SSE is connected, relax polling to 180s (live) / 300s (idle) to save serverless HTTP request quotas.
       // If disconnected from SSE, fall back to faster 30s / 60s polling.
       const isSse = isSseConnectedRef.current;
       const delay = isSse

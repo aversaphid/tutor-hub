@@ -39,7 +39,7 @@ export default function TutorLoginModal({ isOpen, onClose }: TutorLoginModalProp
       }
 
       if (!res.ok) {
-        setError(data?.error || `Server error (${res.status}). Please check Deno Deploy logs.`);
+        setError(data?.error || `Server error (${res.status}). Please check server logs.`);
         return;
       }
 

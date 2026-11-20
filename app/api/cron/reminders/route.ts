@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/cron/reminders
  * Executes the upcoming lesson reminder engine.
- * Can be called by Deno.cron, external schedulers (UptimeRobot, cron-job.org),
+ * Can be called by Cloudflare Cron Triggers, Deno.cron, external schedulers (UptimeRobot, cron-job.org),
  * or client heartbeats.
  */
 export async function GET(request: Request) {

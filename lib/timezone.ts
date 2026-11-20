@@ -113,7 +113,7 @@ export function addDaysPreservingWallClock(
 
 /**
  * Formats a Date into a locale time string strictly in Europe/London time.
- * Prevents servers running in UTC (like Deno Deploy) from displaying UTC times during BST.
+ * Prevents servers running in UTC (like Cloudflare Workers or Deno Deploy) from displaying UTC times during BST.
  */
 export function formatLondonTime(
   date: Date | string,

@@ -174,7 +174,7 @@ export function broadcastSessionUpdate(payload: SessionUpdatePayload) {
   // 1. Deliver to subscribers connected to this isolate
   deliverLocalSessionUpdate(payload);
 
-  // 2. Broadcast across Deno Deploy edge isolates globally
+  // 2. Broadcast across edge isolates globally
   try {
     const channel = getBroadcastChannel();
     if (channel) {
@@ -193,7 +193,7 @@ export function broadcastPresenceUpdate(payload: PresenceUpdatePayload) {
   // 1. Deliver to subscribers connected to this isolate
   deliverLocalPresenceUpdate(payload);
 
-  // 2. Broadcast across Deno Deploy edge isolates globally
+  // 2. Broadcast across edge isolates globally
   try {
     const channel = getBroadcastChannel();
     if (channel) {
@@ -212,7 +212,7 @@ export function broadcastCalculatorAction(payload: CalculatorActionPayload) {
   // 1. Deliver to subscribers connected to this isolate
   deliverLocalCalculatorAction(payload);
 
-  // 2. Broadcast across Deno Deploy edge isolates globally
+  // 2. Broadcast across edge isolates globally
   try {
     const channel = getBroadcastChannel();
     if (channel) {

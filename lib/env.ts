@@ -1,5 +1,5 @@
 /**
- * Universal environment variable accessor supporting Node.js, Next.js Edge, and Deno Deploy runtimes.
+ * Universal environment variable accessor supporting Node.js, Cloudflare Workers, Next.js Edge, and Deno Deploy runtimes.
  */
 export function getEnv(key: string): string | undefined {
   if (typeof process !== "undefined" && process.env?.[key]) {

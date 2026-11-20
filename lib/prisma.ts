@@ -55,7 +55,7 @@ export function getPrisma(): PrismaClient {
 
 /**
  * Transparent proxy that delegates all property/method access to the lazily initialized PrismaClient.
- * This keeps cold starts instant and prevents gateway timeouts on Deno Deploy.
+ * This keeps cold starts instant and prevents gateway timeouts on serverless platforms.
  */
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop, _receiver) {
